@@ -1,0 +1,18 @@
+[package]
+name    = "forrit"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio              = { version = "1.21.2", features = ["rt-multi-thread", "macros"] }
+serde              = { version = "1.0.145", features = ["derive"] }
+tracing            = "0.1.37"
+color-eyre         = "0.6.2"
+tracing-subscriber = "0.3.16"
+transmission_rs    = "0.8.6"
+serde_json         = "1.0.86"
+reqwest            = "0.11.12"
+url = { version = "2.3.1", features = ["serde"] }
+rss = "2.0.1"
