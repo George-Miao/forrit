@@ -143,6 +143,10 @@ impl<T> WithId<T> {
         self.data
     }
 
+    pub fn inner(&self) -> &T {
+        &self.data
+    }
+
     pub fn into_oid(self) -> Result<WithOId<T>> {
         Ok(WithOId {
             id: self.id.to_oid()?,

@@ -1,20 +1,19 @@
 #![feature(iter_intersperse)]
 
-use color_eyre::Result;
+use std::{fs, ops::Deref};
+
+use color_eyre::{eyre::eyre, Result};
 use ejdb::{
-    bson::{from_bson, ordered::OrderedDocument},
+    bson,
     query::{Q, QH},
+    Collection,
 };
+use rss::Item;
 use tracing::info;
 
-use crate::{
-    bangumi_moe::v2::{Tag, WithId},
-    model::WithOId,
-};
+use crate::{bangumi_moe::v2::Current, model::Subscription, server::Server};
 
-mod api;
-mod bangumi_moe;
-mod model;
+mod_use::mod_use![server, model, bangumi_moe, ext, config];
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,8 +26,25 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    // let bgm = fs::read("data/bangumi.current.v2.json")?;
-    // let bgm: Current = serde_json::from_slice(&bgm)?;
+    let bgm = fs::read("data/bangumi.current.v2.json")?;
+    let bgm: Current = serde_json::from_slice(&bgm)?;
+
+    let example = bgm
+        .bangumis
+        .into_iter()
+        .find(|x| x.tag_id.deref() == "62c6ce11f248710007e811b1")
+        .unwrap()
+        .unwrap();
+
+    let team = bgm.working_teams[&example.tag_id][0].clone().unwrap();
+
+    let sub = Subscription {
+        tags: vec![team.tag_id],
+        bangumi_tag: example.tag,
+        season: None,
+        include_pattern: None,
+        exclude_pattern: None,
+    };
 
     // let mut tag_set = HashSet::new();
     // let teams_tags = bgm
@@ -59,18 +75,31 @@ async fn run() -> Result<()> {
     //     .await?
     //     .json::<Vec<Bangumi>>()
     //     .await?;
-
     let db = ejdb::Database::open("data/main.db")?;
 
-    let col = db.collection("tags")?;
+    // let tags = db.collection("tags")?;
+    // let jobs = db.collection("jobs")?;
+    let records = db.collection("records")?;
 
-    for i in col
-        .query(Q.field("type").eq("bangumi"), QH.empty())
+    records
+        .query(Q.empty(), QH.empty())
         .find()?
-        .map(|x| x.map(|x: OrderedDocument| -> WithOId<Tag> { from_bson(x.into()).unwrap() }))
-    {
-        info!("i: {i:#?}");
-    }
+        .try_for_each(|x| {
+            info!("{:#?}", x?);
+            Result::<()>::Ok(())
+        })?;
+
+    // for item in items {
+    //     create_rss_job(&records, item)?;
+    // }
+
+    // for i in tags
+    //     .query(Q.field("type").eq("bangumi"), QH.empty())
+    //     .find()?
+    //     .map(|x| x.map(|x: OrderedDocument| -> WithOId<Tag> { from_bson(x.into()).unwrap() }))
+    // {
+    //     info!("i: {i:#?}");
+    // }
 
     // col.save_all(all_tags)?;
 
@@ -81,4 +110,31 @@ async fn run() -> Result<()> {
 
     // info!("{:#?}", res);
     Ok(())
+}
+
+fn create_rss_job(records: &Collection, item: &Item) -> Result<Option<()>> {
+    let guid = item.guid.as_ref().ok_or_else(|| eyre!("no guid"))?.value();
+    let enc = item
+        .enclosure
+        .as_ref()
+        .ok_or_else(|| eyre!("No enclosure"))?;
+    let url = enc.url();
+
+    if records
+        .query(Q.field("guid").eq(guid), QH.empty())
+        .count()?
+        > 0
+    {
+        info!("Item already exists: {url}")
+    } else {
+        records
+            .save(bson! {
+                "guid" => guid,
+                "url" => url
+            })
+            .unwrap();
+        info!("New item: {url}")
+    }
+
+    Ok(Some(()))
 }
