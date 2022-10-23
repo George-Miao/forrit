@@ -7,7 +7,7 @@ use color_eyre::Result;
 use ejdb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::model::WithOId;
+use crate::WithOId;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]

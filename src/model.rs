@@ -1,16 +1,11 @@
-use std::{
-    ops::{Deref, DerefMut},
-    path::PathBuf,
-};
+use std::path::PathBuf;
 
-use color_eyre::{
-    eyre::{bail, eyre},
-    Result,
-};
-use ejdb::bson::{from_bson, oid::ObjectId, to_bson, Bson, Document};
+use color_eyre::Result;
+use ejdb::bson::{from_bson, to_bson, Bson, Document};
 use regex::Regex;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use transmission_rpc::types::TorrentAddArgs;
 
 use crate::{
     bangumi_moe::v2::{Id, Tag, WithId},
@@ -67,35 +62,24 @@ impl TryFrom<Document> for Subscription {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Job {
-    pub url: String,
+    pub url: Url,
     pub dir: PathBuf,
     pub filename: String,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct WithOId<T> {
-    #[serde(rename = "_id")]
-    pub id: ObjectId,
-    #[serde(flatten)]
-    pub data: T,
-}
+impl TryFrom<Job> for TorrentAddArgs {
+    type Error = color_eyre::Report;
 
-impl<T> Deref for WithOId<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-
-impl<T> DerefMut for WithOId<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
-    }
-}
-
-impl<T> WithOId<T> {
-    pub fn unwrap(self) -> T {
-        self.data
+    fn try_from(val: Job) -> Result<Self> {
+        Ok(TorrentAddArgs {
+            filename: Some(val.url.to_string()),
+            download_dir: Some(
+                val.dir
+                    .into_os_string()
+                    .into_string()
+                    .expect("Download dir should be valid utf-8"),
+            ),
+            ..Default::default()
+        })
     }
 }

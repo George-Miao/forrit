@@ -1,4 +1,9 @@
 #![feature(iter_intersperse)]
+#![feature(let_chains)]
+#![feature(try_blocks)]
+
+#[macro_use]
+extern crate ejdb;
 
 use std::{fs, ops::Deref};
 
@@ -6,14 +11,14 @@ use color_eyre::{eyre::eyre, Result};
 use ejdb::{
     bson,
     query::{Q, QH},
-    Collection,
+    Collection, Database,
 };
 use rss::Item;
 use tracing::info;
 
-use crate::{bangumi_moe::v2::Current, model::Subscription, server::Server};
+use crate::{bangumi_moe::v2::Current, model::Subscription};
 
-mod_use::mod_use![server, model, bangumi_moe, ext, config];
+mod_use::mod_use![server, model, bangumi_moe, ext, config, util];
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -75,19 +80,19 @@ async fn run() -> Result<()> {
     //     .await?
     //     .json::<Vec<Bangumi>>()
     //     .await?;
-    let db = ejdb::Database::open("data/main.db")?;
+    // let db = ejdb::Database::open("data/main.db")?;
 
     // let tags = db.collection("tags")?;
     // let jobs = db.collection("jobs")?;
-    let records = db.collection("records")?;
+    // let records = db.collection("records")?;
 
-    records
-        .query(Q.empty(), QH.empty())
-        .find()?
-        .try_for_each(|x| {
-            info!("{:#?}", x?);
-            Result::<()>::Ok(())
-        })?;
+    // records
+    //     .query(Q.empty(), QH.empty())
+    //     .find()?
+    //     .try_for_each(|x| {
+    //         info!("{:#?}", x?);
+    //         Result::<()>::Ok(())
+    //     })?;
 
     // for item in items {
     //     create_rss_job(&records, item)?;
@@ -96,8 +101,8 @@ async fn run() -> Result<()> {
     // for i in tags
     //     .query(Q.field("type").eq("bangumi"), QH.empty())
     //     .find()?
-    //     .map(|x| x.map(|x: OrderedDocument| -> WithOId<Tag> { from_bson(x.into()).unwrap() }))
-    // {
+    //     .map(|x| x.map(|x: OrderedDocument| -> WithOId<Tag> {
+    // from_bson(x.into()).unwrap() })) {
     //     info!("i: {i:#?}");
     // }
 
