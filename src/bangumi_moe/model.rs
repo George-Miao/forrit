@@ -1,21 +1,28 @@
 use std::{
     collections::HashMap,
+    fmt::Display,
     ops::{Deref, DerefMut},
 };
 
-use color_eyre::Result;
-use ejdb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-
-use crate::WithOId;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Id(pub String);
 
 impl Id {
-    pub fn to_oid(&self) -> Result<ObjectId> {
-        Ok(ObjectId::with_string(&self.0)?)
+    // pub fn to_oid(&self) -> Result<ObjectId> {
+    //     Ok(ObjectId::with_string(&self.0)?)
+    // }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Display for Id {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -24,6 +31,61 @@ impl Deref for Id {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum SearchResult<T> {
+    Found(T),
+    None,
+}
+
+#[doc(hidden)]
+mod __de {
+    use serde::{de::Visitor, Deserialize};
+
+    use crate::bangumi_moe::SearchResult;
+
+    struct SearchResultVisitor<'de, T>(std::marker::PhantomData<&'de T>);
+
+    impl<'de, T> Visitor<'de> for SearchResultVisitor<'de, T>
+    where
+        T: Deserialize<'de>,
+    {
+        type Value = SearchResult<T>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a search result")
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            while let Some(key) = map.next_key()? {
+                match key {
+                    "found" | "success" => {
+                        if !map.next_value::<bool>()? {
+                            return Ok(SearchResult::None);
+                        }
+                    }
+                    _ => return Ok(SearchResult::Found(map.next_value()?)),
+                }
+            }
+            Ok(SearchResult::None)
+        }
+    }
+
+    impl<'de, T> serde::Deserialize<'de> for super::SearchResult<T>
+    where
+        T: serde::Deserialize<'de> + 'de,
+    {
+        fn deserialize<D>(deserializer: D) -> serde::__private::Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(SearchResultVisitor(std::marker::PhantomData))
+        }
     }
 }
 
@@ -41,7 +103,8 @@ pub struct Bangumi {
     pub icon: String,
     pub cover: String,
     pub acgdb_id: Option<String>,
-    pub tag: WithId<Tag>,
+    /// Only exist on v2 api
+    pub tag: Option<WithId<Tag>>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,7 +168,7 @@ pub struct Locale {
 }
 
 impl Tag {
-    pub fn get_preferred_name(&self) -> &str {
+    pub fn preferred_name(&self) -> &str {
         self.locale
             .zh_cn
             .as_ref()
@@ -147,10 +210,10 @@ impl<T> WithId<T> {
         &self.data
     }
 
-    pub fn into_oid(self) -> Result<WithOId<T>> {
-        Ok(WithOId {
-            id: self.id.to_oid()?,
-            data: self.data,
-        })
-    }
+    // pub fn into_oid(self) -> Result<WithOId<T>> {
+    //     Ok(WithOId {
+    //         id: self.id.to_oid()?,
+    //         data: self.data,
+    //     })
+    // }
 }

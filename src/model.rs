@@ -1,62 +1,41 @@
 use std::path::PathBuf;
 
 use color_eyre::Result;
-use ejdb::bson::{from_bson, to_bson, Bson, Document};
 use regex::Regex;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use transmission_rpc::types::TorrentAddArgs;
 
-use crate::{
-    bangumi_moe::v2::{Id, Tag, WithId},
-    AsDocument,
-};
+use crate::bangumi_moe::Id;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subscription {
-    pub tags: Vec<Id>,
-    pub bangumi_tag: WithId<Tag>,
-    pub season: Option<u16>,
+    #[serde(default)]
+    pub filters: Vec<Id>,
+    pub bangumi: Id,
+    pub season: Option<u16>, // TODO: possibly use string for season and add resolving function
+
     #[serde(with = "serde_regex")]
+    #[serde(default)]
     pub include_pattern: Option<Regex>,
+
     #[serde(with = "serde_regex")]
+    #[serde(default)]
     pub exclude_pattern: Option<Regex>,
 }
 
 impl Subscription {
-    pub fn rss_url(&self) -> Result<Url> {
+    pub fn rss_url(&self, domain: &str) -> Result<Url> {
         let tags: String = self
-            .tags
+            .filters
             .iter()
-            .chain(std::iter::once(&self.bangumi_tag.id))
+            .chain(std::iter::once(&self.bangumi))
             .map(|x| x.to_string())
             .intersperse("+".to_owned())
             .collect();
 
-        Url::parse(&format!("https://bangumi.moe/rss/tags/{tags}")).map_err(Into::into)
-    }
-
-    pub fn with_filter(mut self, tag: Id) -> Self {
-        self.tags.push(tag);
-        self
-    }
-}
-
-impl AsDocument for Subscription {
-    fn as_document(&self) -> Result<ejdb::bson::Document> {
-        let doc = match to_bson(self)? {
-            Bson::Document(doc) => doc,
-            _ => unreachable!(),
-        };
-        Ok(doc)
-    }
-}
-
-impl TryFrom<Document> for Subscription {
-    type Error = color_eyre::Report;
-
-    fn try_from(doc: Document) -> Result<Self, Self::Error> {
-        from_bson(Bson::Document(doc)).map_err(Into::into)
+        Url::parse(&format!("https://{domain}/rss/tags/{tags}")).map_err(Into::into)
     }
 }
 
@@ -64,7 +43,6 @@ impl TryFrom<Document> for Subscription {
 pub struct Job {
     pub url: Url,
     pub dir: PathBuf,
-    pub filename: String,
 }
 
 impl TryFrom<Job> for TorrentAddArgs {

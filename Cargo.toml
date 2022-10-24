@@ -6,21 +6,27 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures = { version = "0.3.24", default-features = false, features = ["alloc", "std"] }
-tokio   = { version = "1.21.2", features = ["rt-multi-thread", "macros"] }
-serde   = { version = "1.0.145", features = ["derive"] }
-url     = { version = "2.3.1", features = ["serde"] }
-rss     = { version = "2.0.1", features = ["serde"] }
+transmission-rpc = { git = "https://github.com/George-Miao/transmission-rpc" }
 
-color-eyre         = "0.6.2"
-serde_json         = "1.0.86"
-tracing            = "0.1.37"
-tracing-subscriber = "0.3.16"
-reqwest            = "0.11.12"
-mod_use            = "0.2.1"
-ejdb               = "0.4.1"
-regex              = "1.6.0"
-serde_regex        = "1.1.0"
-home               = "0.5.4"
+futures            = { version = "0.3.24", default-features = false, features = ["alloc", "std"] }
+twelf              = { version = "0.7.0", default-features = false, features = ["env", "toml"] }
+serde              = { version = "1.0.145", features = ["derive"] }
+tokio              = { version = "1.21.2", features = ["rt-multi-thread", "macros", "time", "fs"] }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+rss                = { version = "2.0.1", features = ["serde"] }
+url                = { version = "2.3.1", features = ["serde"] }
 
-transmission-rpc = { path = "../transmission-rpc" }
+color-eyre      = "0.6.2"
+dirs            = "4.0.0"
+mod_use         = "0.2.1"
+paste           = "1.0.9"
+regex           = "1.6.0"
+reqwest         = "0.11.12"
+serde_json      = "1.0.86"
+serde_regex     = "1.1.0"
+serde_with      = "2.0.1"
+tap             = "1.0.1"
+tracing         = "0.1.37"
+humantime-serde = "1.1.1"
+actix-web = "4.2.1"
+stream_throttle = "0.4.0"

@@ -1,6 +1,120 @@
-use color_eyre::Result;
-use ejdb::bson::Document;
+use std::fmt::{Debug, Display};
 
-pub trait AsDocument {
-    fn as_document(&self) -> Result<Document>;
+use futures::{stream, Stream};
+use tap::TapFallible;
+use tracing::{debug, info, warn};
+use transmission_rpc::types as tt;
+
+pub trait IntoStream {
+    type Item;
+    type Stream: Stream<Item = Self::Item>;
+
+    fn into_stream(self) -> Self::Stream;
+}
+
+impl<T, I> IntoStream for I
+where
+    I: IntoIterator<Item = T>,
+{
+    type Item = T;
+    type Stream = futures::stream::Iter<I::IntoIter>;
+
+    fn into_stream(self) -> Self::Stream {
+        stream::iter(self)
+    }
+}
+
+pub trait TorrentExt {
+    fn id(&self) -> Option<tt::Id>;
+}
+
+impl TorrentExt for tt::Torrent {
+    fn id(&self) -> Option<tt::Id> {
+        self.id
+            .map(tt::Id::Id)
+            .or_else(|| self.hash_string.clone().map(tt::Id::Hash))
+    }
+}
+
+pub trait TapErrExt {
+    fn warn_err(self) -> Self;
+    fn warn_err_with(self, msg: impl Display) -> Self;
+    fn warn_err_dbg(self, msg: impl Display) -> Self;
+
+    fn warn_err_end(self)
+    where
+        Self: Sized,
+    {
+        self.warn_err();
+    }
+
+    fn warn_err_with_end(self, msg: impl Display)
+    where
+        Self: Sized,
+    {
+        self.warn_err_with(msg);
+    }
+
+    fn warn_err_dbg_end(self, msg: impl Display)
+    where
+        Self: Sized,
+    {
+        self.warn_err_dbg(msg);
+    }
+}
+
+impl<T: TapFallible> TapErrExt for T
+where
+    T::Err: Display,
+{
+    fn warn_err(self) -> Self {
+        self.tap_err(|error| warn!(%error))
+    }
+
+    fn warn_err_with(self, msg: impl Display) -> Self {
+        self.tap_err(|error| warn!(%error, "{msg}"))
+    }
+
+    fn warn_err_dbg(self, msg: impl Display) -> Self {
+        self.tap_err_dbg(|error| warn!(%error, "{msg}"))
+    }
+}
+
+pub trait TapOkExt {
+    fn debug_ok(self) -> Self;
+    fn debug_ok_with(self, msg: impl Display) -> Self;
+    fn debug_ok_dbg(self, msg: impl Display) -> Self;
+
+    fn info_ok(self) -> Self;
+    fn info_ok_with(self, msg: impl Display) -> Self;
+    fn info_ok_dbg(self, msg: impl Display) -> Self;
+}
+
+impl<T: TapFallible> TapOkExt for T
+where
+    T::Ok: Debug,
+{
+    fn debug_ok(self) -> Self {
+        self.tap_ok(|val| debug!(?val))
+    }
+
+    fn debug_ok_with(self, msg: impl Display) -> Self {
+        self.tap_ok(|val| debug!(?val, "{msg}"))
+    }
+
+    fn debug_ok_dbg(self, msg: impl Display) -> Self {
+        self.tap_ok_dbg(|val| debug!(?val, "{msg}"))
+    }
+
+    fn info_ok(self) -> Self {
+        self.tap_ok(|val| info!(?val))
+    }
+
+    fn info_ok_with(self, msg: impl Display) -> Self {
+        self.tap_ok(|val| info!(?val, "{msg}"))
+    }
+
+    fn info_ok_dbg(self, msg: impl Display) -> Self {
+        self.tap_ok_dbg(|val| info!(?val, "{msg}"))
+    }
 }
