@@ -3,11 +3,13 @@ use std::{path::PathBuf, sync::OnceLock, time::Duration};
 use color_eyre::{eyre::eyre, Result};
 use reqwest::Url;
 use serde::Serialize;
+use tap::Pipe;
 use tokio::sync::{RwLock, RwLockReadGuard};
+use toml_edit::{ArrayOfTables, Document, Item};
 use tracing::info;
 use twelf::{config, Layer};
 
-use crate::Subscription;
+use crate::{bangumi_moe::Id, Subscription};
 
 static CONF_DIR: OnceLock<PathBuf> = OnceLock::new();
 static CONFIG: RwLock<Option<Config>> = RwLock::const_new(None);
@@ -30,6 +32,61 @@ pub async fn reload_config() -> Result<()> {
 
 pub async fn get_config<'a>() -> RwLockReadGuard<'a, Config> {
     RwLockReadGuard::map(CONFIG.read().await, |x| x.as_ref().unwrap())
+}
+
+pub async fn update_config(actions: impl Iterator<Item = ConfigAction>) -> Result<()> {
+    let current_content = CONF_DIR
+        .get()
+        .expect("Config dir not set")
+        .pipe(tokio::fs::read_to_string)
+        .await?
+        .parse::<Document>()?;
+
+    let mut config = CONFIG.write().await;
+
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub enum ConfigAction {
+    AddSubscription(Subscription),
+    RemoveSubscription(Id),
+    UpdateSubscription(Id, Subscription),
+    UpdateCheckIntervel(Duration),
+}
+
+impl ConfigAction {
+    fn apply(self, doc: &mut Document) -> Result<()> {
+        if !doc["subscriptions"].is_array() | !doc["subscriptions"].is_array() {
+            doc["subscriptions"] = Item::ArrayOfTables(ArrayOfTables::new());
+        }
+        match self {
+            Self::AddSubscription(sub) => {
+                doc["subscriptions"]
+                    .as_array_mut()
+                    .or_else(|| doc["subscriptions"].as_array_of_tables_mut())
+                    .unwrap_or_else(|| {
+                        doc["subscriptions"] = Item::Value(toml_edit::Array::new().into());
+                        doc["subscriptions"].as_array_mut().unwrap()
+                    })
+                    .push(toml_edit::ser::to_item(&sub)?.into_value()?);
+            }
+            Self::RemoveSubscription(id) => {
+                doc["subscriptions"]
+                    .as_array_mut()?
+                    .unwrap()
+                    .remove(id.to_string());
+            }
+            Self::UpdateSubscription(id, sub) => {
+                let sub = sub.to_toml()?;
+                doc["subscriptions"][id.to_string()] = sub;
+            }
+            Self::UpdateCheckIntervel(dur) => {
+                doc["check_interval"] = dur.as_secs().into();
+            }
+        }
+        Some(())
+    }
 }
 
 #[config]
