@@ -1,92 +1,36 @@
-use std::{path::PathBuf, sync::OnceLock, time::Duration};
+use std::{
+    net::IpAddr,
+    path::{Path, PathBuf},
+    sync::OnceLock,
+    time::Duration,
+};
 
 use color_eyre::{eyre::eyre, Result};
 use reqwest::Url;
 use serde::Serialize;
-use tap::Pipe;
-use tokio::sync::{RwLock, RwLockReadGuard};
-use toml_edit::{ArrayOfTables, Document, Item};
-use tracing::info;
 use twelf::{config, Layer};
 
-use crate::{bangumi_moe::Id, Subscription};
+static CONF_PATH: OnceLock<PathBuf> = OnceLock::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
-static CONF_DIR: OnceLock<PathBuf> = OnceLock::new();
-static CONFIG: RwLock<Option<Config>> = RwLock::const_new(None);
-
-pub async fn load_config(path: impl Into<PathBuf>) -> Result<()> {
-    CONF_DIR
+pub fn init(path: impl Into<PathBuf>) -> Result<()> {
+    CONF_PATH
         .set(path.into())
         .map_err(|_| eyre!("Config dir already set"))?;
-    let config = Config::from_dir(CONF_DIR.get().unwrap())?;
-    CONFIG.write().await.replace(config);
+    let config = Config::from_dir(
+        CONF_PATH
+            .get()
+            .ok_or_else(|| eyre!("Config is not initialized"))?,
+    )?;
+    CONFIG
+        .set(config)
+        .map_err(|_| eyre!("Config already set"))?;
+    // Ok(REQUIRE_RELOAD.clone())
     Ok(())
 }
 
-pub async fn reload_config() -> Result<()> {
-    let config = Config::from_dir(CONF_DIR.get().unwrap())?;
-    CONFIG.write().await.replace(config);
-    info!("Config reloaded");
-    Ok(())
-}
-
-pub async fn get_config<'a>() -> RwLockReadGuard<'a, Config> {
-    RwLockReadGuard::map(CONFIG.read().await, |x| x.as_ref().unwrap())
-}
-
-pub async fn update_config(actions: impl Iterator<Item = ConfigAction>) -> Result<()> {
-    let current_content = CONF_DIR
-        .get()
-        .expect("Config dir not set")
-        .pipe(tokio::fs::read_to_string)
-        .await?
-        .parse::<Document>()?;
-
-    let mut config = CONFIG.write().await;
-
-    Ok(())
-}
-
-#[derive(Debug, Clone)]
-pub enum ConfigAction {
-    AddSubscription(Subscription),
-    RemoveSubscription(Id),
-    UpdateSubscription(Id, Subscription),
-    UpdateCheckIntervel(Duration),
-}
-
-impl ConfigAction {
-    fn apply(self, doc: &mut Document) -> Result<()> {
-        if !doc["subscriptions"].is_array() | !doc["subscriptions"].is_array() {
-            doc["subscriptions"] = Item::ArrayOfTables(ArrayOfTables::new());
-        }
-        match self {
-            Self::AddSubscription(sub) => {
-                doc["subscriptions"]
-                    .as_array_mut()
-                    .or_else(|| doc["subscriptions"].as_array_of_tables_mut())
-                    .unwrap_or_else(|| {
-                        doc["subscriptions"] = Item::Value(toml_edit::Array::new().into());
-                        doc["subscriptions"].as_array_mut().unwrap()
-                    })
-                    .push(toml_edit::ser::to_item(&sub)?.into_value()?);
-            }
-            Self::RemoveSubscription(id) => {
-                doc["subscriptions"]
-                    .as_array_mut()?
-                    .unwrap()
-                    .remove(id.to_string());
-            }
-            Self::UpdateSubscription(id, sub) => {
-                let sub = sub.to_toml()?;
-                doc["subscriptions"][id.to_string()] = sub;
-            }
-            Self::UpdateCheckIntervel(dur) => {
-                doc["check_interval"] = dur.as_secs().into();
-            }
-        }
-        Some(())
-    }
+pub fn get_config<'a>() -> &'a Config {
+    CONFIG.get().expect("Config is not initialized")
 }
 
 #[config]
@@ -104,9 +48,6 @@ pub struct Config {
     #[serde(default)]
     pub transmission_auth: Option<(String, String)>,
 
-    #[serde(default)]
-    pub subscription: Vec<Subscription>,
-
     #[serde(default = "default::bangumi_moe_domain")]
     pub bangumi_moe_domain: String,
 
@@ -116,29 +57,68 @@ pub struct Config {
     #[serde(default = "default::check_intervel")]
     #[serde(with = "humantime_serde")]
     pub check_intervel: Duration,
+
+    #[serde(default)]
+    pub server: ServerConfig,
+}
+
+#[config]
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerConfig {
+    #[serde(default = "default::server_bind")]
+    pub bind: IpAddr,
+
+    #[serde(default = "default::server_port")]
+    pub port: u16,
+
+    #[serde(default)]
+    pub auth: Option<(String, String)>,
+
+    #[serde(default = "default::server_workers")]
+    pub workers: usize,
 }
 
 mod default {
-    use std::path::PathBuf;
+    use std::{net::IpAddr, path::PathBuf};
 
     use reqwest::Url;
 
     use crate::bangumi_moe::DEFAULT_DOMAIN;
 
-    pub(super) fn data_dir() -> PathBuf {
+    pub fn data_dir() -> PathBuf {
         dirs::data_dir().unwrap().join("forrit")
     }
-    pub(super) fn download_dir() -> PathBuf {
+    pub fn download_dir() -> PathBuf {
         dirs::download_dir().expect("unable to resolve download dir")
     }
-    pub(super) fn transmission_url() -> Url {
+    pub fn transmission_url() -> Url {
         "http://localhost:9091/transmission/rpc".parse().unwrap()
     }
-    pub(super) fn bangumi_moe_domain() -> String {
+    pub fn bangumi_moe_domain() -> String {
         DEFAULT_DOMAIN.to_owned()
     }
-    pub(super) fn check_intervel() -> std::time::Duration {
+    pub fn check_intervel() -> std::time::Duration {
         std::time::Duration::from_secs(60)
+    }
+    pub fn server_bind() -> IpAddr {
+        "127.0.0.1".parse().unwrap()
+    }
+    pub fn server_port() -> u16 {
+        9090
+    }
+    pub fn server_workers() -> usize {
+        4
+    }
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            bind: default::server_bind(),
+            port: default::server_port(),
+            workers: default::server_workers(),
+            auth: None,
+        }
     }
 }
 
@@ -149,10 +129,10 @@ impl Default for Config {
             download_dir: default::download_dir(),
             transmission_url: default::transmission_url(),
             transmission_auth: None,
-            subscription: vec![],
             bangumi_moe_domain: default::bangumi_moe_domain(),
             dry_run: false,
             check_intervel: default::check_intervel(),
+            server: ServerConfig::default(),
         }
     }
 }
@@ -164,6 +144,17 @@ impl Config {
     }
 
     pub fn db_dir(&self) -> PathBuf {
-        self.data_dir.join("forrit.db")
+        self.data_dir.join("database")
+    }
+
+    pub async fn save_to_path(&self, path: impl AsRef<Path>) -> Result<()> {
+        let t = toml::to_string_pretty(self)?;
+        tokio::fs::write(path, t).await?;
+        Ok(())
+    }
+
+    pub async fn write_back(&self) -> Result<()> {
+        self.save_to_path(CONF_PATH.get().expect("Config is not initialized"))
+            .await
     }
 }

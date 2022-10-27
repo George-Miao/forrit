@@ -1,40 +1,24 @@
 use std::{
-    borrow::Cow,
-    // fmt::Debug,
-    // ops::{Deref, DerefMut},
-    sync::LazyLock,
+    borrow::{Borrow, Cow},
+    fmt::{self, Debug, Formatter},
+    ops::{Deref, DerefMut},
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering::Relaxed},
+        Arc, LazyLock,
+    },
 };
 
+use color_eyre::Result;
+use futures::{
+    future::Future,
+    task::{AtomicWaker, Context, Poll},
+};
+use nanoid::nanoid;
 use regex::Regex;
-// use serde::{Deserialize, Serialize};
-
-// #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize,
-// Deserialize)] pub struct WithOId<T> {
-//     #[serde(rename = "_id")]
-//     pub id: ObjectId,
-//     #[serde(flatten)]
-//     pub data: T,
-// }
-
-// impl<T> Deref for WithOId<T> {
-//     type Target = T;
-
-//     fn deref(&self) -> &Self::Target {
-//         &self.data
-//     }
-// }
-
-// impl<T> DerefMut for WithOId<T> {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.data
-//     }
-// }
-
-// impl<T> WithOId<T> {
-//     pub fn unwrap(self) -> T {
-//         self.data
-//     }
-// }
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use sled::Tree;
+use tap::Pipe;
 
 pub fn normalize_title(title: &str) -> Cow<'_, str> {
     const EXPECT_ERR: &str = "Regex should compile";
@@ -85,3 +69,227 @@ fn test_normalize_title() {
             "[jibaketa]Kanojo, Okarishimasu E06 [BD 1920x1080 x264 AACx2 SRT TVB CHT].mkv"
     );
 }
+
+struct Inner {
+    waker: AtomicWaker,
+    set: AtomicBool,
+}
+
+#[derive(Clone)]
+pub struct Flag(Arc<Inner>);
+
+impl Flag {
+    pub fn new() -> Self {
+        Self(Arc::new(Inner {
+            waker: AtomicWaker::new(),
+            set: AtomicBool::new(false),
+        }))
+    }
+
+    pub fn signal(&self) {
+        self.0.set.store(true, Relaxed);
+        self.0.waker.wake();
+    }
+}
+
+impl Default for Flag {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Future for Flag {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+        // quick check to avoid registration if already done.
+        if self.0.set.load(Relaxed) {
+            return Poll::Ready(());
+        }
+
+        self.0.waker.register(cx.waker());
+
+        // Need to check condition **after** `register` to avoid a race
+        // condition that would result in lost notifications.
+        if self.0.set.load(Relaxed) {
+            Poll::Ready(())
+        } else {
+            Poll::Pending
+        }
+    }
+}
+
+impl Debug for Flag {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let val = self.0.set.load(Relaxed);
+        f.debug_tuple("Flag").field(&val).finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct SerdeTree<T> {
+    tree: Tree,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> SerdeTree<T> {
+    pub fn new(tree: Tree) -> Self {
+        Self {
+            tree,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    pub fn get(&self, key: impl AsRef<[u8]>) -> Result<Option<T>>
+    where
+        T: DeserializeOwned,
+    {
+        self.tree
+            .get(key)?
+            .and_then(|v| serde_json::from_slice(&v).ok())
+            .pipe(Ok)
+    }
+
+    /// Insert a value into the tree, and return the key that was used.
+    pub fn insert(&self, value: &T) -> Result<String>
+    where
+        T: Serialize + DeserializeOwned,
+    {
+        let id = nanoid!();
+        self.upsert(id.as_bytes(), value)?;
+        Ok(id)
+    }
+
+    /// Update or insert. If update, return the old value.
+    pub fn upsert(&self, key: impl AsRef<[u8]>, value: &T) -> Result<Option<T>>
+    where
+        T: Serialize + DeserializeOwned,
+    {
+        let value = serde_json::to_vec(value)?;
+        match self.tree.insert(key, value)? {
+            Some(res) => Ok(serde_json::from_slice(res.borrow())?),
+            None => Ok(None),
+        }
+    }
+
+    pub fn remove(&self, key: impl AsRef<[u8]>) -> Result<Option<T>>
+    where
+        T: DeserializeOwned,
+    {
+        let Some(res) = self.tree.remove(key)? else {
+            return Ok(None);
+        };
+        Ok(Some(serde_json::from_slice(res.borrow())?))
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Result<(String, T)>>
+    where
+        T: DeserializeOwned,
+    {
+        self.tree.iter().map(|x| {
+            let (k, v) = x?;
+            let v = serde_json::from_slice(v.borrow())?;
+            let k = String::from_utf8(k.to_vec())?;
+            Ok((k, v))
+        })
+    }
+
+    pub fn iter_with_id(&self) -> impl Iterator<Item = Result<impl DeserializeOwned + Serialize>>
+    where
+        T: DeserializeOwned + Serialize,
+    {
+        self.tree.iter().map(|x| {
+            let (k, v) = x?;
+            let v = serde_json::from_slice::<T>(v.borrow())?;
+            let id = String::from_utf8(k.to_vec())?;
+            Ok(with! { id, v })
+        })
+    }
+}
+
+impl<T> Deref for SerdeTree<T> {
+    type Target = Tree;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tree
+    }
+}
+
+impl Debug for SerdeTree<()> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SerdeTree")
+            .field("tree", &self.tree)
+            .finish()
+    }
+}
+
+impl<T> DerefMut for SerdeTree<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.tree
+    }
+}
+
+impl<T> From<Tree> for SerdeTree<T> {
+    fn from(tree: Tree) -> Self {
+        Self::new(tree)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct With<K, T> {
+    key: K,
+    #[serde(flatten)]
+    content: T,
+}
+
+impl<K, T> With<K, T> {
+    pub fn new(key: K, content: T) -> Self {
+        Self { key, content }
+    }
+
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    pub fn content(&self) -> &T {
+        &self.content
+    }
+
+    pub fn into_content(self) -> T {
+        self.content
+    }
+
+    pub fn into_pair(self) -> (K, T) {
+        (self.key, self.content)
+    }
+}
+
+macro_rules! with {
+    (@with $key_name:ident = $key_val:expr, $val:expr) => {{
+        paste::paste! {
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+            #[allow(non_camel_case_types)]
+            struct [<With_ $key_name>]<K, T> {
+                $key_name: K,
+                #[serde(flatten)]
+                content: T,
+            }
+
+            #[allow(clippy::redundant_field_names)]
+            [<With_ $key_name>] {
+                $key_name: $key_val,
+                content: $val,
+            }
+        }
+    }};
+
+    ($key_name:ident = $key_val:expr, $val:expr) => {
+        with!(@with $key_name = $key_val, $val)
+    };
+
+    ($key:ident, $val:expr) => {{
+        with!(@with $key = $key, $val)
+    }};
+}
+
+pub(crate) use with;

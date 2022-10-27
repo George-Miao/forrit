@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{ops::Deref, path::PathBuf};
 
 use color_eyre::Result;
 use regex::Regex;
@@ -11,9 +11,12 @@ use crate::bangumi_moe::Id;
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subscription {
-    #[serde(default)]
-    pub filters: Vec<Id>,
     pub bangumi: Id,
+
+    #[serde(default)]
+    pub tags: Vec<Id>,
+
+    #[serde(default)]
     pub season: Option<u16>, // TODO: possibly use string for season and add resolving function
 
     #[serde(with = "serde_regex")]
@@ -28,11 +31,11 @@ pub struct Subscription {
 impl Subscription {
     pub fn rss_url(&self, domain: &str) -> Result<Url> {
         let tags: String = self
-            .filters
+            .tags
             .iter()
             .chain(std::iter::once(&self.bangumi))
-            .map(|x| x.to_string())
-            .intersperse("+".to_owned())
+            .map(Deref::deref)
+            .intersperse("+")
             .collect();
 
         Url::parse(&format!("https://{domain}/rss/tags/{tags}")).map_err(Into::into)

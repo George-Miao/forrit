@@ -34,6 +34,23 @@ impl Deref for Id {
     }
 }
 
+impl AsRef<[u8]> for Id {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+}
+
+impl AsRef<str> for Id {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for Id {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
 #[derive(Debug, Clone)]
 pub enum SearchResult<T> {
     Found(T),

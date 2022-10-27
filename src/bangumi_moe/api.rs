@@ -11,6 +11,7 @@ macro_rules! api {
                     }))
                     .send()
                         .await?
+                        .error_for_status()?
                         .json()
                         .await
                         .map_err(Into::into)
@@ -25,6 +26,7 @@ macro_rules! api {
                 self.$method($path)
                     .send()
                     .await?
+                    .error_for_status()?
                     .json()
                     .await
                     .map_err(Into::into)
