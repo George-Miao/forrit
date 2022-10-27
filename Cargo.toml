@@ -1,3 +1,6 @@
+[workspace]
+members = ["bangumi"]
+
 [package]
 name    = "forrit"
 version = "0.1.0"
@@ -7,6 +10,7 @@ edition = "2021"
 
 [dependencies]
 transmission-rpc = { git = "https://github.com/George-Miao/transmission-rpc" }
+bangumi          = { path = "./bangumi" }
 
 futures            = { version = "0.3.24", default-features = false, features = ["alloc", "std"] }
 twelf              = { version = "0.7.0", default-features = false, features = ["env", "toml"] }

@@ -1,12 +1,11 @@
 use std::{ops::Deref, path::PathBuf};
 
+use bangumi::Id;
 use color_eyre::Result;
 use regex::Regex;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use transmission_rpc::types::TorrentAddArgs;
-
-use crate::bangumi_moe::Id;
 
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]

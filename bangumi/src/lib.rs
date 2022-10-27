@@ -1,6 +1,8 @@
 mod api;
+mod error;
 mod model;
 
+pub use error::*;
 pub use model::*;
 use reqwest::Client;
 

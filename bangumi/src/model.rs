@@ -61,7 +61,7 @@ pub enum SearchResult<T> {
 mod __de {
     use serde::{de::Visitor, Deserialize};
 
-    use crate::bangumi_moe::SearchResult;
+    use crate::SearchResult;
 
     struct SearchResultVisitor<'de, T>(std::marker::PhantomData<&'de T>);
 

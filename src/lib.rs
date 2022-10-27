@@ -15,10 +15,10 @@
 #![feature(generic_arg_infer)]
 
 mod_use::mod_use![server, model, ext, config, util];
-pub mod bangumi_moe;
 
 use std::borrow::{Borrow, Cow};
 
+use bangumi::Api;
 use color_eyre::{
     eyre::{bail, ensure, eyre},
     Result,
@@ -26,7 +26,6 @@ use color_eyre::{
 use futures::{
     future::join_all,
     stream::{self, StreamExt},
-    TryStreamExt,
 };
 use reqwest::{Client, Url};
 use rss::{Channel, Item};
@@ -34,8 +33,6 @@ use tap::{Tap, TapFallible};
 use tokio::fs;
 use tracing::{debug, info};
 use transmission_rpc::{types as tt, SharableTransClient};
-
-use crate::bangumi_moe::Api;
 
 pub struct Forrit {
     api: Api,
@@ -53,7 +50,7 @@ impl Forrit {
 
         let req = reqwest::Client::new();
 
-        let api = bangumi_moe::Api::new_raw(conf.bangumi_moe_domain.to_owned(), req.clone());
+        let api = bangumi::Api::new_raw(conf.bangumi_domain.to_owned(), req.clone());
 
         let mut tran =
             SharableTransClient::new_with_client(conf.transmission_url.clone(), req.clone());
@@ -124,7 +121,7 @@ impl Forrit {
 
     async fn get_rss(&self, sub: &Subscription) -> Result<Vec<Item>> {
         let rss_url = sub
-            .rss_url(&get_config().bangumi_moe_domain)?
+            .rss_url(&get_config().bangumi_domain)?
             .tap(|rss_url| debug!(%rss_url));
         let rss_content = self
             .req
@@ -229,17 +226,6 @@ impl Forrit {
                 Ok(t.id())
             }
         }
-    }
-
-    async fn test_sub(&self, sub: &Subscription) -> Result<()> {
-        sub.tags
-            .iter()
-            .chain(std::iter::once(&sub.bangumi))
-            .into_stream()
-            .then(|tag| self.api.fetch_tag(tag.as_str()))
-            .try_collect::<Vec<_>>()
-            .await?;
-        Ok(())
     }
 
     pub async fn main_loop(&self) {

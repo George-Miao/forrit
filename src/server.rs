@@ -12,25 +12,23 @@ use actix_web_httpauth::{
     extractors::AuthenticationError, headers::www_authenticate::basic::Basic,
     middleware::HttpAuthentication,
 };
-use color_eyre::{eyre::eyre, Result};
+use bangumi::{Api, Id};
+use color_eyre::Result;
 use futures::{
     future::{ready, try_join, Ready},
-    StreamExt, TryFutureExt, TryStreamExt,
+    StreamExt, TryStreamExt,
 };
 use reqwest::StatusCode;
 use serde::Deserialize;
 use tap::Pipe;
 use tracing::{info, warn};
 
-use crate::{
-    bangumi_moe::{Api, Id},
-    get_config, with, Config, Forrit, IntoStream, SerdeTree, Subscription,
-};
+use crate::{get_config, with, Config, Forrit, IntoStream, SerdeTree, Subscription};
 
 type Subs = Data<SerdeTree<Subscription>>;
 
 impl Forrit {
-    pub async fn spawn_server(&self) -> Result<()> {
+    pub async fn server(&self) -> Result<()> {
         let config = get_config().clone();
         let bind = (config.server.bind, config.server.port);
         let num_workers = config.server.workers;
@@ -80,8 +78,8 @@ pub async fn list_subs(db: Subs) -> actix_web::Result<impl Responder> {
 }
 
 #[get("/subscription/{id}")]
-pub async fn get_sub(db: Subs, id: Id) -> actix_web::Result<impl Responder> {
-    db.get(id)
+pub async fn get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
+    db.get(id.as_str())
         .into_internal()
         .map(|x| match x {
             Some(x) => Json(x).pipe(Either::Left),
@@ -106,12 +104,12 @@ pub async fn add_sub(
 pub async fn update_sub(
     api: Data<Api>,
     db: Subs,
-    id: Id,
+    id: Path<String>,
     Json(sub): Json<Subscription>,
 ) -> actix_web::Result<impl Responder> {
     validate_sub(&api, &sub).await?;
 
-    match db.upsert(id, &sub).into_internal()? {
+    match db.upsert(id.into_inner(), &sub).into_internal()? {
         Some(res) => Ok(Either::Left(Json(res))),
         None => Ok(Either::Right(HttpResponse::Ok().body("Created"))),
     }
@@ -123,6 +121,22 @@ trait ErrorConvert<T, E> {
 }
 
 impl<T> ErrorConvert<T, &'static str> for color_eyre::Result<T> {
+    fn into_internal(self) -> Result<T, InternalError<&'static str>> {
+        self.map_err(|error| {
+            warn!(%error);
+            InternalError::new("Internal Error", StatusCode::INTERNAL_SERVER_ERROR)
+        })
+    }
+
+    fn into_internal_with<C>(self, cause: C, code: StatusCode) -> Result<T, InternalError<C>> {
+        self.map_err(|error| {
+            warn!(%error);
+            InternalError::new(cause, code)
+        })
+    }
+}
+
+impl<T> ErrorConvert<T, &'static str> for bangumi::Result<T> {
     fn into_internal(self) -> Result<T, InternalError<&'static str>> {
         self.map_err(|error| {
             warn!(%error);
@@ -158,24 +172,6 @@ impl FromRequest for Tags {
             .into_inner()
             .map(|query| Tags(query.tags.split('+').map(|x| Id(x.to_string())).collect()))
             .unwrap_or_else(|_| Tags(vec![]))))
-    }
-}
-
-impl FromRequest for Id {
-    type Error = actix_web::Error;
-    type Future = Ready<Result<Self, Self::Error>>;
-
-    fn from_request(
-        req: &actix_web::HttpRequest,
-        payload: &mut actix_web::dev::Payload,
-    ) -> Self::Future {
-        ready(
-            try {
-                Id(Path::<String>::from_request(req, payload)
-                    .into_inner()?
-                    .into_inner())
-            },
-        )
     }
 }
 

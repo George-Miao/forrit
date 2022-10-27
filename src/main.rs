@@ -1,5 +1,3 @@
-#![feature(never_type)]
-
 use std::{env, path::PathBuf};
 
 use color_eyre::Result;
@@ -7,12 +5,11 @@ use forrit::{init, Config, Forrit};
 use tap::Tap;
 use tokio::select;
 use tracing::{info, metadata::LevelFilter};
-use tracing_subscriber::{self as ts};
-use ts::EnvFilter;
+use tracing_subscriber::{fmt, EnvFilter};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    ts::fmt()
+    fmt()
         .with_env_filter(
             EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
@@ -49,7 +46,7 @@ async fn main() -> Result<()> {
 
     select! {
         _ = forrit.main_loop() => {}
-        res = forrit.spawn_server() => {
+        res = forrit.server() => {
             res?;
         }
         res = tokio::signal::ctrl_c() => {

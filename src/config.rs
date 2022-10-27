@@ -48,8 +48,8 @@ pub struct Config {
     #[serde(default)]
     pub transmission_auth: Option<(String, String)>,
 
-    #[serde(default = "default::bangumi_moe_domain")]
-    pub bangumi_moe_domain: String,
+    #[serde(default = "default::bangumi_domain")]
+    pub bangumi_domain: String,
 
     #[serde(default)]
     pub dry_run: bool,
@@ -81,9 +81,8 @@ pub struct ServerConfig {
 mod default {
     use std::{net::IpAddr, path::PathBuf};
 
+    use bangumi::DEFAULT_DOMAIN;
     use reqwest::Url;
-
-    use crate::bangumi_moe::DEFAULT_DOMAIN;
 
     pub fn data_dir() -> PathBuf {
         dirs::data_dir().unwrap().join("forrit")
@@ -94,7 +93,7 @@ mod default {
     pub fn transmission_url() -> Url {
         "http://localhost:9091/transmission/rpc".parse().unwrap()
     }
-    pub fn bangumi_moe_domain() -> String {
+    pub fn bangumi_domain() -> String {
         DEFAULT_DOMAIN.to_owned()
     }
     pub fn check_intervel() -> std::time::Duration {
@@ -129,7 +128,7 @@ impl Default for Config {
             download_dir: default::download_dir(),
             transmission_url: default::transmission_url(),
             transmission_auth: None,
-            bangumi_moe_domain: default::bangumi_moe_domain(),
+            bangumi_domain: default::bangumi_domain(),
             dry_run: false,
             check_intervel: default::check_intervel(),
             server: ServerConfig::default(),

@@ -290,6 +290,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bangumi"
+version = "0.1.0"
+dependencies = [
+ "paste",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -818,6 +831,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
+ "bangumi",
  "color-eyre",
  "dirs",
  "futures",

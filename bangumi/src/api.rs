@@ -1,9 +1,9 @@
-use crate::bangumi_moe::{Bangumi, Current, SearchResult, Tag, WithId};
+use crate::{Bangumi, Current, SearchResult, Tag, WithId};
 
 macro_rules! api {
     ($name:ident($path:expr) :: $method:ident ($( $param:ident($realarg:literal): $ty:ty, )+ $($param_default:literal = $val:expr $(,)?)*) -> $ret:ty) => {
-            impl $crate::bangumi_moe::Api {
-                pub async fn $name(&self, $( $param: impl Into<$ty> + Sync )*) -> ::color_eyre::Result<$ret> {
+            impl $crate::Api {
+                pub async fn $name(&self, $( $param: impl Into<$ty> + Sync )*) -> $crate::Result<$ret> {
                     self.$method($path)
                     .json(&::serde_json::json!({
                         $($realarg: $param.into(),)*
@@ -21,8 +21,8 @@ macro_rules! api {
     };
 
     ($name:ident($path:expr) :: $method:ident () -> $ret:ty) => {
-        impl $crate::bangumi_moe::Api {
-            pub async fn $name(&self) -> ::color_eyre::Result<$ret> {
+        impl $crate::Api {
+            pub async fn $name(&self) -> $crate::Result<$ret> {
                 self.$method($path)
                     .send()
                     .await?
@@ -39,9 +39,10 @@ macro_rules! api {
 
     (@test $name:ident($( $val:expr $(,)? )*) => $ret:ident => $block:block ) => {
         paste::paste! {
+            #[cfg(test)]
             #[::tokio::test]
-            async fn [< test_api_ $name >]() -> ::color_eyre::Result<()> {
-                let api = $crate::bangumi_moe::Api::new();
+            async fn [< test_api_ $name >]() -> $crate::Result<()> {
+                let api = $crate::Api::new();
                 let $ret = api.[< $name >]($( $val ),*).await?;
                 $block
                 Ok(())
