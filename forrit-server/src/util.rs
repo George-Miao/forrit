@@ -10,13 +10,14 @@ use std::{
 };
 
 use color_eyre::Result;
+use forrit_core::with;
 use futures::{
     future::Future,
     task::{AtomicWaker, Context, Poll},
 };
 use nanoid::nanoid;
 use regex::Regex;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 use sled::Tree;
 use tap::Pipe;
 
@@ -202,7 +203,7 @@ impl<T> SerdeTree<T> {
             let (k, v) = x?;
             let v = serde_json::from_slice::<T>(v.borrow())?;
             let id = String::from_utf8(k.to_vec())?;
-            Ok(with! { id, v })
+            Ok(with! { id, content = v })
         })
     }
 }
@@ -234,62 +235,3 @@ impl<T> From<Tree> for SerdeTree<T> {
         Self::new(tree)
     }
 }
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct With<K, T> {
-    key: K,
-    #[serde(flatten)]
-    content: T,
-}
-
-impl<K, T> With<K, T> {
-    pub fn new(key: K, content: T) -> Self {
-        Self { key, content }
-    }
-
-    pub fn key(&self) -> &K {
-        &self.key
-    }
-
-    pub fn content(&self) -> &T {
-        &self.content
-    }
-
-    pub fn into_content(self) -> T {
-        self.content
-    }
-
-    pub fn into_pair(self) -> (K, T) {
-        (self.key, self.content)
-    }
-}
-
-macro_rules! with {
-    (@with $key_name:ident = $key_val:expr, $val:expr) => {{
-        paste::paste! {
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
-            #[allow(non_camel_case_types)]
-            struct [<With_ $key_name>]<K, T> {
-                $key_name: K,
-                #[serde(flatten)]
-                content: T,
-            }
-
-            #[allow(clippy::redundant_field_names)]
-            [<With_ $key_name>] {
-                $key_name: $key_val,
-                content: $val,
-            }
-        }
-    }};
-
-    ($key_name:ident = $key_val:expr, $val:expr) => {
-        with!(@with $key_name = $key_val, $val)
-    };
-
-    ($key:ident, $val:expr) => {{
-        with!(@with $key = $key, $val)
-    }};
-}
-
-pub(crate) use with;

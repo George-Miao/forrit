@@ -48,22 +48,26 @@ impl Api {
         self.domain.as_deref().unwrap_or(DEFAULT_DOMAIN)
     }
 
-    fn get(&self, path: &str) -> reqwest::RequestBuilder {
+    #[inline]
+    pub fn get(&self, path: &str) -> reqwest::RequestBuilder {
         self.client
             .get(&format!("https://{}/api/{}", self.domain(), path))
     }
 
-    fn post(&self, path: &str) -> reqwest::RequestBuilder {
+    #[inline]
+    pub fn post(&self, path: &str) -> reqwest::RequestBuilder {
         self.client
             .post(&format!("https://{}/api/{}", self.domain(), path))
     }
 
-    fn get_v2(&self, path: &str) -> reqwest::RequestBuilder {
+    #[inline]
+    pub fn get_v2(&self, path: &str) -> reqwest::RequestBuilder {
         self.client
             .get(&format!("https://{}/api/v2/{}", self.domain(), path))
     }
 
-    fn post_v2(&self, path: &str) -> reqwest::RequestBuilder {
+    #[inline]
+    pub fn post_v2(&self, path: &str) -> reqwest::RequestBuilder {
         self.client
             .post(&format!("https://{}/api/v2/{}", self.domain(), path))
     }

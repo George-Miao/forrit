@@ -1,60 +1,77 @@
-use std::{env, path::PathBuf};
-
+// use async_compat::CompatExt;
 use color_eyre::Result;
-use forrit::{init, Config, Forrit};
-use tap::Tap;
-use tokio::select;
-use tracing::{info, metadata::LevelFilter};
-use tracing_subscriber::{fmt, EnvFilter};
+use forrit_core::{bangumi::Id, Subscription, WithID};
+use rustify::{Client, Endpoint, };
+use rustify_derive::Endpoint;
+use serde::{Deserialize, Serialize};
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    fmt()
-        .with_env_filter(
-            EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
-                .with_env_var("FORRIT_LOG")
-                .from_env_lossy()
-                .add_directive("actix_server=warn".parse().unwrap()),
-        )
-        .init();
-    color_eyre::install()?;
+fn main() -> Result<()> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(run())
+}
 
-    let conf_path = env::args()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            dirs::config_dir()
-                .expect("Unable to find config dir")
-                .join("forrit/config.toml")
-                .tap(|dir| {
-                    info!("Using default config path: {}", dir.display());
-                })
-        })
-        .tap(|path| {
-            info!("Using config path: {}", path.display());
-        });
+async fn run() -> Result<()> {
+    let c = Client::default("http://127.0.0.1:9090");
 
-    if !conf_path.exists() {
-        info!("Config file not found, creating a new one",);
-        Config::default().save_to_path(&conf_path).await?;
-    }
+    let sub = Subscription {
+        bangumi: Id("62c125b82fc3ee0d0016bf68".to_string()),
+        tags: vec![],
+        season: None,
+        include_pattern: None,
+        exclude_pattern: None,
+    };
 
-    init(conf_path)?;
-
-    let forrit = Forrit::new().await?;
-
-    select! {
-        _ = forrit.main_loop() => {}
-        res = forrit.server() => {
-            res?;
-        }
-        res = tokio::signal::ctrl_c() => {
-            info!("Ctrl-C received, exiting");
-            res?;
-
-        }
-    }
+    let req = PostSub { sub };
+    let res = req.exec(&c).await?.parse()?;
+    println!("{res:#?}");
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Endpoint)]
+#[endpoint(path = "/subscription", response = "Vec<Subscription>")]
+struct ListSub {}
+
+#[derive(Debug, Clone, Endpoint)]
+#[endpoint(
+    path = "/subscription",
+    method = "POST",
+    response = "WithID<String, Subscription>"
+)]
+struct PostSub {
+    #[endpoint(body)]
+    #[serde(flatten)]
+    sub: Subscription,
+}
+
+#[derive(Debug, Clone, Endpoint)]
+#[endpoint(
+    path = "/subscription/{self.id}",
+    method = "PUT",
+    response = "PutResult"
+)]
+struct PutSub {
+    #[endpoint(skip)]
+    id: String,
+    sub: Subscription,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "status", content = "content", rename_all = "lowercase")]
+enum PutResult {
+    Updated(Subscription),
+    Created(Subscription),
+}
+
+#[derive(Debug, Clone, Endpoint)]
+#[endpoint(
+    path = "/subscription/{self.id}",
+    method = "DELETE",
+    response = "Subscription"
+)]
+struct DeleteSub {
+    id: String,
 }

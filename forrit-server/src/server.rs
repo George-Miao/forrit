@@ -1,6 +1,7 @@
 use std::ops::Deref;
 
 use actix_web::{
+    delete,
     error::InternalError,
     get,
     middleware::{Logger, NormalizePath},
@@ -14,16 +15,18 @@ use actix_web_httpauth::{
 };
 use bangumi::{Api, Id};
 use color_eyre::Result;
+use forrit_core::with;
 use futures::{
     future::{ready, try_join, Ready},
     StreamExt, TryStreamExt,
 };
 use reqwest::StatusCode;
 use serde::Deserialize;
+use serde_json::json;
 use tap::Pipe;
 use tracing::{info, warn};
 
-use crate::{get_config, with, Config, Forrit, IntoStream, SerdeTree, Subscription};
+use crate::{get_config, Config, Forrit, IntoStream, SerdeTree, Subscription};
 
 type Subs = Data<SerdeTree<Subscription>>;
 
@@ -59,6 +62,7 @@ impl Forrit {
                 .service(get_sub)
                 .service(add_sub)
                 .service(update_sub)
+                .service(delete_sub)
         })
         .workers(num_workers)
         .bind(bind)?
@@ -69,7 +73,7 @@ impl Forrit {
 }
 
 #[get("/subscription")]
-pub async fn list_subs(db: Subs) -> actix_web::Result<impl Responder> {
+async fn list_subs(db: Subs) -> actix_web::Result<impl Responder> {
     let res = db
         .iter_with_id()
         .collect::<Result<Vec<_>>>()
@@ -78,7 +82,7 @@ pub async fn list_subs(db: Subs) -> actix_web::Result<impl Responder> {
 }
 
 #[get("/subscription/{id}")]
-pub async fn get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
+async fn get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
     db.get(id.as_str())
         .into_internal()
         .map(|x| match x {
@@ -89,7 +93,7 @@ pub async fn get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Respo
 }
 
 #[post("/subscription")]
-pub async fn add_sub(
+async fn add_sub(
     api: Data<Api>,
     db: Subs,
     Json(sub): Json<Subscription>,
@@ -97,11 +101,11 @@ pub async fn add_sub(
     validate_sub(&api, &sub).await?;
 
     let id = db.insert(&sub).into_internal()?;
-    Ok(Json(with!(id, sub)))
+    Ok(Json(with!(id, content = sub)))
 }
 
 #[put("/subscription/{id}")]
-pub async fn update_sub(
+async fn update_sub(
     api: Data<Api>,
     db: Subs,
     id: Path<String>,
@@ -110,8 +114,22 @@ pub async fn update_sub(
     validate_sub(&api, &sub).await?;
 
     match db.upsert(id.into_inner(), &sub).into_internal()? {
+        Some(res) => Ok(Either::Left(Json(json!({
+            "result": "updated",
+            "content": res,
+        })))),
+        None => Ok(Either::Right(Json(json!({
+            "result": "created",
+            "content": sub,
+        })))),
+    }
+}
+
+#[delete("/subscription/{id}")]
+async fn delete_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
+    match db.remove(id.into_inner()).into_internal()? {
         Some(res) => Ok(Either::Left(Json(res))),
-        None => Ok(Either::Right(HttpResponse::Ok().body("Created"))),
+        None => Ok(Either::Right(HttpResponse::NotFound())),
     }
 }
 
@@ -182,7 +200,7 @@ impl Tags {
 }
 
 pub async fn validate_sub(api: &Api, sub: &Subscription) -> Result<(), actix_web::Error> {
-    let future1 = async {
+    let fut1 = async {
         api.fetch_tag(sub.bangumi.as_str())
             .await
             .into_internal_with(
@@ -190,7 +208,7 @@ pub async fn validate_sub(api: &Api, sub: &Subscription) -> Result<(), actix_web
                 StatusCode::BAD_REQUEST,
             )
     };
-    let future2 = {
+    let fut2 = {
         sub.tags
             .deref()
             .into_stream()
@@ -202,6 +220,6 @@ pub async fn validate_sub(api: &Api, sub: &Subscription) -> Result<(), actix_web
             })
             .try_collect::<Vec<_>>()
     };
-    try_join(future1, future2).await?;
+    try_join(fut1, fut2).await?;
     Ok(())
 }

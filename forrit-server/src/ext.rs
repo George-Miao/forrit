@@ -1,28 +1,10 @@
 use std::fmt::{Debug, Display};
 
-use futures::{stream, Stream};
+use color_eyre::Result;
+use forrit_core::Job;
 use tap::TapFallible;
 use tracing::{debug, info, warn};
 use transmission_rpc::types as tt;
-
-pub trait IntoStream {
-    type Item;
-    type Stream: Stream<Item = Self::Item>;
-
-    fn into_stream(self) -> Self::Stream;
-}
-
-impl<T, I> IntoStream for I
-where
-    I: IntoIterator<Item = T>,
-{
-    type Item = T;
-    type Stream = futures::stream::Iter<I::IntoIter>;
-
-    fn into_stream(self) -> Self::Stream {
-        stream::iter(self)
-    }
-}
 
 pub trait TorrentExt {
     fn id(&self) -> Option<tt::Id>;
@@ -116,5 +98,27 @@ where
 
     fn info_ok_dbg(self, msg: impl Display) -> Self {
         self.tap_ok_dbg(|val| info!(?val, "{msg}"))
+    }
+}
+
+pub trait JobExt {
+    type Error;
+    fn try_into_transmission(self) -> std::result::Result<tt::TorrentAddArgs, Self::Error>;
+}
+
+impl JobExt for Job {
+    type Error = color_eyre::Report;
+
+    fn try_into_transmission(self) -> Result<tt::TorrentAddArgs> {
+        Ok(tt::TorrentAddArgs {
+            filename: Some(self.url.to_string()),
+            download_dir: Some(
+                self.dir
+                    .into_os_string()
+                    .into_string()
+                    .expect("Download dir should be valid utf-8"),
+            ),
+            ..Default::default()
+        })
     }
 }

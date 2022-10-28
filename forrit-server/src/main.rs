@@ -1,6 +1,5 @@
 //! ## Looping
 //!
-//! -> Get config
 //! -> Get subscriptions
 //! -> Get RSS (or potentially other sources)
 //! -> Turn into jobs
@@ -14,15 +13,20 @@
 #![feature(once_cell)]
 #![feature(generic_arg_infer)]
 
-mod_use::mod_use![server, model, ext, config, util];
+mod_use::mod_use![server, ext, config, util];
 
-use std::borrow::{Borrow, Cow};
+use std::{
+    borrow::{Borrow, Cow},
+    env,
+    path::PathBuf,
+};
 
 use bangumi::Api;
 use color_eyre::{
     eyre::{bail, ensure, eyre},
     Result,
 };
+use forrit_core::{IntoStream, Job, Subscription};
 use futures::{
     future::join_all,
     stream::{self, StreamExt},
@@ -30,9 +34,67 @@ use futures::{
 use reqwest::{Client, Url};
 use rss::{Channel, Item};
 use tap::{Tap, TapFallible};
-use tokio::fs;
-use tracing::{debug, info};
-use transmission_rpc::{types as tt, SharableTransClient};
+use tokio::{fs, select};
+use tracing::{debug, info, metadata::LevelFilter};
+use tracing_subscriber::{fmt, EnvFilter};
+use transmission_rpc::{
+    types::{self as tt},
+    SharableTransClient,
+};
+
+use crate::{init, Config};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    fmt()
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .with_env_var("FORRIT_LOG")
+                .from_env_lossy()
+                .add_directive("actix_server=warn".parse().unwrap()),
+        )
+        .init();
+    color_eyre::install()?;
+
+    let conf_path = env::args()
+        .nth(1)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            dirs::config_dir()
+                .expect("Unable to find config dir")
+                .join("forrit/config.toml")
+                .tap(|dir| {
+                    info!("Using default config path: {}", dir.display());
+                })
+        })
+        .tap(|path| {
+            info!("Using config path: {}", path.display());
+        });
+
+    if !conf_path.exists() {
+        info!("Config file not found, creating a new one");
+        Config::default().save_to_path(&conf_path).await?;
+    }
+
+    init(conf_path)?;
+
+    let forrit = Forrit::new().await?;
+
+    select! {
+        _ = forrit.main_loop() => {}
+        res = forrit.server() => {
+            res?;
+        }
+        res = tokio::signal::ctrl_c() => {
+            info!("Ctrl-C received, exiting");
+            res?;
+
+        }
+    }
+
+    Ok(())
+}
 
 pub struct Forrit {
     api: Api,
