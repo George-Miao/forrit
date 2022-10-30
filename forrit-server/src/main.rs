@@ -104,6 +104,7 @@ pub struct Forrit {
     rustify: RustifyClient,
     tran: SharableTransClient,
     subs: SerdeTree<Subscription>,
+    flag: Flag,
 }
 
 impl Forrit {
@@ -130,6 +131,7 @@ impl Forrit {
             req,
             tran,
             subs,
+            flag: Flag::new(),
         };
         this.validate_config().await?;
 
@@ -302,7 +304,12 @@ impl Forrit {
         info!("Starting mainloop");
 
         loop {
-            clock.tick().await;
+            select! {
+                _ = clock.tick() => {},
+                _ = self.flag.clone() => {
+                    info!("New subscription added, fetching now");
+                }
+            }
             debug!("Checking for new episodes");
             self.subs
                 .iter()

@@ -86,8 +86,7 @@ pub trait QuickExec<E: Endpoint> {
 impl<E: Endpoint> QuickExec<E> for E {
     fn quick_exec<'a, C: rustify::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C> {
         async move {
-            let mut spin =
-                spinners::Spinner::new(spinners::Spinners::Dots2, "Fetching data".into());
+            let mut spin = spinners::Spinner::new(spinners::Spinners::Dots2, "Loading..".into());
             let res = self.exec(client).await?.parse()?;
             spin.stop();
             print!("\x1b[2K\x1b[G");

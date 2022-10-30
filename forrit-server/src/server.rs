@@ -18,10 +18,10 @@ use futures::future::{ready, Ready};
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
-use tap::Pipe;
+use tap::{Pipe, Tap};
 use tracing::{info, warn};
 
-use crate::{get_config, Config, Forrit, SerdeTree, Subscription};
+use crate::{get_config, Config, Flag, Forrit, SerdeTree, Subscription};
 
 type Subs = Data<SerdeTree<Subscription>>;
 type Api = bangumi::rustify::Client;
@@ -35,6 +35,7 @@ impl Forrit {
         let subs = Data::new(self.subs.clone());
         let conf = Data::new(config);
         let rustify = Data::new(self.rustify.clone());
+        let flag = Data::new(self.flag.clone());
 
         info!("Staring server");
 
@@ -52,6 +53,7 @@ impl Forrit {
                 .app_data(conf.clone())
                 .app_data(subs.clone())
                 .app_data(rustify.clone())
+                .app_data(flag.clone())
                 .wrap(Logger::default())
                 .wrap(NormalizePath::trim())
                 .service(handle_list_subs)
@@ -94,11 +96,13 @@ async fn handle_get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Re
 async fn handle_post_sub(
     api: Data<Api>,
     db: Subs,
+    waker: Data<Flag>,
     Json(sub): Json<Subscription>,
 ) -> actix_web::Result<impl Responder> {
     validate_sub(&api, &sub).await?;
 
     let id = db.insert(&sub).into_internal()?;
+    waker.signal();
     Ok(Json(with!(id, content = sub)))
 }
 
@@ -106,12 +110,17 @@ async fn handle_post_sub(
 async fn handle_put_sub(
     api: Data<Api>,
     db: Subs,
+    waker: Data<Flag>,
     id: Path<String>,
     Json(sub): Json<Subscription>,
 ) -> actix_web::Result<impl Responder> {
     validate_sub(&api, &sub).await?;
 
-    match db.upsert(id.into_inner(), &sub).into_internal()? {
+    match db
+        .upsert(id.into_inner(), &sub)
+        .into_internal()?
+        .tap(|_| waker.signal())
+    {
         Some(res) => Ok(Either::Left(Json(json!({
             "result": "updated",
             "content": res,

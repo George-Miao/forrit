@@ -105,6 +105,7 @@ impl Future for Flag {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
         // quick check to avoid registration if already done.
         if self.0.set.load(Relaxed) {
+            self.0.set.store(false, Relaxed);
             return Poll::Ready(());
         }
 
@@ -113,6 +114,7 @@ impl Future for Flag {
         // Need to check condition **after** `register` to avoid a race
         // condition that would result in lost notifications.
         if self.0.set.load(Relaxed) {
+            self.0.set.store(false, Relaxed);
             Poll::Ready(())
         } else {
             Poll::Pending

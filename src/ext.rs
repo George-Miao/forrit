@@ -22,7 +22,7 @@ pub struct SubscriptionDisplay<'a> {
 impl Display for SubscriptionDisplay<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let bangumi = &self.sub.bangumi.name;
-        let padding = self.padding - bangumi.width_cjk();
+        let padding = self.padding.saturating_sub(bangumi.width_cjk());
         let team = self
             .sub
             .team

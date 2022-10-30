@@ -15,6 +15,7 @@ use regex::Regex;
 use requestty::{self, ListItem, Question};
 use rustify::Client;
 use tap::{Conv, Pipe, Tap, TryConv};
+use unicode_width::UnicodeWidthStr;
 
 use crate::{
     break_on_esc,
@@ -66,9 +67,14 @@ impl SubsCmd {
                     println!("No subscriptions found");
                     return Ok(());
                 }
+                let len = list
+                    .iter()
+                    .map(|x| x.content().bangumi.name.width_cjk())
+                    .max()
+                    .unwrap_or(25);
                 let choices = list
                     .iter()
-                    .map(|sub| sub.content().display(25).to_string())
+                    .map(|sub| sub.content().display(len).to_string())
                     .collect::<Vec<_>>();
                 match self {
                     Self::Del => {
