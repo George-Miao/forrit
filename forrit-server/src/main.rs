@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|| {
             dirs::config_dir()
                 .expect("Unable to find config dir")
-                .join("forrit/config.toml")
+                .join("forrit_server/config.toml")
                 .tap(|dir| {
                     info!("Using default config path: {}", dir.display());
                 })
@@ -145,7 +145,7 @@ impl Forrit {
 
     async fn retrieve_jobs(&self, sub: &Subscription) -> Result<Vec<Job>> {
         let items = self.get_rss(sub).await?;
-        let bangumi = self.api.fetch_tag(sub.bangumi.as_str()).await?;
+        let bangumi = self.api.fetch_tag(sub.bangumi.tag.as_str()).await?;
         let name = bangumi.preferred_name();
         let season = sub.season.unwrap_or(1);
         // let record = self.record()?;
@@ -183,7 +183,7 @@ impl Forrit {
 
     async fn get_rss(&self, sub: &Subscription) -> Result<Vec<Item>> {
         let rss_url = sub
-            .rss_url(&get_config().bangumi_domain)?
+            .get_rss_url(&get_config().bangumi_domain)?
             .tap(|rss_url| debug!(%rss_url));
         let rss_content = self
             .req
@@ -306,7 +306,7 @@ impl Forrit {
                     };
                     match self.retrieve_jobs(&sub).await {
                         Err(error) => {
-                            tracing::warn!(%error, bangumi_tag=%sub.bangumi, "Failed to retrieve jobs")
+                            tracing::warn!(%error, bangumi=?sub.bangumi, "Failed to retrieve jobs")
                         }
                         Ok(jobs) => {
                             if get_config().dry_run {

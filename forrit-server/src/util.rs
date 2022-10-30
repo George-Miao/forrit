@@ -18,7 +18,7 @@ use futures::{
 use nanoid::nanoid;
 use regex::Regex;
 use serde::{de::DeserializeOwned, Serialize};
-use sled::Tree;
+use sled::{Batch, Tree};
 use tap::Pipe;
 
 pub fn normalize_title(title: &str) -> Cow<'_, str> {
@@ -181,6 +181,17 @@ impl<T> SerdeTree<T> {
             return Ok(None);
         };
         Ok(Some(serde_json::from_slice(res.borrow())?))
+    }
+
+    pub fn remove_batch(&self, keys: impl IntoIterator<Item = impl AsRef<[u8]>>) -> Result<()>
+    where
+        T: DeserializeOwned,
+    {
+        let mut batch = Batch::default();
+        for key in keys {
+            batch.remove(key.as_ref());
+        }
+        self.tree.apply_batch(batch).map_err(Into::into)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Result<(String, T)>>

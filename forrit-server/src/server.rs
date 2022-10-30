@@ -58,11 +58,13 @@ impl Forrit {
                 .app_data(api.clone())
                 .wrap(Logger::default())
                 .wrap(NormalizePath::trim())
-                .service(list_subs)
-                .service(get_sub)
-                .service(add_sub)
-                .service(update_sub)
-                .service(delete_sub)
+                .service(handle_list_subs)
+                .service(handle_get_sub)
+                .service(handle_add_sub)
+                .service(handle_update_sub)
+                .service(handle_delete_sub)
+                .service(handle_delete_subs)
+                .service(handle_get_config)
         })
         .workers(num_workers)
         .bind(bind)?
@@ -73,7 +75,7 @@ impl Forrit {
 }
 
 #[get("/subscription")]
-async fn list_subs(db: Subs) -> actix_web::Result<impl Responder> {
+async fn handle_list_subs(db: Subs) -> actix_web::Result<impl Responder> {
     let res = db
         .iter_with_id()
         .collect::<Result<Vec<_>>>()
@@ -82,7 +84,7 @@ async fn list_subs(db: Subs) -> actix_web::Result<impl Responder> {
 }
 
 #[get("/subscription/{id}")]
-async fn get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
+async fn handle_get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
     db.get(id.as_str())
         .into_internal()
         .map(|x| match x {
@@ -93,7 +95,7 @@ async fn get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder
 }
 
 #[post("/subscription")]
-async fn add_sub(
+async fn handle_add_sub(
     api: Data<Api>,
     db: Subs,
     Json(sub): Json<Subscription>,
@@ -105,7 +107,7 @@ async fn add_sub(
 }
 
 #[put("/subscription/{id}")]
-async fn update_sub(
+async fn handle_update_sub(
     api: Data<Api>,
     db: Subs,
     id: Path<String>,
@@ -126,11 +128,26 @@ async fn update_sub(
 }
 
 #[delete("/subscription/{id}")]
-async fn delete_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
+async fn handle_delete_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
     match db.remove(id.into_inner()).into_internal()? {
         Some(res) => Ok(Either::Left(Json(res))),
         None => Ok(Either::Right(HttpResponse::NotFound())),
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct DelSubs {
+    pub ids: Vec<String>,
+}
+#[delete("/subscription")]
+async fn handle_delete_subs(db: Subs, req: Json<DelSubs>) -> actix_web::Result<impl Responder> {
+    db.remove_batch(req.into_inner().ids).into_internal()?;
+    Ok(HttpResponse::NoContent())
+}
+
+#[get("/config")]
+async fn handle_get_config(db: Data<Config>) -> actix_web::Result<impl Responder> {
+    Ok(Json(db))
 }
 
 trait ErrorConvert<T, E> {
@@ -201,10 +218,10 @@ impl Tags {
 
 pub async fn validate_sub(api: &Api, sub: &Subscription) -> Result<(), actix_web::Error> {
     let fut1 = async {
-        api.fetch_tag(sub.bangumi.as_str())
+        api.fetch_tag(sub.bangumi.tag.as_str())
             .await
             .into_internal_with(
-                format!("Invalid bangumi tag `{}`", sub.bangumi.as_str()),
+                format!("Invalid bangumi tag `{}`", sub.bangumi.tag.as_str()),
                 StatusCode::BAD_REQUEST,
             )
     };

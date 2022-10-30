@@ -34,6 +34,7 @@ pub fn get_config<'a>() -> &'a Config {
 }
 
 #[config]
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize)]
 pub struct Config {
     #[serde(default = "default::data_dir")]

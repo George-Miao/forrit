@@ -1,0 +1,11 @@
+data_dir = '/home/pop/.local/share/forrit'
+download_dir = '/home/pop/Downloads'
+transmission_url = 'http://localhost:9091/transmission/rpc'
+bangumi_domain = 'bangumi.moe'
+dry_run = false
+check_intervel = '1m'
+
+[server]
+bind = '127.0.0.1'
+port = 9090
+workers = 4
