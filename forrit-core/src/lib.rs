@@ -32,7 +32,7 @@ where
 }
 
 with! {
-    pub struct WithID {
+    pub struct WithId {
         id, content
     }
 }
