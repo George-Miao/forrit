@@ -1,8 +1,13 @@
-use std::future::Future;
+use std::{
+    future::Future,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
-use bangumi::{Api, SearchResult};
+use bangumi::{endpoints::SearchTags, SearchResult};
 use clap::{Parser, Subcommand};
 use color_eyre::{eyre::bail, Result};
+use forrit_core::{Subscription, WithId};
+use owo_colors::OwoColorize;
 use requestty::{
     prompt_one,
     question::{
@@ -11,7 +16,7 @@ use requestty::{
     },
     symbols, ErrorKind, ExpandItem, ListItem, OnEsc,
 };
-use rustify::{errors::ClientError, Endpoint};
+use rustify::{Client, Endpoint};
 use tap::Pipe;
 use url::Url;
 
@@ -54,7 +59,13 @@ impl Cmd {
             Cmd::Subs(cmd) => cmd.run(config).await,
             Cmd::Config => todo!(),
             Cmd::Search { query } => {
-                let SearchResult::Found(res) = Api::new().search_tag_multi(query.as_str()).await? else {
+                let res = SearchTags::builder()
+                    .name(query.as_str())
+                    .build()
+                    .exec(&Client::default(bangumi::DEFAULT_DOMAIN))
+                    .await?
+                    .parse()?;
+                let SearchResult::Found(res) = res else {
                     bail!("No result found");
                 };
                 res.into_iter()
@@ -68,85 +79,76 @@ impl Cmd {
 type ReqFut<'a, E: Endpoint + 'a, C: rustify::client::Client + 'a> =
     impl Future<Output = Result<E::Response>> + 'a;
 
-pub trait FormatExec<E: Endpoint> {
-    fn formatted_exec<'a, C: rustify::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C>;
+pub trait QuickExec<E: Endpoint> {
+    fn quick_exec<'a, C: rustify::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C>;
 }
 
-impl<E: Endpoint> FormatExec<E> for E {
-    fn formatted_exec<'a, C: rustify::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C> {
+impl<E: Endpoint> QuickExec<E> for E {
+    fn quick_exec<'a, C: rustify::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C> {
         async move {
-            let res = self
-                .exec(client)
-                .await
-                .format_error()?
-                .parse()
-                .format_error()?;
+            let mut spin =
+                spinners::Spinner::new(spinners::Spinners::Dots2, "Fetching data".into());
+            let res = self.exec(client).await?.parse()?;
+            spin.stop();
+            print!("\x1b[2K\x1b[G");
             Result::<E::Response>::Ok(res)
         }
     }
 }
 
-pub trait FormatError<T> {
-    fn format_error(self) -> color_eyre::Result<T>;
-}
+pub fn print_indent(s: &str) {
+    static INDENT: AtomicUsize = AtomicUsize::new(10);
 
-impl<T> FormatError<T> for std::result::Result<T, ClientError> {
-    fn format_error(self) -> color_eyre::Result<T> {
-        let error = match self {
-            Ok(x) => return Ok(x),
-            Err(e) => e,
-        };
-
-        match error {
-            ClientError::DataParseError { source } => bail!("Error while parsing data: {source}"),
-            ClientError::EndpointBuildError { source } => {
-                bail!("Error while building endpoint: {source}")
-            }
-            ClientError::GenericError { source } => bail!("Error: {source}"),
-            ClientError::ReqwestBuildError { source } => bail!("Error while request: {source}"),
-            ClientError::ResponseError { source } => bail!("Error in response: {source}"),
-            ClientError::RequestError {
-                source,
-                url,
-                method,
-            } => bail!("Error while {method} {url}: {source}"),
-            ClientError::RequestBuildError {
-                source,
-                method,
-                url,
-            } => bail!("Error while build {method:?} {url}: {source}"),
-
-            ClientError::ResponseConversionError { source, .. } => {
-                bail!("Error while converting response: {source}")
-            }
-            ClientError::ResponseParseError { source, .. } => {
-                bail!("Error while parsing response: {source}")
-            }
-            ClientError::ServerResponseError { code, content } => {
-                if let Some(content) = content {
-                    bail!("Server error: {content} (HTTP {code})")
-                } else {
-                    bail!("Server error (HTTP {code})")
-                }
-            }
-            ClientError::UrlBuildError { source } => bail!("Error while building url: {source}"),
-            ClientError::UrlQueryParseError { source } => {
-                bail!("Error while parsing query: {source}")
-            }
-            ClientError::UrlParseError { source } => bail!("Error while parsing url: {source}"),
-        }
+    if s.len() > INDENT.load(Ordering::Relaxed) {
+        INDENT.store(s.len() + 2, Ordering::Relaxed);
     }
+
+    print_indent_with(s, INDENT.load(Ordering::Relaxed));
 }
 
-// fn print_indent(s: &str) {
-//     static INDENT: AtomicUsize = AtomicUsize::new(7);
+fn print_indent_with(s: &str, num: usize) {
+    print!("{0:>1$} ", s.green().bold(), num);
+}
 
-//     if s.len() > INDENT.load(Ordering::Relaxed) {
-//         INDENT.store(s.len() + 2, Ordering::Relaxed);
-//     }
+fn print_sub_with_id(sub: &WithId<String, Subscription>) {
+    print_indent_with("Subs ID", 8);
+    println!("{}", sub.id());
+    print_sub(sub.content())
+}
 
-//     print!("{0:>1$} ", s.green(), INDENT.load(Ordering::Relaxed));
-// }
+fn print_sub(sub: &Subscription) {
+    print_indent_with("Name", 8);
+    println!("{}", sub.bangumi.name);
+
+    print_indent_with("Team", 8);
+    println!(
+        "{}",
+        sub.team.as_ref().map(|x| x.name.as_str()).unwrap_or("None")
+    );
+    print_indent_with("Tags", 8);
+    println!("{:?}", sub.tags);
+
+    print_indent_with("Season", 8);
+    println!("{}", sub.season.unwrap_or(1));
+
+    print_indent_with("Inc. Pat", 8);
+    println!(
+        "{}",
+        sub.include_pattern
+            .as_ref()
+            .map(|x| x.as_str())
+            .unwrap_or("None")
+    );
+
+    print_indent_with("Exc. Pat", 8);
+    println!(
+        "{}",
+        sub.exclude_pattern
+            .as_ref()
+            .map(|x| x.as_str())
+            .unwrap_or("None")
+    );
+}
 
 pub trait QuestionBuilderExt {
     type Output;

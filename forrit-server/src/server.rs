@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use actix_web::{
     delete,
     error::InternalError,
@@ -13,22 +11,20 @@ use actix_web_httpauth::{
     extractors::AuthenticationError, headers::www_authenticate::basic::Basic,
     middleware::HttpAuthentication,
 };
-use bangumi::{Api, Id};
+use bangumi::{endpoints::FetchTags, rustify::Endpoint, Id};
 use color_eyre::Result;
-use forrit_core::with;
-use futures::{
-    future::{ready, try_join, Ready},
-    StreamExt, TryStreamExt,
-};
+use forrit_core::{with, Confirm};
+use futures::future::{ready, Ready};
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
 use tap::Pipe;
 use tracing::{info, warn};
 
-use crate::{get_config, Config, Forrit, IntoStream, SerdeTree, Subscription};
+use crate::{get_config, Config, Forrit, SerdeTree, Subscription};
 
 type Subs = Data<SerdeTree<Subscription>>;
+type Api = bangumi::rustify::Client;
 
 impl Forrit {
     pub async fn server(&self) -> Result<()> {
@@ -38,7 +34,7 @@ impl Forrit {
 
         let subs = Data::new(self.subs.clone());
         let conf = Data::new(config);
-        let api = Data::new(self.api.clone());
+        let rustify = Data::new(self.rustify.clone());
 
         info!("Staring server");
 
@@ -55,13 +51,13 @@ impl Forrit {
             App::new()
                 .app_data(conf.clone())
                 .app_data(subs.clone())
-                .app_data(api.clone())
+                .app_data(rustify.clone())
                 .wrap(Logger::default())
                 .wrap(NormalizePath::trim())
                 .service(handle_list_subs)
                 .service(handle_get_sub)
-                .service(handle_add_sub)
-                .service(handle_update_sub)
+                .service(handle_post_sub)
+                .service(handle_put_sub)
                 .service(handle_delete_sub)
                 .service(handle_delete_subs)
                 .service(handle_get_config)
@@ -95,7 +91,7 @@ async fn handle_get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Re
 }
 
 #[post("/subscription")]
-async fn handle_add_sub(
+async fn handle_post_sub(
     api: Data<Api>,
     db: Subs,
     Json(sub): Json<Subscription>,
@@ -107,7 +103,7 @@ async fn handle_add_sub(
 }
 
 #[put("/subscription/{id}")]
-async fn handle_update_sub(
+async fn handle_put_sub(
     api: Data<Api>,
     db: Subs,
     id: Path<String>,
@@ -142,7 +138,7 @@ struct DelSubs {
 #[delete("/subscription")]
 async fn handle_delete_subs(db: Subs, req: Json<DelSubs>) -> actix_web::Result<impl Responder> {
     db.remove_batch(req.into_inner().ids).into_internal()?;
-    Ok(HttpResponse::NoContent())
+    Ok(Json(Confirm::default()))
 }
 
 #[get("/config")]
@@ -171,7 +167,23 @@ impl<T> ErrorConvert<T, &'static str> for color_eyre::Result<T> {
     }
 }
 
-impl<T> ErrorConvert<T, &'static str> for bangumi::Result<T> {
+impl<T> ErrorConvert<T, &'static str> for Result<T, bangumi::Error> {
+    fn into_internal(self) -> Result<T, InternalError<&'static str>> {
+        self.map_err(|error| {
+            warn!(%error);
+            InternalError::new("Internal Error", StatusCode::INTERNAL_SERVER_ERROR)
+        })
+    }
+
+    fn into_internal_with<C>(self, cause: C, code: StatusCode) -> Result<T, InternalError<C>> {
+        self.map_err(|error| {
+            warn!(%error);
+            InternalError::new(cause, code)
+        })
+    }
+}
+
+impl<T> ErrorConvert<T, &'static str> for Result<T, bangumi::rustify::errors::ClientError> {
     fn into_internal(self) -> Result<T, InternalError<&'static str>> {
         self.map_err(|error| {
             warn!(%error);
@@ -217,26 +229,16 @@ impl Tags {
 }
 
 pub async fn validate_sub(api: &Api, sub: &Subscription) -> Result<(), actix_web::Error> {
-    let fut1 = async {
-        api.fetch_tag(sub.bangumi.tag.as_str())
-            .await
-            .into_internal_with(
-                format!("Invalid bangumi tag `{}`", sub.bangumi.tag.as_str()),
-                StatusCode::BAD_REQUEST,
-            )
-    };
-    let fut2 = {
-        sub.tags
-            .deref()
-            .into_stream()
-            .then(|tag| async {
-                api.fetch_tag(tag.as_str()).await.into_internal_with(
-                    format!("Invalid filter tag `{}`", tag.as_str()),
-                    StatusCode::BAD_REQUEST,
-                )
-            })
-            .try_collect::<Vec<_>>()
-    };
-    try_join(fut1, fut2).await?;
+    sub.tags()
+        .map(|x| x.0.to_owned())
+        .collect::<Vec<_>>()
+        .pipe(|tags| FetchTags::builder().ids(tags))
+        .build()
+        .exec(api)
+        .await
+        .into_internal_with("Invalid tag", StatusCode::BAD_REQUEST)?
+        .parse()
+        .into_internal_with("Invalid tag", StatusCode::BAD_REQUEST)?;
+
     Ok(())
 }

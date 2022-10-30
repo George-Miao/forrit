@@ -86,7 +86,7 @@ mod default {
     use reqwest::Url;
 
     pub fn data_dir() -> PathBuf {
-        dirs::data_dir().unwrap().join("forrit")
+        dirs::data_dir().unwrap().join("forrit_server")
     }
     pub fn download_dir() -> PathBuf {
         dirs::download_dir().expect("unable to resolve download dir")
@@ -149,6 +149,10 @@ impl Config {
 
     pub async fn save_to_path(&self, path: impl AsRef<Path>) -> Result<()> {
         let t = toml::to_string_pretty(self)?;
+        let path = path.as_ref();
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
         tokio::fs::write(path, t).await?;
         Ok(())
     }

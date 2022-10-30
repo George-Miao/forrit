@@ -21,7 +21,10 @@ use std::{
     path::PathBuf,
 };
 
-use bangumi::Api;
+use bangumi::{
+    endpoints::FetchTag,
+    rustify::{Client as RustifyClient, Endpoint},
+};
 use color_eyre::{
     eyre::{bail, ensure, eyre},
     Result,
@@ -97,8 +100,8 @@ async fn main() -> Result<()> {
 }
 
 pub struct Forrit {
-    api: Api,
     req: Client,
+    rustify: RustifyClient,
     tran: SharableTransClient,
     subs: SerdeTree<Subscription>,
 }
@@ -112,7 +115,7 @@ impl Forrit {
 
         let req = reqwest::Client::new();
 
-        let api = bangumi::Api::new_raw(conf.bangumi_domain.to_owned(), req.clone());
+        let rustify = RustifyClient::new(bangumi::DEFAULT_DOMAIN, req.clone());
 
         let mut tran =
             SharableTransClient::new_with_client(conf.transmission_url.clone(), req.clone());
@@ -123,7 +126,7 @@ impl Forrit {
         let subs = db.open_tree("subscriptions")?.into();
 
         let this = Self {
-            api,
+            rustify,
             req,
             tran,
             subs,
@@ -145,10 +148,14 @@ impl Forrit {
 
     async fn retrieve_jobs(&self, sub: &Subscription) -> Result<Vec<Job>> {
         let items = self.get_rss(sub).await?;
-        let bangumi = self.api.fetch_tag(sub.bangumi.tag.as_str()).await?;
+        let bangumi = FetchTag::builder()
+            .id(sub.bangumi.tag.as_str())
+            .build()
+            .exec(&self.rustify)
+            .await?
+            .parse()?;
         let name = bangumi.preferred_name();
         let season = sub.season.unwrap_or(1);
-        // let record = self.record()?;
 
         debug!(?items);
 

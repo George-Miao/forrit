@@ -1,4 +1,4 @@
-use forrit_core::{Subscription, WithId};
+use forrit_core::{Confirm, Subscription, WithId};
 use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
@@ -39,17 +39,13 @@ pub enum PutResult {
 }
 
 #[derive(Debug, Clone, Endpoint, TypedBuilder)]
-#[endpoint(
-    path = "/subscription/{self.id}",
-    method = "DELETE",
-    response = "Subscription"
-)]
+#[endpoint(path = "/subscription/{self.id}", method = "DELETE")]
 pub struct DeleteSub {
     id: String,
 }
 
 #[derive(Debug, Clone, Endpoint, TypedBuilder)]
-#[endpoint(path = "/subscription", method = "DELETE")]
+#[endpoint(path = "/subscription", method = "DELETE", response = "Confirm")]
 pub struct DeleteSubs {
     #[endpoint(body)]
     ids: Vec<String>,

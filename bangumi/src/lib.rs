@@ -1,80 +1,23 @@
-mod api;
-mod error;
 mod model;
 
-pub use error::*;
+pub mod endpoints;
 pub use model::*;
-use reqwest::Client;
+pub use rustify;
 
-pub const DEFAULT_DOMAIN: &str = "bangumi.moe";
+pub const DEFAULT_DOMAIN: &str = "https://bangumi.moe";
 
-#[derive(Debug, Clone)]
-pub struct Api {
-    domain: Option<String>,
-    client: Client,
-}
+use rustify::errors::ClientError as RustifyError;
+use thiserror::Error;
 
-impl Api {
-    #[inline]
-    pub fn new() -> Self {
-        Self {
-            domain: None,
-            client: Client::new(),
-        }
-    }
+#[derive(Debug, Error)]
+pub enum Error {
+    /// Some endpoints return different data depend on their version
+    #[error("Api version error: {0}")]
+    Version(String),
 
-    #[inline]
-    pub fn new_with_client(client: Client) -> Self {
-        Self {
-            domain: None,
-            client,
-        }
-    }
+    #[error("rustify error: {0}")]
+    Rustify(#[from] RustifyError),
 
-    #[inline]
-    pub fn new_raw(domain: impl Into<Option<String>>, client: Client) -> Self {
-        let domain = domain.into();
-        Self { domain, client }
-    }
-
-    #[inline]
-    pub fn with_domain(mut self, domain: impl Into<Option<String>>) -> Self {
-        self.domain = domain.into();
-        self
-    }
-
-    #[inline]
-    pub fn domain(&self) -> &str {
-        self.domain.as_deref().unwrap_or(DEFAULT_DOMAIN)
-    }
-
-    #[inline]
-    pub fn get(&self, path: &str) -> reqwest::RequestBuilder {
-        self.client
-            .get(&format!("https://{}/api/{}", self.domain(), path))
-    }
-
-    #[inline]
-    pub fn post(&self, path: &str) -> reqwest::RequestBuilder {
-        self.client
-            .post(&format!("https://{}/api/{}", self.domain(), path))
-    }
-
-    #[inline]
-    pub fn get_v2(&self, path: &str) -> reqwest::RequestBuilder {
-        self.client
-            .get(&format!("https://{}/api/v2/{}", self.domain(), path))
-    }
-
-    #[inline]
-    pub fn post_v2(&self, path: &str) -> reqwest::RequestBuilder {
-        self.client
-            .post(&format!("https://{}/api/v2/{}", self.domain(), path))
-    }
-}
-
-impl Default for Api {
-    fn default() -> Self {
-        Self::new()
-    }
+    #[error("Search found nothing")]
+    NotFound,
 }

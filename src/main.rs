@@ -9,11 +9,25 @@ use clap::Parser;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use toml_edit::Document;
-mod_use::mod_use![api, cli];
+mod_use::mod_use![api, cli, ext];
+
+#[test]
+fn show_spinner() {
+    use spinners::{Spinner, Spinners};
+    use strum::IntoEnumIterator;
+
+    for spin in Spinners::iter() {
+        let name = format!("{} spinner", spin);
+        let mut spinner = Spinner::new(spin, name);
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        spinner.stop();
+    }
+}
 
 fn main() -> Result<()> {
     let conf = Config::default();
     color_eyre::install()?;
+
     let Err(e) = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -28,8 +42,8 @@ fn main() -> Result<()> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedConfig {
-    #[serde(default)]
-    pub bangumi_domain: Option<String>,
+    #[serde(default = "default::bangumi")]
+    pub bangumi: String,
     #[serde(default = "default::server")]
     pub server: String,
 }
@@ -37,6 +51,9 @@ pub struct ParsedConfig {
 mod default {
     pub fn server() -> String {
         "http://localhost:9090".to_string()
+    }
+    pub fn bangumi() -> String {
+        bangumi::DEFAULT_DOMAIN.to_string()
     }
 }
 

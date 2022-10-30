@@ -27,6 +27,8 @@ tap           = "1.0.1"
 dirs          = "4.0.0"
 regex         = "1.6.0"
 requestty     = "0.5.0"
+unicode-width = "0.1.10"
+spinners = "4.1.0"
 
 [profile.release]
 strip         = true
@@ -34,3 +36,6 @@ lto           = true
 opt-level     = "z"
 codegen-units = 1
 panic         = "abort"
+
+[dev-dependencies]
+strum = "0.24.1"

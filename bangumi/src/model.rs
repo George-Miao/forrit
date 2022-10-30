@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Error, Result};
+use crate::Error;
 
 microtype::microtype! {
     #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -42,9 +42,22 @@ impl<T> SearchResult<T> {
     pub fn is_none(&self) -> bool {
         matches!(self, SearchResult::None)
     }
+
+    pub fn unwrap(self) -> T {
+        match self {
+            SearchResult::Found(t) => t,
+            SearchResult::None => panic!("Unwrap on `SearchResult::None`"),
+        }
+    }
+
+    pub fn resolve(self) -> Result<T, Error> {
+        match self {
+            SearchResult::Found(t) => Ok(t),
+            SearchResult::None => Err(Error::NotFound),
+        }
+    }
 }
 
-#[doc(hidden)]
 mod __de {
     use serde::{de::Visitor, Deserialize};
 
@@ -143,13 +156,12 @@ pub struct Tag {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TagType {
+    Lang,
     Resolution,
+    Format,
     Bangumi,
     Team,
-    Format,
-    Lang,
-    #[serde(other)]
-    Unknown,
+    Misc,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -280,7 +292,7 @@ impl From<&WithId<Tag>> for Record {
 impl TryFrom<WithId<Bangumi>> for Record {
     type Error = Error;
 
-    fn try_from(bangumi: WithId<Bangumi>) -> Result<Self> {
+    fn try_from(bangumi: WithId<Bangumi>) -> Result<Self, Self::Error> {
         Ok(Self {
             name: bangumi
                 .tag
@@ -295,7 +307,7 @@ impl TryFrom<WithId<Bangumi>> for Record {
 impl TryFrom<&WithId<Bangumi>> for Record {
     type Error = Error;
 
-    fn try_from(bangumi: &WithId<Bangumi>) -> Result<Self> {
+    fn try_from(bangumi: &WithId<Bangumi>) -> Result<Self, Self::Error> {
         Ok(Self {
             name: bangumi
                 .tag
@@ -339,39 +351,51 @@ impl From<&WithId<Team>> for Record {
 // }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Torrent {
+    #[serde(rename = "_id")]
+    pub id: Id,
+    pub category_tag_id: Id,
+    pub title: String,
+    pub introduction: String,
+    pub tag_ids: Vec<Id>,
+
+    #[serde(default)]
+    pub comments: i64,
+
+    #[serde(default)]
+    pub downloads: i64,
+
+    #[serde(default)]
+    pub finished: i64,
+
+    #[serde(default)]
+    pub leechers: i64,
+
+    #[serde(default)]
+    pub seeders: i64,
+    pub uploader_id: Id,
+
+    #[serde(default)]
+    pub team_id: Option<Id>,
+    pub publish_time: Id,
+    pub magnet: String,
+    #[serde(rename = "infoHash")]
+    pub info_hash: String,
+    pub file_id: Id,
+    #[serde(default)]
+    pub teamsync: Option<bool>,
+    pub content: Vec<Content>,
+    pub size: Option<String>,
+    pub btskey: Option<String>,
+    #[serde(default)]
+    pub sync: Sync,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Torrents {
     pub torrents: Vec<Torrent>,
     pub count: i64,
     pub page_count: i64,
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Torrent {
-    #[serde(rename = "_id")]
-    pub id: Id,
-    pub category_tag_id: String,
-    pub title: String,
-    pub introduction: String,
-    pub tag_ids: Vec<Id>,
-    pub comments: i64,
-    pub downloads: i64,
-    pub finished: i64,
-    pub leechers: i64,
-    pub seeders: i64,
-    pub uploader_id: String,
-    pub team_id: String,
-    pub publish_time: String,
-    pub magnet: String,
-    #[serde(rename = "infoHash")]
-    pub info_hash: String,
-    pub file_id: String,
-    #[serde(default)]
-    pub teamsync: Option<bool>,
-    pub content: Vec<[String; 2]>,
-    pub size: String,
-    pub btskey: String,
-    #[serde(default)]
-    pub sync: Sync,
 }
 
 #[derive(Debug, Clone, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -384,4 +408,8 @@ pub struct Sync {
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Content(String, String);
+#[serde(untagged)]
+pub enum Content {
+    Tuple([String; 2]),
+    Name(String),
+}
