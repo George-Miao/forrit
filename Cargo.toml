@@ -9,17 +9,27 @@ edition = "2021"
 [dependencies]
 forrit-core = { version = "0.1.0", path = "forrit-core" }
 
-tokio          = { version = "1.21.2", default-features = false, features = ["rt", "macros"] }
 rustify_derive = { version = "0.5.2", path = "../rustify/rustify_derive" }
 rustify        = { version = "0.5.3", path = "../rustify" }
 
-color-eyre = "0.6.2"
-clap       = "4.0.18"
-tap        = "1.0.1"
-serde      = "1.0.147"
+tokio      = { version = "1.21.2", default-features = false, features = ["rt", "macros", "fs"] }
+clap       = { version = "4.0.18", features = ["derive"] }
+toml_edit  = { version = "0.15.0", features = ["serde", "easy"] }
+url        = { version = "2.3.1", features = ["serde"] }
+bangumi    = { version = "0.1.0", path = "bangumi" }
+color-eyre = { version = "0.6.2", default-features = false }
+owo-colors = { version = "3.5.0", features = ["supports-colors"] }
+
+typed-builder = "0.10.0"
+mod_use       = "0.2.1"
+serde         = "1.0.147"
+tap           = "1.0.1"
+dirs          = "4.0.0"
+regex         = "1.6.0"
+requestty     = "0.5.0"
 
 [profile.release]
-# strip         = true
+strip         = true
 lto           = true
 opt-level     = "z"
 codegen-units = 1
