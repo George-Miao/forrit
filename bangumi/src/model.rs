@@ -1,60 +1,47 @@
 use std::{
     collections::HashMap,
-    fmt::Display,
     ops::{Deref, DerefMut},
 };
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[repr(transparent)]
-pub struct Id(pub String);
+use crate::{Error, Result};
 
-impl Id {
-    // pub fn to_oid(&self) -> Result<ObjectId> {
-    //     Ok(ObjectId::with_string(&self.0)?)
-    // }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
+microtype::microtype! {
+    #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+    pub String {
+        Id,
+        Name
     }
 }
 
-impl Display for Id {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
+macro_rules! impl_display {
+    ($i:ident) => {
+        impl ::std::fmt::Display for $i {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+    };
 }
 
-impl Deref for Id {
-    type Target = str;
+impl_display!(Id);
+impl_display!(Name);
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl AsRef<[u8]> for Id {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_bytes()
-    }
-}
-
-impl AsRef<str> for Id {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl From<String> for Id {
-    fn from(s: String) -> Self {
-        Self(s)
-    }
-}
 #[derive(Debug, Clone)]
 pub enum SearchResult<T> {
     Found(T),
     None,
+}
+
+impl<T> SearchResult<T> {
+    pub fn is_found(&self) -> bool {
+        matches!(self, SearchResult::Found(_))
+    }
+
+    pub fn is_none(&self) -> bool {
+        matches!(self, SearchResult::None)
+    }
 }
 
 #[doc(hidden)]
@@ -122,6 +109,22 @@ pub struct Bangumi {
     pub acgdb_id: Option<String>,
     /// Only exist on v2 api
     pub tag: Option<WithId<Tag>>,
+}
+
+impl WithId<Bangumi> {
+    pub fn into_record(self) -> Option<WithId<Name>> {
+        Some(WithId {
+            data: self.tag.as_ref()?.inner().preferred_name_owned(),
+            id: self.into_inner().tag_id,
+        })
+    }
+
+    pub fn as_record(&self) -> Option<WithId<Name>> {
+        Some(WithId {
+            data: self.tag.as_ref()?.inner().preferred_name_owned(),
+            id: self.inner().tag_id.clone(),
+        })
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -194,9 +197,13 @@ impl Tag {
             .or(self.locale.ja.as_ref())
             .unwrap_or(&self.name)
     }
+
+    pub fn preferred_name_owned(&self) -> Name {
+        self.preferred_name().to_owned().into()
+    }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct WithId<T> {
     #[serde(rename = "_id")]
     pub id: Id,
@@ -219,12 +226,23 @@ impl<T> DerefMut for WithId<T> {
 }
 
 impl<T> WithId<T> {
-    pub fn unwrap(self) -> T {
-        self.data
+    pub fn new(id: Id, data: T) -> Self {
+        Self { id, data }
     }
 
     pub fn inner(&self) -> &T {
         &self.data
+    }
+
+    pub fn into_inner(self) -> T {
+        self.data
+    }
+
+    pub fn map<R>(self, f: impl FnOnce(T) -> R) -> WithId<R> {
+        WithId {
+            id: self.id,
+            data: f(self.data),
+        }
     }
 
     // pub fn into_oid(self) -> Result<WithOId<T>> {
@@ -234,3 +252,148 @@ impl<T> WithId<T> {
     //     })
     // }
 }
+
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Record {
+    pub tag: Id,
+    pub name: Name,
+}
+
+impl From<WithId<Tag>> for Record {
+    fn from(tag: WithId<Tag>) -> Self {
+        Self {
+            name: tag.preferred_name_owned(),
+            tag: tag.id,
+        }
+    }
+}
+
+impl From<&WithId<Tag>> for Record {
+    fn from(tag: &WithId<Tag>) -> Self {
+        Self {
+            name: tag.preferred_name_owned(),
+            tag: tag.id.to_owned(),
+        }
+    }
+}
+
+impl TryFrom<WithId<Bangumi>> for Record {
+    type Error = Error;
+
+    fn try_from(bangumi: WithId<Bangumi>) -> Result<Self> {
+        Ok(Self {
+            name: bangumi
+                .tag
+                .as_ref()
+                .ok_or_else(|| Error::Version("v1 api does not have `tag` field".into()))?
+                .preferred_name_owned(),
+            tag: bangumi.into_inner().tag_id,
+        })
+    }
+}
+
+impl TryFrom<&WithId<Bangumi>> for Record {
+    type Error = Error;
+
+    fn try_from(bangumi: &WithId<Bangumi>) -> Result<Self> {
+        Ok(Self {
+            name: bangumi
+                .tag
+                .as_ref()
+                .ok_or_else(|| Error::Version("v1 api does not have `tag` field".into()))?
+                .preferred_name_owned(),
+            tag: bangumi.tag_id.to_owned(),
+        })
+    }
+}
+
+impl From<WithId<Team>> for Record {
+    fn from(team: WithId<Team>) -> Self {
+        Self {
+            name: team.tag.preferred_name_owned(),
+            tag: team.into_inner().tag_id,
+        }
+    }
+}
+
+impl From<&WithId<Team>> for Record {
+    fn from(team: &WithId<Team>) -> Self {
+        Self {
+            name: team.tag.preferred_name_owned(),
+            tag: team.tag_id.to_owned(),
+        }
+    }
+}
+
+// Example code that deserializes and serializes the model.
+// extern crate serde;
+// #[macro_use]
+// extern crate serde_derive;
+// extern crate serde_json;
+//
+// use generated_module::[object Object];
+//
+// fn main() {
+//     let json = r#"{"answer": 42}"#;
+//     let model: [object Object] = serde_json::from_str(&json).unwrap();
+// }
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Torrents {
+    pub torrents: Vec<Torrent>,
+    pub count: i64,
+    pub page_count: i64,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Torrent {
+    #[serde(rename = "_id")]
+    pub id: Id,
+    pub category_tag_id: String,
+    pub title: String,
+    pub introduction: String,
+    pub tag_ids: Vec<Id>,
+    pub comments: i64,
+    pub downloads: i64,
+    pub finished: i64,
+    pub leechers: i64,
+    pub seeders: i64,
+    pub uploader_id: String,
+    pub team_id: String,
+    pub publish_time: String,
+    pub magnet: String,
+    #[serde(rename = "infoHash")]
+    pub info_hash: String,
+    pub file_id: String,
+    #[serde(default)]
+    pub teamsync: Option<bool>,
+    pub content: Vec<[String; 2]>,
+    pub size: String,
+    pub btskey: String,
+    #[serde(default)]
+    pub sync: Sync,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Sync {
+    pub dmhy: Option<String>,
+    pub acgrip: Option<String>,
+    pub acgnx: Option<String>,
+    pub acgnx_int: Option<String>,
+    pub nyaa: Option<String>,
+}
+
+impl Default for Sync {
+    fn default() -> Self {
+        Self {
+            dmhy: None,
+            acgrip: None,
+            acgnx: None,
+            acgnx_int: None,
+            nyaa: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Content(String, String);

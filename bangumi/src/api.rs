@@ -1,9 +1,12 @@
-use crate::{Bangumi, Current, SearchResult, Tag, WithId};
+use crate::{Bangumi, Current, SearchResult, Tag, Torrents, WithId};
 
 macro_rules! api {
-    ($name:ident($path:expr) :: $method:ident ($( $param:ident($realarg:literal): $ty:ty, )+ $($param_default:literal = $val:expr $(,)?)*) -> $ret:ty) => {
+    ($name:ident($path:expr) :: $method:ident
+        ($( $param:ident($realarg:literal): $ty:ty, )+
+        $($param_default:literal = $val:expr $(,)?)*) -> $ret:ty
+    ) => {
             impl $crate::Api {
-                pub async fn $name(&self, $( $param: impl Into<$ty> + Sync )*) -> $crate::Result<$ret> {
+                pub async fn $name (&self, $( $param: impl Into<$ty> + Sync )*) -> $crate::Result<$ret> {
                     self.$method($path)
                     .json(&::serde_json::json!({
                         $($realarg: $param.into(),)*
@@ -55,11 +58,17 @@ macro_rules! api {
     }
 }
 
-api!(fetch_tag("tag/fetch")         :: post (tag("_id"): &str, ) -> WithId<Tag>);
-api!(search_tag_multi("tag/search") :: post (name("name"): &str, "keywords" = true, "multi" = true) -> SearchResult<Vec<Tag>>);
-api!(search_tag("tag/search")       :: post (name("name"): &str, "keywords" = true) -> SearchResult<Tag>);
-api!(current_v1("bangumi/current")  :: get () -> Vec<Bangumi>);
-api!(current_v2("bangumi/current")  :: get_v2 () -> Current);
+api!(fetch_tag       ("tag/fetch")        :: post (tag("_id"): &str, ) -> WithId<Tag>);
+api!(search_tag_multi("tag/search")       :: post (name("name"): &str, "keywords" = true, "multi" = true) -> SearchResult<Vec<WithId<Tag>>>);
+api!(search_tag      ("tag/search")       :: post (name("name"): &str, "keywords" = true) -> SearchResult<WithId<Tag>>);
+api!(popular_bangumi ("tag/popbangumi")   :: get () -> Vec<WithId<Tag>>);
+api!(common_tags     ("tag/common")       :: get () -> Vec<WithId<Tag>>);
+api!(misc_tags       ("tag/misc")         :: get () -> Vec<WithId<Tag>>);
+api!(suggest_tags    ("tag/suggest")      :: post (query("query"): String,) -> Vec<WithId<Tag>>);
+api!(fetch_bangumi   ("bangumi/fetch")    :: post (bangumi_id("_id"): &str, ) -> WithId<Bangumi>);
+api!(current_v1      ("bangumi/current")  :: get () -> Vec<WithId<Bangumi>>);
+api!(current_v2      ("bangumi/current")  :: get_v2 () -> Current);
+api!(search_torrent  ("torrent/search")   :: post(tags("tag_id"): Vec<String>, ) -> Torrents);
 
 api!(@test fetch_tag("632762c52eaf6e578875f7c6") => tag => {
     use std::ops::Deref;
@@ -67,6 +76,10 @@ api!(@test fetch_tag("632762c52eaf6e578875f7c6") => tag => {
     assert_eq!(tag.id.deref(), "632762c52eaf6e578875f7c6");
     assert_eq!(tag.name, "BLEACH 千年血戰篇");
 });
+api!(@test suggest_tags("BLEACH 千年血戰篇") => tags => {
+    assert!(!tags.is_empty());
+});
+
 api!(@test search_tag_multi("BLEACH") => result => {
     match result {
         SearchResult::Found(tags) => {
@@ -77,3 +90,4 @@ api!(@test search_tag_multi("BLEACH") => result => {
         }
     }
 });
+api!(@test search_torrent(vec!["632762cc2eaf6e578875f7de".to_owned()]) => _a => {});
