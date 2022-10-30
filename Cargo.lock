@@ -333,6 +333,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bangumi"
+version = "0.1.0"
+source = "git+https://github.com/George-Miao/forrit/#90b648928ee99b28c240bb84dd869e794242ef60"
+dependencies = [
+ "microtype",
+ "paste",
+ "rustify",
+ "rustify_derive",
+ "serde",
+ "thiserror",
+ "typed-builder 0.11.0",
+]
+
+[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -937,11 +951,11 @@ dependencies = [
 name = "forrit"
 version = "0.1.0"
 dependencies = [
- "bangumi",
+ "bangumi 0.1.0 (git+https://github.com/George-Miao/forrit/)",
  "clap",
  "color-eyre",
  "dirs",
- "forrit-core",
+ "forrit-core 0.1.0 (git+https://github.com/George-Miao/forrit/)",
  "mod_use",
  "owo-colors",
  "regex",
@@ -963,7 +977,24 @@ dependencies = [
 name = "forrit-core"
 version = "0.1.0"
 dependencies = [
- "bangumi",
+ "bangumi 0.1.0 (git+https://github.com/George-Miao/forrit/)",
+ "futures",
+ "mod_use",
+ "paste",
+ "regex",
+ "serde",
+ "serde_regex",
+ "serde_with",
+ "thiserror",
+ "url",
+]
+
+[[package]]
+name = "forrit-core"
+version = "0.1.0"
+source = "git+https://github.com/George-Miao/forrit/#90b648928ee99b28c240bb84dd869e794242ef60"
+dependencies = [
+ "bangumi 0.1.0 (git+https://github.com/George-Miao/forrit/)",
  "futures",
  "mod_use",
  "paste",
@@ -981,10 +1012,10 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
- "bangumi",
+ "bangumi 0.1.0 (git+https://github.com/George-Miao/forrit/)",
  "color-eyre",
  "dirs",
- "forrit-core",
+ "forrit-core 0.1.0 (git+https://github.com/George-Miao/forrit/)",
  "futures",
  "humantime-serde",
  "mod_use",
@@ -2024,6 +2055,7 @@ dependencies = [
 [[package]]
 name = "rustify"
 version = "0.5.3"
+source = "git+https://github.com/George-Miao/rustify/#b19e39d2b5173750599f18fe32917403f661ee07"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2042,6 +2074,7 @@ dependencies = [
 [[package]]
 name = "rustify_derive"
 version = "0.5.2"
+source = "git+https://github.com/George-Miao/rustify/#b19e39d2b5173750599f18fe32917403f661ee07"
 dependencies = [
  "proc-macro2",
  "quote",

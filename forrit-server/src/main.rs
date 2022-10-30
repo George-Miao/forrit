@@ -36,12 +36,12 @@ use futures::{
 };
 use reqwest::{Client, Url};
 use rss::{Channel, Item};
-use tap::{Tap, TapFallible};
+use tap::{Pipe, Tap, TapFallible};
 use tokio::{fs, select};
 use tracing::{debug, info, metadata::LevelFilter};
 use tracing_subscriber::{fmt, EnvFilter};
 use transmission_rpc::{
-    types::{self as tt},
+    types::{self as tt, TorrentSetArgs},
     SharableTransClient,
 };
 
@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
         Config::default().save_to_path(&conf_path).await?;
     }
 
-    init(conf_path)?;
+    init(conf_path).await?;
 
     let forrit = Forrit::new().await?;
 
@@ -139,13 +139,15 @@ impl Forrit {
     }
 
     async fn handle_jobs(&self, jobs: Vec<Job>) {
-        let ids = join_all(jobs.into_iter().map(|x| self.download_job(x)))
+        join_all(jobs.into_iter().map(|x| self.download_job(x)))
             .await
             .into_iter()
             .filter_map(|r| r.warn_err().ok().flatten())
             .collect::<Vec<_>>()
-            .tap_dbg(|ids| debug!(?ids));
-        self.rename_files(ids).await.warn_err_end();
+            .tap_dbg(|ids| debug!(?ids))
+            .pipe(|ids| self.postprocess(ids))
+            .await
+            .warn_err_end();
     }
 
     async fn retrieve_jobs(&self, sub: &Subscription) -> Result<Vec<Job>> {
@@ -230,8 +232,10 @@ impl Forrit {
         Ok(())
     }
 
-    async fn rename_files(&self, ids: Vec<tt::Id>) -> Result<()> {
-        self.tran
+    async fn postprocess(&self, ids: Vec<tt::Id>) -> Result<()> {
+        let config = get_config();
+        let torrents = self
+            .tran
             .torrent_get(
                 Some(vec![
                     tt::TorrentGetField::Id,
@@ -243,7 +247,9 @@ impl Forrit {
             .await
             .map_err(|e| eyre!(e))?
             .arguments
-            .torrents
+            .torrents;
+        torrents
+            .iter()
             .into_stream()
             .flat_map(|t| {
                 stream::repeat(
@@ -252,20 +258,40 @@ impl Forrit {
                 )
                 .zip(
                     t.files
+                        .as_ref()
                         .expect("Torrent should contains file because previously requested")
                         .into_stream(),
                 )
             })
             .for_each_concurrent(None, |(id, f)| async {
-                let name = f.name;
-                let Cow::Owned(modified) = normalize_title(&name) else { return };
+                let name = &f.name;
+                let Cow::Owned(modified) = normalize_title(name) else { return };
                 info!("Renaming: `{name} => {modified}`");
                 self.tran
-                    .torrent_rename_path(vec![id], name, modified)
+                    .torrent_rename_path(vec![id], name.to_owned(), modified)
                     .await
                     .warn_err_end();
             })
             .await;
+        self.tran
+            .torrent_set(
+                TorrentSetArgs {
+                    tracker_add: config
+                        .trackers
+                        .iter()
+                        .map(|x| x.as_str().to_owned())
+                        .collect::<Vec<_>>()
+                        .pipe(Some),
+                    ..Default::default()
+                },
+                torrents
+                    .into_iter()
+                    .map(|t| t.id().unwrap())
+                    .collect::<Vec<_>>()
+                    .pipe(Some),
+            )
+            .await
+            .map_err(|e| eyre!(e))?;
         Ok(())
     }
 

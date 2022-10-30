@@ -25,14 +25,16 @@ fn show_spinner() {
 }
 
 fn main() -> Result<()> {
-    let conf = Config::default();
     color_eyre::install()?;
 
     let Err(e) = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap()
-        .block_on(Arg::parse().run(conf)) else {
+        .block_on(async {
+            let conf = Config::load().await?;
+            Arg::parse().run(conf).await
+        }) else {
             return Ok(())
         };
     println!("{}", e);
@@ -65,6 +67,15 @@ pub struct Config {
 }
 
 impl Config {
+    pub async fn load() -> Result<Self> {
+        Self::from_path(
+            dirs::config_dir()
+                .ok_or_else(|| color_eyre::eyre::eyre!("Unable to find config dir"))?
+                .join("forrit/config.toml"),
+        )
+        .await
+    }
+
     pub async fn from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_owned();
         if !path.exists() {

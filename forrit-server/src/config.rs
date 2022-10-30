@@ -6,22 +6,27 @@ use std::{
 };
 
 use color_eyre::{eyre::eyre, Result};
-use reqwest::Url;
+use futures::future::try_join_all;
+use reqwest::{Client, Url};
 use serde::Serialize;
+use tap::{Pipe, TapFallible};
+use tracing::{info, warn};
 use twelf::{config, Layer};
 
 static CONF_PATH: OnceLock<PathBuf> = OnceLock::new();
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
-pub fn init(path: impl Into<PathBuf>) -> Result<()> {
+pub async fn init(path: impl Into<PathBuf>) -> Result<()> {
     CONF_PATH
         .set(path.into())
         .map_err(|_| eyre!("Config dir already set"))?;
-    let config = Config::from_dir(
+    let mut config = Config::from_dir(
         CONF_PATH
             .get()
             .ok_or_else(|| eyre!("Config is not initialized"))?,
     )?;
+    config.load_trackers().await?;
+    info!("Loaded {} tracker(s)", config.trackers.len());
     CONFIG
         .set(config)
         .map_err(|_| eyre!("Config already set"))?;
@@ -61,6 +66,12 @@ pub struct Config {
 
     #[serde(default)]
     pub server: ServerConfig,
+
+    #[serde(default)]
+    pub trackers: Vec<Url>,
+
+    #[serde(default)]
+    pub tracker_lists: Vec<Url>,
 }
 
 #[config]
@@ -132,6 +143,8 @@ impl Default for Config {
             bangumi_domain: default::bangumi_domain(),
             dry_run: false,
             check_intervel: default::check_intervel(),
+            trackers: Vec::new(),
+            tracker_lists: Vec::new(),
             server: ServerConfig::default(),
         }
     }
@@ -141,6 +154,41 @@ impl Config {
     pub fn from_dir(dir: impl Into<PathBuf>) -> Result<Self> {
         Config::with_layers(&[Layer::Toml(dir.into()), Layer::Env(Some("FORRIT_".into()))])
             .map_err(Into::into)
+    }
+
+    pub async fn load_trackers(&mut self) -> Result<()> {
+        let client = Client::new();
+        self.tracker_lists
+            .iter()
+            .map(|x| async {
+                client
+                    .get(x.as_str())
+                    .send()
+                    .await?
+                    .text()
+                    .await
+                    .map_err(|x| eyre!("Failed to get tracker list: {}", x))
+            })
+            .collect::<Vec<_>>()
+            .pipe(try_join_all)
+            .await?
+            .join("\n")
+            .lines()
+            .filter_map(|x| {
+                if x.trim().is_empty() {
+                    return None;
+                }
+                Url::parse(x)
+                    .tap_err(|error| warn!(%error, "Unable to parse url"))
+                    .ok()
+            })
+            .into_iter()
+            .for_each(|x| {
+                if !self.trackers.contains(&x) {
+                    self.trackers.push(x)
+                }
+            });
+        Ok(())
     }
 
     pub fn db_dir(&self) -> PathBuf {
