@@ -8,8 +8,9 @@ edition = "2021"
 [dependencies]
 transmission-rpc = { git = "https://github.com/George-Miao/transmission-rpc" }
 
-forrit-core = { version = "0.1.0", path = "../forrit-core" }
-bangumi     = { version = "0.1.0", path = "../bangumi" }
+forrit-core = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/" }
+bangumi     = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/", package = "bangumi" }
+
 
 futures            = { version = "0.3.24", default-features = false, features = ["alloc", "std"] }
 twelf              = { version = "0.7.0", default-features = false, features = ["env", "toml"] }
