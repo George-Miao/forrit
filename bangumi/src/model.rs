@@ -374,25 +374,13 @@ pub struct Torrent {
     pub sync: Sync,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sync {
     pub dmhy: Option<String>,
     pub acgrip: Option<String>,
     pub acgnx: Option<String>,
     pub acgnx_int: Option<String>,
     pub nyaa: Option<String>,
-}
-
-impl Default for Sync {
-    fn default() -> Self {
-        Self {
-            dmhy: None,
-            acgrip: None,
-            acgnx: None,
-            acgnx_int: None,
-            nyaa: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
