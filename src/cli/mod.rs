@@ -1,5 +1,6 @@
 use std::{
     future::Future,
+    io::{stdout, Write},
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -22,7 +23,7 @@ use url::Url;
 
 use crate::Config;
 
-mod_use::mod_use![sub];
+mod_use::mod_use![sub, config];
 
 #[derive(Debug, Clone, Parser)]
 #[command(author, version, about)]
@@ -49,7 +50,10 @@ enum Cmd {
     Subs(SubsCmd),
 
     /// Manage configs
-    Config,
+    Config {
+        #[command(subcommand)]
+        cmd: Option<ConfigCmd>,
+    },
 
     /// Search for tags on bangumi.moe
     Search { query: String },
@@ -60,7 +64,7 @@ impl Cmd {
         symbols::set(symbols::ASCII);
         match self {
             Cmd::Subs(cmd) => cmd.run(config).await,
-            Cmd::Config => todo!(),
+            Cmd::Config { cmd } => cmd.unwrap_or_default().run(config).await,
             Cmd::Search { query } => {
                 let res = SearchTags::builder()
                     .name(query.as_str())
@@ -92,64 +96,89 @@ impl<E: Endpoint> QuickExec<E> for E {
             let mut spin = spinners::Spinner::new(spinners::Spinners::Dots2, "Loading..".into());
             let res = self.exec(client).await?.parse()?;
             spin.stop();
-            print!("\x1b[2K\x1b[G");
+            let w = stdout();
+            write!(&w, "\x1b[2K\x1b[G")?;
+            (&w).flush()?;
             Result::<E::Response>::Ok(res)
         }
     }
 }
 
-pub fn print_indent(s: &str) {
+pub fn get_indent() -> (usize, impl FnOnce(usize)) {
     static INDENT: AtomicUsize = AtomicUsize::new(10);
+    (INDENT.load(Ordering::Relaxed), |len| {
+        INDENT.store(len, Ordering::Relaxed)
+    })
+}
 
-    if s.len() > INDENT.load(Ordering::Relaxed) {
-        INDENT.store(s.len() + 2, Ordering::Relaxed);
+pub fn print_indent(s: &str) {
+    let (len, set_indent) = get_indent();
+    if s.len() > len {
+        set_indent(s.len() + 2);
     }
 
-    print_indent_with(s, INDENT.load(Ordering::Relaxed));
+    let (len, _) = get_indent();
+
+    print_indent_with(s, len);
 }
 
 fn print_indent_with(s: &str, num: usize) {
-    print!("{0:>1$} ", s.green().bold(), num);
+    write_indent_with(&mut stdout(), s, num).unwrap()
+}
+
+fn write_indent_with(w: &mut dyn Write, s: &str, num: usize) -> std::io::Result<()> {
+    write!(w, "{0:>1$} ", s.green().bold(), num)
 }
 
 fn print_sub_with_id(sub: &WithId<String, Subscription>) {
-    print_indent_with("Subs ID", 8);
-    println!("{}", sub.id());
-    print_sub(sub.content())
+    write_sub_with_id(&mut stdout(), sub).unwrap()
+}
+
+fn write_sub_with_id(w: &mut dyn Write, sub: &WithId<String, Subscription>) -> std::io::Result<()> {
+    write_indent_with(w, "Subs ID", 8)?;
+    writeln!(w, "{}", sub.id())?;
+    write_sub(w, sub.content())
 }
 
 fn print_sub(sub: &Subscription) {
-    print_indent_with("Name", 8);
-    println!("{}", sub.bangumi.name);
+    write_sub(&mut stdout(), sub).unwrap();
+}
 
-    print_indent_with("Team", 8);
-    println!(
+fn write_sub(w: &mut dyn Write, sub: &Subscription) -> std::io::Result<()> {
+    write_indent_with(w, "Name", 8)?;
+    writeln!(w, "{}", sub.bangumi.name)?;
+
+    write_indent_with(w, "Team", 8)?;
+    writeln!(
+        w,
         "{}",
         sub.team.as_ref().map(|x| x.name.as_str()).unwrap_or("None")
-    );
-    print_indent_with("Tags", 8);
-    println!("{:?}", sub.tags);
+    )?;
+    write_indent_with(w, "Tags", 8)?;
+    writeln!(w, "{:?}", sub.tags)?;
 
-    print_indent_with("Season", 8);
-    println!("{}", sub.season.unwrap_or(1));
+    write_indent_with(w, "Season", 8)?;
+    writeln!(w, "{}", sub.season.unwrap_or(1))?;
 
-    print_indent_with("Inc. Pat", 8);
-    println!(
+    write_indent_with(w, "Inc. Pat", 8)?;
+    writeln!(
+        w,
         "{}",
         sub.include_pattern
             .as_ref()
             .map(|x| x.as_str())
             .unwrap_or("None")
-    );
+    )?;
 
-    print_indent_with("Exc. Pat", 8);
-    println!(
+    write_indent_with(w, "Exc. Pat", 8)?;
+    writeln!(
+        w,
         "{}",
         sub.exclude_pattern
             .as_ref()
             .map(|x| x.as_str())
             .unwrap_or("None")
-    );
+    )
 }
 
 pub trait QuestionBuilderExt {

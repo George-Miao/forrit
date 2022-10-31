@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use actix_web::{
     delete,
     error::InternalError,
@@ -65,6 +67,7 @@ impl Forrit {
                 .service(handle_get_config)
         })
         .workers(num_workers)
+        .keep_alive(Duration::from_secs(90))
         .bind(bind)?
         .run()
         .await

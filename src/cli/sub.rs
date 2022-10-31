@@ -13,15 +13,15 @@ use forrit_core::Subscription;
 use owo_colors::OwoColorize;
 use regex::Regex;
 use requestty::{self, ListItem, Question};
-use rustify::Client;
+use rustify::{Client, Endpoint};
 use tap::{Conv, Pipe, Tap, TryConv};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
     break_on_esc,
-    cli::{print_sub, print_sub_with_id},
-    continue_on_esc, Config, DeleteSubs, ListSub, PostSub, PutSub, QuestionBuilderExt, QuickExec,
-    SubscriptionExt,
+    cli::{print_sub, write_sub_with_id},
+    continue_on_esc, pager, Config, DeleteSubs, ListSub, PostSub, PutSub, QuestionBuilderExt,
+    QuickExec, SubscriptionExt,
 };
 
 #[derive(Debug, Clone, Subcommand)]
@@ -55,10 +55,14 @@ impl SubsCmd {
                     if x.is_empty() {
                         println!("No subscription found");
                     } else {
-                        for sub in x {
-                            print_sub_with_id(&sub);
-                            println!("{:<15}", "");
-                        }
+                        pager(|w| {
+                            for sub in x {
+                                write_sub_with_id(w, &sub)?;
+                                writeln!(w)?;
+                            }
+                            Ok(())
+                        })
+                        .unwrap();
                     }
                 }),
             Self::Del | Self::Update => {
@@ -84,7 +88,10 @@ impl SubsCmd {
                             .pipe(|res| res.into_iter().map(|idx| list[idx.index].id().clone()))
                             .collect::<Vec<_>>()
                             .pipe(|ids| DeleteSubs::builder().ids(ids).build())
-                            .quick_exec(&forrit_client)
+                            .tap(|x| {
+                                println!("Deleting {:#?}", x);
+                            })
+                            .exec(&forrit_client)
                             .await?;
                     }
                     Self::Update => {
@@ -367,7 +374,7 @@ async fn fill_sub_detail(
                     ('v', "View current subscription"),
                 ])
                 .default_separator()
-                .choice('x', "Cancel")
+                .choice('q', "Quit")
                 .default_separator()
                 .message("Next? (ESC to finish, Enter for detail)")
                 .try_ask()
@@ -472,7 +479,7 @@ async fn fill_sub_detail(
                 })
                 .for_each(|t| println!("{}", t.title)),
             'v' => print_sub(sub),
-            'x' => bail!("Aborted"),
+            'q' => bail!("Aborted"),
             _ => unreachable!(),
         }
     }

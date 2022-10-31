@@ -190,9 +190,7 @@ impl<T> SerdeTree<T> {
         T: DeserializeOwned,
     {
         let mut batch = Batch::default();
-        for key in keys {
-            batch.remove(key.as_ref());
-        }
+        keys.into_iter().for_each(|key| batch.remove(key.as_ref()));
         self.tree.apply_batch(batch).map_err(Into::into)
     }
 

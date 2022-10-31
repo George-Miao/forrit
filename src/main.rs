@@ -1,13 +1,21 @@
 #![feature(type_alias_impl_trait)]
+#![feature(iter_intersperse)]
 
 use std::{
+    env::var_os,
+    io::Write,
     ops::{Deref, DerefMut},
     path::{Path, PathBuf},
+    process::{Command, Stdio},
 };
 
 use clap::Parser;
 use color_eyre::Result;
+use either::Either;
+use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use tap::{Pipe, TapFallible};
 use toml_edit::Document;
 mod_use::mod_use![api, cli, ext];
 
@@ -128,4 +136,105 @@ impl Default for Config {
             .join("forrit/config.toml");
         Self { parsed, path, orig }
     }
+}
+
+fn pager(f: impl FnOnce(&mut dyn Write) -> std::io::Result<()>) -> Result<()> {
+    /// Default pager environment variable
+    const DEFAULT_PAGER_ENV: &str = "PAGER";
+
+    /// Environment variable to disable pager altogether
+    const NO_PAGER_ENV: &str = "NOPAGER";
+
+    /// Last resort pager. Should work everywhere.
+    const DEFAULT_PAGER: &str = "more";
+
+    let mut pager = (|| {
+        let pager = if var_os(NO_PAGER_ENV).is_some() {
+            None
+        } else {
+            var_os(DEFAULT_PAGER_ENV)
+                .unwrap_or_else(|| DEFAULT_PAGER.into())
+                .pipe(Some)
+        }?;
+
+        Command::new(pager)
+            .stdin(Stdio::piped())
+            .spawn()
+            .tap_err(|x| eprintln!("Failed to spawn pager: {}\n\nFalling back to stdout", x))
+            .ok()
+    })();
+
+    let mut w = pager
+        .as_mut()
+        .and_then(|p| p.stdin.take())
+        .map(Either::Left)
+        .unwrap_or_else(|| std::io::stdout().lock().pipe(Either::Right));
+
+    f(&mut w)?;
+
+    drop(w);
+
+    if let Some(pager) = &mut pager {
+        pager.wait()?;
+    }
+
+    Ok(())
+}
+fn prettify_value<T: Serialize>(val: T, indent: usize) -> String {
+    let val = serde_json::to_value(&val).unwrap();
+    // let (n, _) = get_indent();
+    let n = if let Some(obj) = val.as_object() {
+        obj.keys().map(|x| x.len()).max().unwrap_or(15).max(15)
+    } else {
+        15
+    };
+    match val {
+        Value::Null => "None".to_string(),
+        Value::Bool(x) => format!("{}", x),
+        Value::Number(x) => format!("{}", x),
+        Value::String(x) => x,
+        Value::Array(x) => x
+            .into_iter()
+            .map(|x| prettify_value(x, 0))
+            .intersperse("\n  ".to_owned() + &" ".repeat(indent * n))
+            .collect::<String>(),
+        Value::Object(x) => format_obj(&x, n, indent),
+    }
+}
+
+fn format_obj(obj: &Map<String, Value>, n: usize, indent: usize) -> String {
+    if indent == 0 {
+        obj.into_iter()
+            .map(|(k, v)| format!("{:>1$} {2}", k.green(), n, prettify_value(v, 1)))
+            .intersperse("\n".to_owned())
+            .collect::<String>()
+    } else {
+        obj.into_iter()
+            .map(|(k, v)| format!("{k} = {}", prettify_value(v, indent)))
+            .intersperse("\n  ".to_owned() + &" ".repeat(indent * n))
+            .collect::<String>()
+    }
+}
+
+#[test]
+fn pretty() {
+    use serde_json::json;
+
+    let s = json!({
+        "nest": {
+            "oops": 123,
+            "hoho": [
+                "123123",
+                "123123",
+                "aojdnoahdoaspodhoaosd"
+            ]
+        },
+        "val": [
+            {
+                "hoho": "hoho"
+            }
+        ]
+    });
+
+    println!("{}", prettify_value(s, 0));
 }

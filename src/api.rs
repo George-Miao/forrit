@@ -50,3 +50,7 @@ pub struct DeleteSubs {
     #[endpoint(body)]
     ids: Vec<String>,
 }
+
+#[derive(Debug, Clone, Endpoint)]
+#[endpoint(path = "/config", response = "serde_json::Value")]
+pub struct GetConfig;
