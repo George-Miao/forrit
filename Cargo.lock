@@ -873,7 +873,6 @@ dependencies = [
  "owo-colors",
  "regex",
  "requestty",
- "reqwest",
  "rustify",
  "rustify_derive",
  "serde",
