@@ -17,7 +17,7 @@ use bangumi::{endpoints::FetchTags, rustify::Endpoint, Id};
 use color_eyre::Result;
 use forrit_core::{with, Confirm};
 use futures::future::{ready, Ready};
-use reqwest::StatusCode;
+use reqwest::{StatusCode, Url};
 use serde::Deserialize;
 use serde_json::json;
 use tap::{Pipe, Tap};
@@ -25,7 +25,8 @@ use tracing::{info, warn};
 
 use crate::{get_config, Config, Flag, Forrit, SerdeTree, Subscription};
 
-type Subs = Data<SerdeTree<Subscription>>;
+type Subs = SerdeTree<Subscription>;
+type Recs = SerdeTree<Url>;
 type Api = bangumi::rustify::Client;
 
 impl Forrit {
@@ -34,10 +35,11 @@ impl Forrit {
         let bind = (config.server.bind, config.server.port);
         let num_workers = config.server.workers;
 
-        let subs = Data::new(self.subs.clone());
+        let subs = self.subs.clone();
+        let records = self.records.clone();
         let conf = Data::new(config);
         let rustify = Data::new(self.bangumi_client.clone());
-        let flag = Data::new(self.flag.clone());
+        let flag = self.flag.clone();
 
         info!("Staring server");
 
@@ -54,8 +56,9 @@ impl Forrit {
             App::new()
                 .app_data(conf.clone())
                 .app_data(subs.clone())
-                .app_data(rustify.clone())
+                .app_data(records.clone())
                 .app_data(flag.clone())
+                .app_data(rustify.clone())
                 .wrap(Logger::default())
                 .wrap(NormalizePath::trim())
                 .service(handle_list_subs)
@@ -99,7 +102,7 @@ async fn handle_get_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Re
 async fn handle_post_sub(
     api: Data<Api>,
     db: Subs,
-    waker: Data<Flag>,
+    waker: Flag,
     Json(sub): Json<Subscription>,
 ) -> actix_web::Result<impl Responder> {
     validate_sub(&api, &sub).await?;
@@ -115,19 +118,24 @@ async fn handle_put_sub(
     db: Subs,
     waker: Data<Flag>,
     id: Path<String>,
+    records: Recs,
     Json(sub): Json<Subscription>,
 ) -> actix_web::Result<impl Responder> {
     validate_sub(&api, &sub).await?;
 
+    let id = id.into_inner();
     match db
-        .upsert(id.into_inner(), &sub)
+        .upsert(&id, &sub)
         .into_internal()?
         .tap(|_| waker.signal())
     {
-        Some(res) => Ok(Either::Left(Json(json!({
-            "result": "updated",
-            "content": res,
-        })))),
+        Some(res) => {
+            records.remove_all(&id).into_internal()?;
+            Ok(Either::Left(Json(json!({
+                "result": "updated",
+                "content": res,
+            }))))
+        }
         None => Ok(Either::Right(Json(json!({
             "result": "created",
             "content": sub,
@@ -136,9 +144,17 @@ async fn handle_put_sub(
 }
 
 #[delete("/subscription/{id}")]
-async fn handle_delete_sub(db: Subs, id: Path<String>) -> actix_web::Result<impl Responder> {
-    match db.remove(id.into_inner()).into_internal()? {
-        Some(res) => Ok(Either::Left(Json(res))),
+async fn handle_delete_sub(
+    db: Subs,
+    records: Recs,
+    id: Path<String>,
+) -> actix_web::Result<impl Responder> {
+    let id = id.into_inner();
+    match db.remove(&id).into_internal()? {
+        Some(res) => {
+            records.remove_all(&id).into_internal()?;
+            Ok(Either::Left(Json(res)))
+        }
         None => Ok(Either::Right(HttpResponse::NotFound())),
     }
 }
@@ -148,8 +164,15 @@ struct DelSubs {
     pub ids: Vec<String>,
 }
 #[delete("/subscription")]
-async fn handle_delete_subs(db: Subs, req: Json<DelSubs>) -> actix_web::Result<impl Responder> {
-    db.remove_batch(req.into_inner().ids).into_internal()?;
+async fn handle_delete_subs(
+    db: Subs,
+    records: Recs,
+    req: Json<DelSubs>,
+) -> actix_web::Result<impl Responder> {
+    let ids = req.into_inner().ids;
+    db.remove_batch(ids.iter()).into_internal()?;
+    ids.iter()
+        .try_for_each(|id| records.remove_all(id).into_internal())?;
     Ok(Json(Confirm::default()))
 }
 

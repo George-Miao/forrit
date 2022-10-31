@@ -9,14 +9,16 @@ use std::{
     },
 };
 
+use actix_web::{dev::Payload, error::InternalError, FromRequest, HttpRequest};
 use color_eyre::Result;
 use forrit_core::with;
 use futures::{
-    future::Future,
+    future::{err, ok, Future, Ready},
     task::{AtomicWaker, Context, Poll},
 };
 use nanoid::nanoid;
 use regex::Regex;
+use reqwest::{StatusCode, Url};
 use serde::{de::DeserializeOwned, Serialize};
 use sled::{Batch, Tree};
 use tap::Pipe;
@@ -129,7 +131,6 @@ impl Debug for Flag {
     }
 }
 
-#[derive(Clone)]
 pub struct SerdeTree<T> {
     tree: Tree,
     _marker: std::marker::PhantomData<T>,
@@ -219,6 +220,30 @@ impl<T> SerdeTree<T> {
     }
 }
 
+impl SerdeTree<Url> {
+    pub fn upsert_record(&self, sub_id: &str, torrent_id: &str, url: &Url) -> Result<()> {
+        let key = format!("{}:{}", sub_id, torrent_id);
+        self.upsert(key.as_bytes(), url)?;
+        Ok(())
+    }
+
+    pub fn find_record(&self, sub_id: &str, torrent_id: &str) -> Result<Option<Url>> {
+        let key = format!("{}:{}", sub_id, torrent_id);
+        self.get(key.as_bytes())
+    }
+
+    pub fn remove_all(&self, sub_id: &str) -> Result<()> {
+        let mut batch = Batch::default();
+        self.tree.scan_prefix(sub_id.as_bytes()).try_for_each(|x| {
+            let (k, _) = x?;
+            batch.remove(k);
+            Result::<()>::Ok(())
+        })?;
+        self.tree.apply_batch(batch)?;
+        Ok(())
+    }
+}
+
 impl<T> Deref for SerdeTree<T> {
     type Target = Tree;
 
@@ -244,5 +269,48 @@ impl Debug for SerdeTree<()> {
 impl<T> From<Tree> for SerdeTree<T> {
     fn from(tree: Tree) -> Self {
         Self::new(tree)
+    }
+}
+
+impl<T> Clone for SerdeTree<T> {
+    fn clone(&self) -> Self {
+        Self {
+            tree: self.tree.clone(),
+            _marker: self._marker,
+        }
+    }
+}
+
+impl<T: 'static> FromRequest for SerdeTree<T> {
+    type Error = InternalError<&'static str>;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    #[inline]
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+        if let Some(st) = req.app_data::<Self>() {
+            ok(st.clone())
+        } else {
+            err(InternalError::new(
+                "SerdeTree not found in app_data",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
+}
+
+impl FromRequest for Flag {
+    type Error = InternalError<&'static str>;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    #[inline]
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+        if let Some(st) = req.app_data::<Flag>() {
+            ok(st.clone())
+        } else {
+            err(InternalError::new(
+                "SerdeTree not found in app_data",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
     }
 }

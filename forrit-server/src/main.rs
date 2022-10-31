@@ -9,9 +9,7 @@
 #![feature(iter_intersperse)]
 #![feature(let_chains)]
 #![feature(try_blocks)]
-#![feature(never_type)]
 #![feature(once_cell)]
-#![feature(generic_arg_infer)]
 
 mod_use::mod_use![server, ext, config, util];
 
@@ -163,7 +161,7 @@ impl Forrit {
         Ok(())
     }
 
-    async fn retrieve_jobs(&self, sub: &Subscription) -> Result<Vec<Job>> {
+    async fn retrieve_jobs(&self, id: &str, sub: &Subscription) -> Result<Vec<Job>> {
         let torrents = SearchTorrents::builder()
             .tags(sub.tags().map(|x| x.0.to_owned()).collect::<Vec<_>>())
             .build()
@@ -183,7 +181,12 @@ impl Forrit {
             .into_iter()
             .filter_map(|torrent| {
                 if !config.no_cache {
-                    if let Some(url) = self.records.get(torrent.id.as_str()).ok().flatten() {
+                    if let Some(url) = self
+                        .records
+                        .find_record(id, torrent.id.as_str())
+                        .ok()
+                        .flatten()
+                    {
                         debug!(%url, "Excluded because record found");
                         return None;
                     }
@@ -214,7 +217,7 @@ impl Forrit {
 
                 let _ = self
                     .records
-                    .upsert(torrent.id.as_str(), &url)
+                    .upsert_record(id, torrent.id.as_str(), &url)
                     .tap_err(|error| debug!(?error, "Error insert record into database"));
 
                 Some(Job { url, dir })
@@ -258,7 +261,7 @@ impl Forrit {
             .map_err(|e| eyre!(e))?
             .arguments
         {
-            tt::TorrentAddedOrDuplicate::TorrentDuplicate(_) => Ok(None),
+            tt::TorrentAddedOrDuplicate::TorrentDuplicate(t) => Ok(t.id()),
             tt::TorrentAddedOrDuplicate::TorrentAdded(t) => {
                 info!(name = ?t.name, "Torrent added");
                 Ok(t.id())
@@ -345,10 +348,10 @@ impl Forrit {
                 .iter()
                 .into_stream()
                 .for_each_concurrent(None, |sub| async {
-                    let Ok((_, sub)) = sub.warn_err() else {
+                    let Ok((id, sub)) = sub.warn_err() else {
                         return
                     };
-                    match self.retrieve_jobs(&sub).await {
+                    match self.retrieve_jobs(&id, &sub).await {
                         Err(error) => {
                             tracing::warn!(%error, bangumi=?sub.bangumi, "Failed to retrieve jobs")
                         }
