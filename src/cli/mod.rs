@@ -34,7 +34,10 @@ pub struct Arg {
 }
 
 impl Arg {
-    pub async fn run(self, config: Config) -> Result<()> {
+    pub async fn run(self, mut config: Config) -> Result<()> {
+        if let Some(server) = self.server {
+            config.server = server.to_string();
+        }
         self.cmd.run(config).await
     }
 }

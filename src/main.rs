@@ -1,7 +1,7 @@
 #![feature(type_alias_impl_trait)]
 
 use std::{
-    ops::Deref,
+    ops::{Deref, DerefMut},
     path::{Path, PathBuf},
 };
 
@@ -104,6 +104,12 @@ impl Deref for Config {
 
     fn deref(&self) -> &Self::Target {
         &self.parsed
+    }
+}
+
+impl DerefMut for Config {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.parsed
     }
 }
 
