@@ -99,11 +99,18 @@ impl SubsCmd {
                             .pipe(|subs| Question::select("Subscriptions").choices(subs))
                             .ask()?
                             .pipe(|res| list[res.index].clone())
-                            .pipe(|sub| async {
+                            .pipe(|mut sub| async {
                                 let id = sub.id().clone();
-                                let sub =
-                                    request_sub(&bangumi_client, Some(sub.into_content())).await?;
-                                Result::<PutSub>::Ok(PutSub::builder().id(id).sub(sub).build())
+
+                                fill_sub_detail(
+                                    &bangumi_client,
+                                    sub.content().team.clone().into_iter().collect(),
+                                    sub.content_mut(),
+                                )
+                                .await?;
+                                Result::<PutSub>::Ok(
+                                    PutSub::builder().id(id).sub(sub.into_content()).build(),
+                                )
                             })
                             .await?
                             .quick_exec(&forrit_client)
@@ -236,7 +243,6 @@ impl SubsAddArg {
                 let tags = SearchTorrent::builder()
                     .tag_id(bangumi.id.as_str())
                     .build()
-                    .tap(|tag| println!("{tag:#?}"))
                     .quick_exec(&bangumi_client)
                     .await?
                     .pipe(|x: Vec<Torrent>| x)
@@ -348,7 +354,8 @@ async fn fill_sub_detail(
     mut teams: Vec<Record>,
     sub: &mut Subscription,
 ) -> Result<()> {
-    if teams.len() == 1 {
+    if teams.is_empty() {
+    } else if teams.len() == 1 {
         sub.team = Some(teams.remove(0));
     } else {
         sub.team = teams
