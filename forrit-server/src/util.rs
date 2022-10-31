@@ -153,7 +153,7 @@ impl<T> SerdeTree<T> {
             .pipe(Ok)
     }
 
-    /// Insert a value into the tree, and return the key that was used.
+    /// Insert a value into the tree with a generated key, and return it.
     pub fn insert(&self, value: &T) -> Result<String>
     where
         T: Serialize + DeserializeOwned,

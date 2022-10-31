@@ -33,7 +33,7 @@ use futures::{
 use reqwest::Url;
 use tap::{Pipe, Tap, TapFallible};
 use tokio::{fs, select};
-use tracing::{debug, info, metadata::LevelFilter};
+use tracing::{debug, info, metadata::LevelFilter, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 use transmission_rpc::{
     types::{self as tt, TorrentSetArgs},
@@ -134,16 +134,33 @@ impl Forrit {
         Ok(this)
     }
 
-    async fn handle_jobs(&self, jobs: Vec<Job>) {
-        join_all(jobs.into_iter().map(|x| self.download_job(x)))
-            .await
-            .into_iter()
-            .filter_map(|r| r.warn_err().ok().flatten())
-            .collect::<Vec<_>>()
-            .tap_dbg(|ids| debug!(?ids))
-            .pipe(|ids| self.postprocess(ids))
-            .await
-            .warn_err_end();
+    pub async fn validate_config(&self) -> Result<()> {
+        let Config {
+            data_dir,
+            download_dir,
+            ..
+        } = &get_config();
+
+        let res = self.tran.session_get().await.map_err(|e| {
+            warn!("Unable to call transmission rpc");
+            eyre!(e)
+        })?;
+        ensure!(
+            res.is_ok(),
+            "Transmission rpc returned an error ({})",
+            res.result
+        );
+
+        ensure!(
+            data_dir.is_absolute(),
+            "`data_dir` should be an absolute path"
+        );
+        ensure!(
+            download_dir.is_absolute(),
+            "`download_dir` should be an absolute path"
+        );
+
+        Ok(())
     }
 
     async fn retrieve_jobs(&self, sub: &Subscription) -> Result<Vec<Job>> {
@@ -207,26 +224,46 @@ impl Forrit {
         Ok(jobs)
     }
 
-    pub async fn validate_config(&self) -> Result<()> {
-        let Config {
-            data_dir,
-            download_dir,
-            ..
-        } = &get_config();
+    async fn handle_jobs(&self, jobs: Vec<Job>) {
+        join_all(jobs.into_iter().map(|x| self.download_job(x)))
+            .await
+            .into_iter()
+            .filter_map(|r| r.warn_err().ok().flatten())
+            .collect::<Vec<_>>()
+            .tap_dbg(|ids| debug!(?ids))
+            .pipe(|ids| self.postprocess(ids))
+            .await
+            .warn_err_end();
+    }
 
-        let res = self.tran.session_get().await.map_err(|e| eyre!(e))?;
-        ensure!(res.is_ok(), "Unable to call transmission rpc");
+    async fn download_job(&self, job: Job) -> Result<Option<tt::Id>> {
+        let Job { url, dir } = job;
 
-        ensure!(
-            data_dir.is_absolute(),
-            "`data_dir` should be an absolute path"
-        );
-        ensure!(
-            download_dir.is_absolute(),
-            "`download_dir` should be an absolute path"
-        );
+        let arg = tt::TorrentAddArgs {
+            filename: Some(url.to_string()),
+            download_dir: Some(
+                dir.to_str()
+                    .ok_or_else(|| {
+                        eyre!("Path `{}` contains non UTF-8 char, skipped", dir.display())
+                    })?
+                    .to_owned(),
+            ),
+            ..tt::TorrentAddArgs::default()
+        };
 
-        Ok(())
+        match self
+            .tran
+            .torrent_add(arg)
+            .await
+            .map_err(|e| eyre!(e))?
+            .arguments
+        {
+            tt::TorrentAddedOrDuplicate::TorrentDuplicate(_) => Ok(None),
+            tt::TorrentAddedOrDuplicate::TorrentAdded(t) => {
+                info!(name = ?t.name, "Torrent added");
+                Ok(t.id())
+            }
+        }
     }
 
     async fn postprocess(&self, ids: Vec<tt::Id>) -> Result<()> {
@@ -290,36 +327,6 @@ impl Forrit {
             .await
             .map_err(|e| eyre!(e))?;
         Ok(())
-    }
-
-    async fn download_job(&self, job: Job) -> Result<Option<tt::Id>> {
-        let Job { url, dir } = job;
-
-        let arg = tt::TorrentAddArgs {
-            filename: Some(url.to_string()),
-            download_dir: Some(
-                dir.to_str()
-                    .ok_or_else(|| {
-                        eyre!("Path `{}` contains non UTF-8 char, skipped", dir.display())
-                    })?
-                    .to_owned(),
-            ),
-            ..tt::TorrentAddArgs::default()
-        };
-
-        match self
-            .tran
-            .torrent_add(arg)
-            .await
-            .map_err(|e| eyre!(e))?
-            .arguments
-        {
-            tt::TorrentAddedOrDuplicate::TorrentDuplicate(_) => Ok(None),
-            tt::TorrentAddedOrDuplicate::TorrentAdded(t) => {
-                info!(name = ?t.name, "Torrent added");
-                Ok(t.id())
-            }
-        }
     }
 
     pub async fn main_loop(&self) {
