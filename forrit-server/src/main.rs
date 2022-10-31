@@ -15,18 +15,14 @@
 
 mod_use::mod_use![server, ext, config, util];
 
-use std::{
-    borrow::{Borrow, Cow},
-    env,
-    path::PathBuf,
-};
+use std::{borrow::Cow, env, path::PathBuf};
 
 use bangumi::{
-    endpoints::FetchTag,
+    endpoints::SearchTorrents,
     rustify::{Client as RustifyClient, Endpoint},
 };
 use color_eyre::{
-    eyre::{bail, ensure, eyre},
+    eyre::{ensure, eyre},
     Result,
 };
 use forrit_core::{IntoStream, Job, Subscription};
@@ -34,8 +30,7 @@ use futures::{
     future::join_all,
     stream::{self, StreamExt},
 };
-use reqwest::{Client, Url};
-use rss::{Channel, Item};
+use reqwest::Url;
 use tap::{Pipe, Tap, TapFallible};
 use tokio::{fs, select};
 use tracing::{debug, info, metadata::LevelFilter};
@@ -100,8 +95,7 @@ async fn main() -> Result<()> {
 }
 
 pub struct Forrit {
-    req: Client,
-    rustify: RustifyClient,
+    bangumi_client: RustifyClient,
     tran: SharableTransClient,
     subs: SerdeTree<Subscription>,
     flag: Flag,
@@ -127,8 +121,7 @@ impl Forrit {
         let subs = db.open_tree("subscriptions")?.into();
 
         let this = Self {
-            rustify,
-            req,
+            bangumi_client: rustify,
             tran,
             subs,
             flag: Flag::new(),
@@ -151,14 +144,15 @@ impl Forrit {
     }
 
     async fn retrieve_jobs(&self, sub: &Subscription) -> Result<Vec<Job>> {
-        let items = self.get_rss(sub).await?;
-        let bangumi = FetchTag::builder()
-            .id(sub.bangumi.tag.as_str())
+        let items = SearchTorrents::builder()
+            .tags(sub.tags().map(|x| x.0.to_owned()).collect::<Vec<_>>())
             .build()
-            .exec(&self.rustify)
+            .exec(&self.bangumi_client)
             .await?
-            .parse()?;
-        let name = bangumi.preferred_name();
+            .parse()?
+            .torrents;
+
+        let name = &sub.bangumi.name;
         let season = sub.season.unwrap_or(1);
 
         debug!(?items);
@@ -166,11 +160,15 @@ impl Forrit {
         let jobs = items
             .into_iter()
             .filter_map(|x| {
-                let filename = x.title?;
-                let enc = x.enclosure?;
+                let filename = x.title;
 
-                let url = Url::parse(&enc.url)
-                    .tap_err(|e| debug!(?e, "Excluded because failed to parse url"))
+                let url = Url::parse(&x.magnet)
+                    .tap_err(|error| {
+                        debug!(
+                            ?error,
+                            "Excluded because failed to parse url ({})", x.magnet
+                        )
+                    })
                     .ok()?;
 
                 if let Some(ref exclude) = sub.exclude_pattern && exclude.is_match(&filename) {
@@ -190,24 +188,6 @@ impl Forrit {
             .collect();
 
         Ok(jobs)
-    }
-
-    async fn get_rss(&self, sub: &Subscription) -> Result<Vec<Item>> {
-        let rss_url = sub
-            .get_rss_url(&get_config().bangumi_domain)?
-            .tap(|rss_url| debug!(%rss_url));
-        let rss_content = self
-            .req
-            .get(rss_url)
-            .send()
-            .await?
-            .error_for_status()?
-            .bytes()
-            .await?;
-        if rss_content.is_empty() {
-            bail!("RSS is empty");
-        }
-        Ok(Channel::read_from(rss_content.borrow())?.items)
     }
 
     pub async fn validate_config(&self) -> Result<()> {

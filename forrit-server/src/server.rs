@@ -34,7 +34,7 @@ impl Forrit {
 
         let subs = Data::new(self.subs.clone());
         let conf = Data::new(config);
-        let rustify = Data::new(self.rustify.clone());
+        let rustify = Data::new(self.bangumi_client.clone());
         let flag = Data::new(self.flag.clone());
 
         info!("Staring server");

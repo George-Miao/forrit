@@ -18,7 +18,6 @@ serde              = { version = "1.0.145", features = ["derive"] }
 tokio              = { version = "1.21.2", features = ["rt-multi-thread", "macros", "time", "fs", "signal"] }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 url                = { version = "2.3.1", features = ["serde"] }
-rss                = { version = "2.0.1", features = ["serde"] }
 toml               = { version = "0.5.9", features = ["preserve_order"] }
 
 color-eyre         = "0.6.2"
