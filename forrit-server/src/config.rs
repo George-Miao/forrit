@@ -72,6 +72,9 @@ pub struct Config {
 
     #[serde(default)]
     pub tracker_lists: Vec<Url>,
+
+    #[serde(default)]
+    pub no_cache: bool,
 }
 
 #[config]
@@ -146,6 +149,7 @@ impl Default for Config {
             trackers: Vec::new(),
             tracker_lists: Vec::new(),
             server: ServerConfig::default(),
+            no_cache: false,
         }
     }
 }

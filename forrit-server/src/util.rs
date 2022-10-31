@@ -229,17 +229,17 @@ impl<T> Deref for SerdeTree<T> {
     }
 }
 
+impl<T> DerefMut for SerdeTree<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.tree
+    }
+}
+
 impl Debug for SerdeTree<()> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("SerdeTree")
             .field("tree", &self.tree)
             .finish()
-    }
-}
-
-impl<T> DerefMut for SerdeTree<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.tree
     }
 }
 

@@ -98,6 +98,7 @@ pub struct Forrit {
     bangumi_client: RustifyClient,
     tran: SharableTransClient,
     subs: SerdeTree<Subscription>,
+    records: SerdeTree<Url>,
     flag: Flag,
 }
 
@@ -119,11 +120,13 @@ impl Forrit {
         };
         let db = sled::open(conf.db_dir())?;
         let subs = db.open_tree("subscriptions")?.into();
+        let records = db.open_tree("records")?.into();
 
         let this = Self {
             bangumi_client: rustify,
             tran,
             subs,
+            records,
             flag: Flag::new(),
         };
         this.validate_config().await?;
@@ -144,7 +147,7 @@ impl Forrit {
     }
 
     async fn retrieve_jobs(&self, sub: &Subscription) -> Result<Vec<Job>> {
-        let items = SearchTorrents::builder()
+        let torrents = SearchTorrents::builder()
             .tags(sub.tags().map(|x| x.0.to_owned()).collect::<Vec<_>>())
             .build()
             .exec(&self.bangumi_client)
@@ -155,18 +158,27 @@ impl Forrit {
         let name = &sub.bangumi.name;
         let season = sub.season.unwrap_or(1);
 
-        debug!(?items);
+        let config = get_config();
 
-        let jobs = items
+        debug!(?torrents);
+
+        let jobs = torrents
             .into_iter()
-            .filter_map(|x| {
-                let filename = x.title;
+            .filter_map(|torrent| {
+                if !config.no_cache {
+                    if let Some(url) = self.records.get(torrent.id.as_str()).ok().flatten() {
+                        debug!(%url, "Excluded because record found");
+                        return None;
+                    }
+                }
 
-                let url = Url::parse(&x.magnet)
+                let filename = torrent.title;
+
+                let url = Url::parse(&torrent.magnet)
                     .tap_err(|error| {
                         debug!(
                             ?error,
-                            "Excluded because failed to parse url ({})", x.magnet
+                            "Excluded because failed to parse url ({})", torrent.magnet
                         )
                     })
                     .ok()?;
@@ -181,7 +193,12 @@ impl Forrit {
                         None?
                 }
 
-                let dir = get_config().download_dir.join(format!("{name}/S{season}"));
+                let dir = config.download_dir.join(format!("{name}/S{season}"));
+
+                let _ = self
+                    .records
+                    .upsert(torrent.id.as_str(), &url)
+                    .tap_err(|error| debug!(?error, "Error insert record into database"));
 
                 Some(Job { url, dir })
             })
