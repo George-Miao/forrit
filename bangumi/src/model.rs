@@ -373,6 +373,7 @@ pub struct Torrent {
 
     #[serde(default)]
     pub seeders: i64,
+
     pub uploader_id: Id,
 
     #[serde(default)]
