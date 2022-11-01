@@ -22,6 +22,10 @@ Constantly running, fetching updates from source sites and send it to configured
 
 Used to manage subscriptions and search from source sites.
 
+## Installation
+
+TODO
+
 ## License
 
 MIT
