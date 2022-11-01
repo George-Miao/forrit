@@ -2627,8 +2627,9 @@ dependencies = [
 
 [[package]]
 name = "transmission-rpc"
-version = "0.3.7"
-source = "git+https://github.com/George-Miao/transmission-rpc#4dcb391984d2de97187a27997fce131fcd5ae361"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "180df4216995b3aeb948445d7c297fa8909ab3042e679cd8054251560e651b3b"
 dependencies = [
  "enum-iterator",
  "log",

@@ -6,11 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-transmission-rpc = { git = "https://github.com/George-Miao/transmission-rpc" }
-
 forrit-core = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/" }
 bangumi     = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/", package = "bangumi" }
-
 
 futures            = { version = "0.3.24", default-features = false, features = ["alloc", "std"] }
 twelf              = { version = "0.7.0", default-features = false, features = ["env", "toml"] }
@@ -19,6 +16,7 @@ tokio              = { version = "1.21.2", features = ["rt-multi-thread", "macro
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 url                = { version = "2.3.1", features = ["serde"] }
 toml               = { version = "0.5.9", features = ["preserve_order"] }
+transmission-rpc   = { version = "0.4.0", features = ["sync"] }
 
 color-eyre         = "0.6.2"
 dirs               = "4.0.0"
