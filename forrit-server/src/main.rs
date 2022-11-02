@@ -48,7 +48,8 @@ async fn main() -> Result<()> {
                 .with_default_directive(LevelFilter::INFO.into())
                 .with_env_var("FORRIT_LOG")
                 .from_env_lossy()
-                .add_directive("actix_server=warn".parse().unwrap()),
+                .add_directive("actix_server=warn".parse().unwrap())
+                .add_directive("transmission_rpc=warn".parse().unwrap()),
         )
         .init();
     color_eyre::install()?;
