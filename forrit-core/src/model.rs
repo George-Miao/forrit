@@ -9,7 +9,7 @@ use crate::Result;
 
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Subscription {
+pub struct BangumiSubscription {
     /// Tag and name of the bangumi.
     pub bangumi: Record,
 
@@ -32,7 +32,7 @@ pub struct Subscription {
     pub exclude_pattern: Option<Regex>,
 }
 
-impl Subscription {
+impl BangumiSubscription {
     pub fn get_rss_url(&self, base: &str) -> Result<Url> {
         let tags: String = self.tags().map(|x| x.as_str()).intersperse("+").collect();
 
@@ -48,7 +48,8 @@ impl Subscription {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Job {
+pub struct Job<I: AsRef<str>> {
+    pub id: I,
     pub url: Url,
     pub dir: PathBuf,
 }

@@ -314,3 +314,19 @@ impl FromRequest for Flag {
         }
     }
 }
+
+// pub trait WeakError: Display {
+//     fn as_std(&self) -> Option<&dyn std::error::Error>;
+// }
+
+// impl<E: Error> WeakError for E {
+//     fn as_std(&self) -> Option<&dyn std::error::Error> {
+//         Some(self)
+//     }
+// }
+
+// impl<E: Deref<Target = dyn Error>> WeakError for E {
+//     fn as_std(&self) -> Option<&dyn std::error::Error> {
+//         Some(self.deref())
+//     }
+// }

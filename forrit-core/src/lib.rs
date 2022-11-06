@@ -1,11 +1,16 @@
+#![allow(incomplete_features)]
+#![feature(async_fn_in_trait)]
 #![feature(iter_intersperse)]
+#![feature(trait_upcasting)]
+#![feature(return_position_impl_trait_in_trait)]
 
 pub use futures;
 use futures::{stream, Stream};
 
-mod_use::mod_use![model, error];
+mod_use::mod_use![model, error, notification, downloader, sites];
 
 pub use bangumi;
+pub use typetag;
 
 pub mod __reexport {
     pub use paste;

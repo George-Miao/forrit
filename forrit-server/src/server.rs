@@ -15,7 +15,7 @@ use actix_web_httpauth::{
 };
 use bangumi::{endpoints::FetchTags, rustify::Endpoint, Id};
 use color_eyre::Result;
-use forrit_core::{with, Confirm};
+use forrit_core::{with, Confirm, Site};
 use futures::future::{ready, Ready};
 use reqwest::{StatusCode, Url};
 use serde::Deserialize;
@@ -23,13 +23,18 @@ use serde_json::json;
 use tap::{Pipe, Tap};
 use tracing::{info, warn};
 
-use crate::{get_config, Config, Flag, Forrit, SerdeTree, Subscription};
+use crate::{get_config, BangumiSubscription, Config, Flag, Forrit, SerdeTree};
 
-type Subs = SerdeTree<Subscription>;
+type Subs = SerdeTree<BangumiSubscription>;
 type Recs = SerdeTree<Url>;
 type Api = bangumi::rustify::Client;
 
-impl Forrit {
+impl<S, D> Forrit<S, D>
+where
+    D: Send + 'static,
+    S: Site + Clone + Send + Sync + 'static,
+    S::Sub: Send,
+{
     pub async fn server(&self) -> Result<()> {
         let config = get_config().clone();
         let bind = (config.server.bind, config.server.port);
@@ -38,7 +43,7 @@ impl Forrit {
         let subs = self.subs.clone();
         let records = self.records.clone();
         let conf = Data::new(config);
-        let rustify = Data::new(self.bangumi_client.clone());
+        let rustify = Data::new(self.site.clone());
         let flag = self.flag.clone();
 
         info!("Staring server");
@@ -103,7 +108,7 @@ async fn handle_post_sub(
     api: Data<Api>,
     db: Subs,
     waker: Flag,
-    Json(sub): Json<Subscription>,
+    Json(sub): Json<BangumiSubscription>,
 ) -> actix_web::Result<impl Responder> {
     validate_sub(&api, &sub).await?;
 
@@ -119,7 +124,7 @@ async fn handle_put_sub(
     waker: Data<Flag>,
     id: Path<String>,
     records: Recs,
-    Json(sub): Json<Subscription>,
+    Json(sub): Json<BangumiSubscription>,
 ) -> actix_web::Result<impl Responder> {
     validate_sub(&api, &sub).await?;
 
@@ -263,7 +268,7 @@ impl Tags {
     }
 }
 
-pub async fn validate_sub(api: &Api, sub: &Subscription) -> Result<(), actix_web::Error> {
+pub async fn validate_sub(api: &Api, sub: &BangumiSubscription) -> Result<(), actix_web::Error> {
     sub.tags()
         .map(|x| x.0.to_owned())
         .collect::<Vec<_>>()

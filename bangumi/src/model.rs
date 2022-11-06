@@ -22,6 +22,12 @@ macro_rules! impl_display {
                 write!(f, "{}", self.0)
             }
         }
+
+        impl ::std::convert::AsRef<str> for $i {
+            fn as_ref(&self) -> &str {
+                &self.0
+            }
+        }
     };
 }
 

@@ -1,7 +1,5 @@
 use std::fmt::{Debug, Display};
 
-use color_eyre::Result;
-use forrit_core::Job;
 use tap::TapFallible;
 use tracing::{debug, info, warn};
 use transmission_rpc::types as tt;
@@ -101,24 +99,24 @@ where
     }
 }
 
-pub trait JobExt {
-    type Error;
-    fn try_into_transmission(self) -> std::result::Result<tt::TorrentAddArgs, Self::Error>;
-}
+// pub trait JobExt {
+//     type Error;
+//     fn try_into_transmission(self) -> std::result::Result<tt::TorrentAddArgs,
+// Self::Error>; }
 
-impl JobExt for Job {
-    type Error = color_eyre::Report;
+// impl JobExt for Job {
+//     type Error = color_eyre::Report;
 
-    fn try_into_transmission(self) -> Result<tt::TorrentAddArgs> {
-        Ok(tt::TorrentAddArgs {
-            filename: Some(self.url.to_string()),
-            download_dir: Some(
-                self.dir
-                    .into_os_string()
-                    .into_string()
-                    .expect("Download dir should be valid utf-8"),
-            ),
-            ..Default::default()
-        })
-    }
-}
+//     fn try_into_transmission(self) -> Result<tt::TorrentAddArgs> {
+//         Ok(tt::TorrentAddArgs {
+//             filename: Some(self.url.to_string()),
+//             download_dir: Some(
+//                 self.dir
+//                     .into_os_string()
+//                     .into_string()
+//                     .expect("Download dir should be valid utf-8"),
+//             ),
+//             ..Default::default()
+//         })
+//     }
+// }

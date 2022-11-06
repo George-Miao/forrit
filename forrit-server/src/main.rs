@@ -6,39 +6,31 @@
 //! -> Start download
 //! -> Rename
 
+#![allow(incomplete_features)]
+#![feature(async_fn_in_trait)]
 #![feature(iter_intersperse)]
 #![feature(let_chains)]
 #![feature(try_blocks)]
 #![feature(once_cell)]
 
-mod_use::mod_use![server, ext, config, util];
+mod_use::mod_use![server, ext, config, util, downloaders, sites];
 
-use std::{borrow::Cow, env, path::PathBuf};
+use std::{borrow::Cow, env, fmt::Debug, ops::Deref, path::PathBuf};
 
-use bangumi::{
-    endpoints::SearchTorrents,
-    rustify::{Client as RustifyClient, Endpoint},
-};
 use color_eyre::{
     eyre::{ensure, eyre},
     Result,
 };
-use forrit_core::{IntoStream, Job, Subscription};
-use futures::{
-    future::join_all,
-    stream::{self, StreamExt},
-};
+use forrit_core::{BangumiSubscription, Downloader, IntoStream, Job, Site, SiteCtx};
+use futures::{future::join_all, stream::StreamExt};
 use reqwest::Url;
-use tap::{Pipe, Tap, TapFallible};
+use serde::{de::DeserializeOwned, Serialize};
+use tap::{Pipe, Tap};
 use tokio::{fs, select};
-use tracing::{debug, info, metadata::LevelFilter, warn};
+use tracing::{debug, info, metadata::LevelFilter};
 use tracing_subscriber::{fmt, EnvFilter};
-use transmission_rpc::{
-    types::{self as tt, TorrentSetArgs},
-    SharableTransClient,
-};
 
-use crate::{init, Config};
+use crate::{init, sites::bangumi::Bangumi, transmission::TransmissionDownloader, Config};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -54,6 +46,10 @@ async fn main() -> Result<()> {
         .init();
     color_eyre::install()?;
 
+    run().await
+}
+
+async fn run() -> Result<()> {
     let conf_path = env::args()
         .nth(1)
         .map(PathBuf::from)
@@ -76,8 +72,14 @@ async fn main() -> Result<()> {
 
     init(conf_path).await?;
 
-    let forrit = Forrit::new().await?;
+    let conf = get_config();
 
+    let downloader = TransmissionDownloader::new_from_dyn_conf(conf.downloader.deref())
+        .await?
+        .unwrap();
+    let bangumi = Bangumi::default();
+
+    let forrit = Forrit::new(bangumi, downloader).await?;
     select! {
         _ = forrit.main_loop() => {}
         res = forrit.server() => {
@@ -93,37 +95,32 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-pub struct Forrit {
-    bangumi_client: RustifyClient,
-    tran: SharableTransClient,
-    subs: SerdeTree<Subscription>,
+pub struct Forrit<S: Site, D> {
+    site: S,
+    downloader: D,
+    subs: SerdeTree<S::Sub>,
     records: SerdeTree<Url>,
     flag: Flag,
 }
 
-impl Forrit {
-    pub async fn new() -> Result<Self> {
+impl<S: Site, D: Downloader> Forrit<S, D>
+where
+    S::Sub: Serialize + DeserializeOwned,
+    S::Id: Debug,
+    D::Error: Into<color_eyre::Report>,
+{
+    pub async fn new(site: S, downloader: D) -> Result<Self> {
         let conf = get_config();
 
         fs::create_dir_all(&conf.data_dir).await?;
-        fs::create_dir_all(&conf.download_dir).await?;
 
-        let req = reqwest::Client::new();
-
-        let rustify = RustifyClient::new(bangumi::DEFAULT_DOMAIN, req.clone());
-
-        let mut tran =
-            SharableTransClient::new_with_client(conf.transmission_url.clone(), req.clone());
-        if let Some((user, password)) = conf.transmission_auth.clone() {
-            tran.set_auth(tt::BasicAuth { user, password })
-        };
         let db = sled::open(conf.db_dir())?;
-        let subs = db.open_tree("subscriptions")?.into();
+        let subs = db.open_tree(S::NAME)?.into();
         let records = db.open_tree("records")?.into();
 
         let this = Self {
-            bangumi_client: rustify,
-            tran,
+            site,
+            downloader,
             subs,
             records,
             flag: Flag::new(),
@@ -134,102 +131,18 @@ impl Forrit {
     }
 
     pub async fn validate_config(&self) -> Result<()> {
-        let Config {
-            data_dir,
-            download_dir,
-            ..
-        } = &get_config();
-
-        let res = self.tran.session_get().await.map_err(|e| {
-            warn!("Unable to call transmission rpc");
-            eyre!(e)
-        })?;
-        ensure!(
-            res.is_ok(),
-            "Transmission rpc returned an error ({})",
-            res.result
-        );
+        let Config { data_dir, .. } = &get_config();
 
         ensure!(
             data_dir.is_absolute(),
             "`data_dir` should be an absolute path"
         );
-        ensure!(
-            download_dir.is_absolute(),
-            "`download_dir` should be an absolute path"
-        );
 
         Ok(())
     }
 
-    async fn retrieve_jobs(&self, id: &str, sub: &Subscription) -> Result<Vec<Job>> {
-        let torrents = SearchTorrents::builder()
-            .tags(sub.tags().map(|x| x.0.to_owned()).collect::<Vec<_>>())
-            .build()
-            .exec(&self.bangumi_client)
-            .await?
-            .parse()?
-            .torrents;
-
-        let name = &sub.bangumi.name;
-        let season = sub.season.unwrap_or(1);
-
-        let config = get_config();
-
-        debug!(?torrents);
-
-        let jobs = torrents
-            .into_iter()
-            .filter_map(|torrent| {
-                if !config.no_cache {
-                    if let Some(url) = self
-                        .records
-                        .find_record(id, torrent.id.as_str())
-                        .ok()
-                        .flatten()
-                    {
-                        debug!(%url, "Excluded because record found");
-                        return None;
-                    }
-                }
-
-                let filename = torrent.title;
-
-                let url = Url::parse(&torrent.magnet)
-                    .tap_err(|error| {
-                        debug!(
-                            ?error,
-                            "Excluded because failed to parse url ({})", torrent.magnet
-                        )
-                    })
-                    .ok()?;
-
-                if let Some(ref exclude) = sub.exclude_pattern && exclude.is_match(&filename) {
-                        debug!(filename, "Excluded because exclude pattern matches");
-                        None?
-                }
-
-                if let Some(ref include) = sub.include_pattern && !include.is_match(&filename) {
-                        debug!(filename, "Excluded because include pattern does not match");
-                        None?
-                }
-
-                let dir = config.download_dir.join(format!("{name}/S{season}"));
-
-                let _ = self
-                    .records
-                    .upsert_record(id, torrent.id.as_str(), &url)
-                    .tap_err(|error| debug!(?error, "Error insert record into database"));
-
-                Some(Job { url, dir })
-            })
-            .collect();
-
-        Ok(jobs)
-    }
-
-    async fn handle_jobs(&self, jobs: Vec<Job>) {
-        join_all(jobs.into_iter().map(|x| self.download_job(x)))
+    async fn handle_jobs(&self, jobs: impl Iterator<Item = Job<S::Id>>) {
+        join_all(jobs.map(|x| self.downloader.download(x)))
             .await
             .into_iter()
             .filter_map(|r| r.warn_err().ok().flatten())
@@ -240,94 +153,23 @@ impl Forrit {
             .warn_err_end();
     }
 
-    async fn download_job(&self, job: Job) -> Result<Option<tt::Id>> {
-        let Job { url, dir } = job;
-
-        let arg = tt::TorrentAddArgs {
-            filename: Some(url.to_string()),
-            download_dir: Some(
-                dir.to_str()
-                    .ok_or_else(|| {
-                        eyre!("Path `{}` contains non UTF-8 char, skipped", dir.display())
-                    })?
-                    .to_owned(),
-            ),
-            ..tt::TorrentAddArgs::default()
-        };
-
-        match self
-            .tran
-            .torrent_add(arg)
-            .await
-            .map_err(|e| eyre!(e))?
-            .arguments
-        {
-            tt::TorrentAddedOrDuplicate::TorrentDuplicate(t) => Ok(t.id()),
-            tt::TorrentAddedOrDuplicate::TorrentAdded(t) => {
-                info!(name = ?t.name, "Torrent added");
-                Ok(t.id())
-            }
-        }
-    }
-
-    async fn postprocess(&self, ids: Vec<tt::Id>) -> Result<()> {
+    async fn postprocess(&self, ids: Vec<D::Id>) -> Result<()> {
         let config = get_config();
-        let torrents = self
-            .tran
-            .torrent_get(
-                Some(vec![
-                    tt::TorrentGetField::Id,
-                    tt::TorrentGetField::HashString,
-                    tt::TorrentGetField::Files,
-                ]),
-                Some(ids),
-            )
-            .await
-            .map_err(|e| eyre!(e))?
-            .arguments
-            .torrents;
-        torrents
-            .iter()
+
+        ids.iter()
             .into_stream()
-            .flat_map(|t| {
-                stream::repeat(
-                    t.id()
-                        .expect("Torrent should contains id because previously requested"),
-                )
-                .zip(
-                    t.files
-                        .as_ref()
-                        .expect("Torrent should contains file because previously requested")
-                        .into_stream(),
-                )
-            })
-            .for_each_concurrent(None, |(id, f)| async {
-                let name = &f.name;
-                let Cow::Owned(modified) = normalize_title(name) else { return };
-                info!("Renaming: `{name} => {modified}`");
-                self.tran
-                    .torrent_rename_path(vec![id], name.to_owned(), modified)
+            .for_each_concurrent(None, |id| async {
+                self.downloader
+                    .rename(id, |name| {
+                        let Cow::Owned(modified) =     normalize_title(name) else { return None};
+                        Some(modified)
+                    })
                     .await
                     .warn_err_end();
             })
             .await;
-        self.tran
-            .torrent_set(
-                TorrentSetArgs {
-                    tracker_add: config
-                        .trackers
-                        .iter()
-                        .map(|x| x.as_str().to_owned())
-                        .collect::<Vec<_>>()
-                        .pipe(Some),
-                    ..Default::default()
-                },
-                torrents
-                    .into_iter()
-                    .map(|t| t.id().unwrap())
-                    .collect::<Vec<_>>()
-                    .pipe(Some),
-            )
+        self.downloader
+            .add_tracker(ids, config.trackers.iter().map(|x| x.to_string()).collect())
             .await
             .map_err(|e| eyre!(e))?;
         Ok(())
@@ -344,27 +186,45 @@ impl Forrit {
                     info!("New subscription added, fetching now");
                 }
             }
+            let config = get_config();
             debug!("Checking for new episodes");
             self.subs
                 .iter()
                 .into_stream()
                 .for_each_concurrent(None, |sub| async {
-                    let Ok((id, sub)) = sub.warn_err() else {
+                    let Ok((_, ref sub)) = sub.warn_err() else {
                         return
                     };
-                    match self.retrieve_jobs(&id, &sub).await {
+                    let download_dir = config.downloader.download_dir();
+
+                    match self.site.update(SiteCtx { download_dir, sub }).await {
                         Err(error) => {
-                            tracing::warn!(%error, bangumi=?sub.bangumi, "Failed to retrieve jobs")
+                            tracing::warn!(%error, "Failed to retrieve jobs")
                         }
                         Ok(jobs) => {
-                            if get_config().dry_run {
+                            if config.dry_run {
                                 tracing::info!(?jobs);
                                 return;
                             }
 
                             tracing::debug!(?jobs, "Adding jobs");
 
-                            self.handle_jobs(jobs).await;
+                            self.handle_jobs(jobs.into_iter().filter(|x| {
+                                if self
+                                    .records
+                                    .get(x.id.as_ref())
+                                    .warn_err()
+                                    .ok()
+                                    .flatten()
+                                    .is_some()
+                                {
+                                    false
+                                } else {
+                                    self.records.upsert(x.id.as_ref(), &x.url).warn_err_end();
+                                    true
+                                }
+                            }))
+                            .await;
                         }
                     }
                 })

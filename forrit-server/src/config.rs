@@ -1,4 +1,5 @@
 use std::{
+    fmt::Debug,
     net::IpAddr,
     path::{Path, PathBuf},
     sync::OnceLock,
@@ -6,6 +7,7 @@ use std::{
 };
 
 use color_eyre::{eyre::eyre, Result};
+use forrit_core::{DownloaderConfig, NoopConfig};
 use futures::future::try_join_all;
 use reqwest::{Client, Url};
 use serde::Serialize;
@@ -45,18 +47,6 @@ pub struct Config {
     #[serde(default = "default::data_dir")]
     pub data_dir: PathBuf,
 
-    #[serde(default = "default::download_dir")]
-    pub download_dir: PathBuf,
-
-    #[serde(default = "default::transmission_url")]
-    pub transmission_url: Url,
-
-    #[serde(default)]
-    pub transmission_auth: Option<(String, String)>,
-
-    #[serde(default = "default::bangumi_domain")]
-    pub bangumi_domain: String,
-
     #[serde(default)]
     pub dry_run: bool,
 
@@ -75,6 +65,8 @@ pub struct Config {
 
     #[serde(default)]
     pub no_cache: bool,
+
+    pub downloader: Box<dyn DownloaderConfig>,
 }
 
 #[config]
@@ -93,10 +85,9 @@ pub struct ServerConfig {
     pub workers: usize,
 }
 
-mod default {
+pub mod default {
     use std::{net::IpAddr, path::PathBuf};
 
-    use bangumi::DEFAULT_DOMAIN;
     use reqwest::Url;
 
     pub fn data_dir() -> PathBuf {
@@ -107,9 +98,6 @@ mod default {
     }
     pub fn transmission_url() -> Url {
         "http://localhost:9091/transmission/rpc".parse().unwrap()
-    }
-    pub fn bangumi_domain() -> String {
-        DEFAULT_DOMAIN.to_owned()
     }
     pub fn check_intervel() -> std::time::Duration {
         std::time::Duration::from_secs(60)
@@ -140,16 +128,13 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             data_dir: default::data_dir(),
-            download_dir: default::download_dir(),
-            transmission_url: default::transmission_url(),
-            transmission_auth: None,
-            bangumi_domain: default::bangumi_domain(),
             dry_run: false,
             check_intervel: default::check_intervel(),
             trackers: Vec::new(),
             tracker_lists: Vec::new(),
             server: ServerConfig::default(),
             no_cache: false,
+            downloader: NoopConfig.erase(),
         }
     }
 }
