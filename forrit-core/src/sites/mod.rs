@@ -10,6 +10,8 @@ pub trait Site {
     type Id: AsRef<str>;
     type Sub;
 
+    async fn validate(&self, sub: &Self::Sub) -> Result<(), Self::Error>;
+
     async fn update<'a>(
         &'a self,
         ctx: SiteCtx<'a, Self::Sub>,

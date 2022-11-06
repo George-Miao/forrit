@@ -1,6 +1,10 @@
-use bangumi::{endpoints::SearchTorrents, rustify::Client, Endpoint};
+use bangumi::{
+    endpoints::{FetchTags, SearchTorrents},
+    rustify::Client,
+    Endpoint,
+};
 use forrit_core::{BangumiSubscription, Job, Site, SiteCtx};
-use tap::TapFallible;
+use tap::{Pipe, TapFallible};
 use tracing::{debug, warn};
 use url::Url;
 
@@ -90,5 +94,18 @@ impl Site for Bangumi {
             .collect();
 
         Ok(jobs)
+    }
+
+    async fn validate(&self, sub: &Self::Sub) -> Result<(), Self::Error> {
+        sub.tags()
+            .map(|x| x.0.to_owned())
+            .collect::<Vec<_>>()
+            .pipe(|tags| FetchTags::builder().ids(tags))
+            .build()
+            .exec(&self.client)
+            .await?
+            .parse()?;
+
+        Ok(())
     }
 }
