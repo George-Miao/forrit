@@ -30,7 +30,7 @@ use tokio::{fs, select};
 use tracing::{debug, info, metadata::LevelFilter};
 use tracing_subscriber::{fmt, EnvFilter};
 
-use crate::{init, sites::bangumi::Bangumi, transmission::TransmissionDownloader, Config};
+use crate::{init, sites::bangumi::Bangumi, transmission::Transmission, Config};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -74,7 +74,7 @@ async fn run() -> Result<()> {
 
     let conf = get_config();
 
-    let downloader = TransmissionDownloader::new_from_dyn_conf(conf.downloader.deref())
+    let downloader = Transmission::new_from_dyn_conf(conf.downloader.deref())
         .await?
         .unwrap();
     let bangumi = Bangumi::default();

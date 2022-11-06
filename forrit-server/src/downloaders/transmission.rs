@@ -29,11 +29,11 @@ impl DownloaderConfig for TransmissionConfig {
     }
 }
 
-pub struct TransmissionDownloader {
+pub struct Transmission {
     trans: SharableTransClient,
 }
 
-impl Downloader for TransmissionDownloader {
+impl Downloader for Transmission {
     type Config = TransmissionConfig;
     type Error = Report;
     type Id = tt::Id;
