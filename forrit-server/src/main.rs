@@ -27,7 +27,7 @@ use reqwest::Url;
 use serde::{de::DeserializeOwned, Serialize};
 use tap::{Pipe, Tap};
 use tokio::{fs, select};
-use tracing::{debug, info, metadata::LevelFilter};
+use tracing::{debug, info, metadata::LevelFilter, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::{init, sites::bangumi::Bangumi, transmission::Transmission, Config};
