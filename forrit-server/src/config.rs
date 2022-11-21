@@ -66,6 +66,9 @@ pub struct Config {
     #[serde(default)]
     pub no_cache: bool,
 
+    #[serde(default)]
+    pub rate_limit: Option<usize>,
+
     pub downloader: Box<dyn DownloaderConfig>,
 }
 
@@ -135,6 +138,7 @@ impl Default for Config {
             server: ServerConfig::default(),
             no_cache: false,
             downloader: NoopConfig.erase(),
+            rate_limit: None,
         }
     }
 }

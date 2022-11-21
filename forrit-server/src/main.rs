@@ -191,7 +191,7 @@ where
             self.subs
                 .iter()
                 .into_stream()
-                .for_each_concurrent(None, |sub| async {
+                .for_each_concurrent(config.rate_limit, |sub| async {
                     let Ok((_, ref sub)) = sub.warn_err() else {
                         return
                     };
@@ -199,15 +199,13 @@ where
 
                     match self.site.update(SiteCtx { download_dir, sub }).await {
                         Err(error) => {
-                            tracing::warn!(%error, "Failed to retrieve jobs")
+                            warn!(%error, "Failed to retrieve jobs")
                         }
                         Ok(jobs) => {
                             if config.dry_run {
-                                tracing::info!(?jobs);
+                                info!(?jobs);
                                 return;
                             }
-
-                            tracing::debug!(?jobs, "Adding jobs");
 
                             self.handle_jobs(jobs.into_iter().filter(|x| {
                                 if self
@@ -221,6 +219,7 @@ where
                                     false
                                 } else {
                                     self.records.upsert(x.id.as_ref(), &x.url).warn_err_end();
+                                    info!(url = ?x.url, "Adding job");
                                     true
                                 }
                             }))
