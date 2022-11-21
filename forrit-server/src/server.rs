@@ -60,7 +60,7 @@ where
             api.validate(&sub)
                 .await
                 .map_err(|e| eyre!(e))
-                .into_internal()?;
+                .into_internal_with("Bad request", StatusCode::BAD_REQUEST)?;
 
             let id = db.insert(&sub).into_internal()?;
             waker.signal();
@@ -86,7 +86,7 @@ where
             api.validate(&sub)
                 .await
                 .map_err(|e| eyre!(e))
-                .into_internal()?;
+                .into_internal_with("Bad request", StatusCode::BAD_REQUEST)?;
 
             let id = id.into_inner();
             match db
