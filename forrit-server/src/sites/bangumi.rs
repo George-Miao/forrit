@@ -96,7 +96,7 @@ impl Site for Bangumi {
         Ok(jobs)
     }
 
-    async fn validate(&self, sub: &Self::Sub) -> Result<(), Self::Error> {
+    async fn validate(&self, sub: &Self::Sub) -> Result<bool, Self::Error> {
         sub.tags()
             .map(|x| x.0.to_owned())
             .collect::<Vec<_>>()
@@ -104,8 +104,8 @@ impl Site for Bangumi {
             .build()
             .exec(&self.client)
             .await?
-            .parse()?;
-
-        Ok(())
+            .parse()
+            .is_ok()
+            .pipe(Ok)
     }
 }

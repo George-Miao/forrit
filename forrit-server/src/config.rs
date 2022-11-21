@@ -6,7 +6,6 @@ use std::{
     time::Duration,
 };
 
-use color_eyre::{eyre::eyre, Result};
 use forrit_core::{DownloaderConfig, NoopConfig};
 use futures::future::try_join_all;
 use reqwest::{Client, Url};
@@ -15,24 +14,21 @@ use tap::{Pipe, TapFallible};
 use tracing::{info, warn};
 use twelf::{config, Layer};
 
+use crate::{Error, Result};
+
 static CONF_PATH: OnceLock<PathBuf> = OnceLock::new();
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
 pub async fn init(path: impl Into<PathBuf>) -> Result<()> {
     CONF_PATH
         .set(path.into())
-        .map_err(|_| eyre!("Config dir already set"))?;
-    let mut config = Config::from_dir(
-        CONF_PATH
-            .get()
-            .ok_or_else(|| eyre!("Config is not initialized"))?,
-    )?;
+        .map_err(|_| Error::ConfigInitError("Config path already set"))?;
+    let mut config = Config::from_dir(CONF_PATH.get().unwrap())?;
     config.load_trackers().await?;
     info!("Loaded {} tracker(s)", config.trackers.len());
     CONFIG
         .set(config)
-        .map_err(|_| eyre!("Config already set"))?;
-    // Ok(REQUIRE_RELOAD.clone())
+        .map_err(|_| Error::ConfigInitError("Config already set"))?;
     Ok(())
 }
 
@@ -153,15 +149,7 @@ impl Config {
         let client = Client::new();
         self.tracker_lists
             .iter()
-            .map(|x| async {
-                client
-                    .get(x.as_str())
-                    .send()
-                    .await?
-                    .text()
-                    .await
-                    .map_err(|x| eyre!("Failed to get tracker list: {}", x))
-            })
+            .map(|x| async { client.get(x.as_str()).send().await?.text().await })
             .collect::<Vec<_>>()
             .pipe(try_join_all)
             .await?

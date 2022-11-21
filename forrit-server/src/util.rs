@@ -10,7 +10,6 @@ use std::{
 };
 
 use actix_web::{dev::Payload, error::InternalError, FromRequest, HttpRequest};
-use color_eyre::Result;
 use forrit_core::with;
 use futures::{
     future::{err, ok, Future, Ready},
@@ -22,6 +21,8 @@ use reqwest::{StatusCode, Url};
 use serde::{de::DeserializeOwned, Serialize};
 use sled::{Batch, Tree};
 use tap::Pipe;
+
+use crate::Result;
 
 pub fn normalize_title(title: &str) -> Cow<'_, str> {
     const EXPECT_ERR: &str = "Regex should compile";

@@ -1,8 +1,4 @@
-use std::{
-    any::Any,
-    fmt::{Debug, Display},
-    path::Path,
-};
+use std::{any::Any, fmt::Debug, path::Path};
 
 use dyn_clonable::clonable;
 use serde::{Deserialize, Serialize};
@@ -10,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::Job;
 
 pub trait Downloader {
-    type Error: Display;
+    type Error: std::error::Error + Send + Sync + 'static;
     type Config: DownloaderConfig;
     type Id: Debug;
 
@@ -70,7 +66,7 @@ pub struct NoopDownloader;
 
 impl Downloader for NoopDownloader {
     type Config = NoopConfig;
-    type Error = String;
+    type Error = std::convert::Infallible;
     type Id = ();
 
     async fn download<I: AsRef<str>>(&self, _: Job<I>) -> Result<Option<Self::Id>, Self::Error> {

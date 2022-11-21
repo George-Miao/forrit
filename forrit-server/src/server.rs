@@ -1,26 +1,25 @@
 use std::time::Duration;
 
 use actix_web::{
-    error::InternalError,
+    body::BoxBody,
     middleware::{Logger, NormalizePath},
     web::*,
-    App, Either, FromRequest, HttpResponse, HttpServer,
+    App, Either, FromRequest, HttpResponse, HttpServer, ResponseError,
 };
 use actix_web_httpauth::{
     extractors::AuthenticationError, headers::www_authenticate::basic::Basic,
     middleware::HttpAuthentication,
 };
 use bangumi::Id;
-use color_eyre::{eyre::eyre, Report, Result};
 use forrit_core::{with, Confirm, Site};
 use futures::future::{ready, Ready};
-use reqwest::{StatusCode, Url};
+use reqwest::{header::HeaderValue, StatusCode, Url};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 use tap::{Pipe, Tap};
 use tracing::{info, warn};
 
-use crate::{get_config, BangumiSubscription, Config, Flag, Forrit, SerdeTree};
+use crate::{get_config, BangumiSubscription, Config, Error, Flag, Forrit, Result, SerdeTree};
 
 type Subs = SerdeTree<BangumiSubscription>;
 type Recs = SerdeTree<Url>;
@@ -46,35 +45,34 @@ where
         info!("Staring server");
 
         let handle_list_subs = |db: SerdeTree<S::Sub>| async move {
-            let res = db
-                .iter_with_id()
-                .collect::<Result<Vec<_>>>()
-                .into_internal()?;
-            actix_web::Result::<_>::Ok(Json(res))
+            let res = db.iter_with_id().collect::<Result<Vec<_>>>()?;
+            Result::<_>::Ok(Json(res))
         };
 
         let handle_post_sub = |api: Data<S>,
                                db: SerdeTree<S::Sub>,
                                waker: Flag,
                                Json(sub): Json<S::Sub>| async move {
-            api.validate(&sub)
+            if !api
+                .validate(&sub)
                 .await
-                .map_err(|e| eyre!(e))
-                .into_internal_with("Bad request", StatusCode::BAD_REQUEST)?;
+                .map_err(|e| Error::AdHocError(e.into()))?
+            {
+                return Err(Error::WebError("Bad request", StatusCode::BAD_REQUEST));
+            }
 
-            let id = db.insert(&sub).into_internal()?;
+            let id = db.insert(&sub)?;
             waker.signal();
-            actix_web::Result::<_>::Ok(Json(with!(id, content = sub)))
+            Result::<_>::Ok(Json(with!(id, content = sub)))
         };
 
         let handle_get_sub = |db: Subs, id: Path<String>| async move {
             db.get(id.as_str())
-                .into_internal()
                 .map(|x| match x {
                     Some(x) => Json(x).pipe(Either::Left),
                     None => HttpResponse::NotFound().pipe(Either::Right),
                 })?
-                .pipe(actix_web::Result::<_>::Ok)
+                .pipe(Result::<_>::Ok)
         };
 
         let handle_put_sub = |api: Data<S>,
@@ -83,25 +81,24 @@ where
                               id: Path<String>,
                               records: Recs,
                               Json(sub): Json<S::Sub>| async move {
-            api.validate(&sub)
+            if !api
+                .validate(&sub)
                 .await
-                .map_err(|e| eyre!(e))
-                .into_internal_with("Bad request", StatusCode::BAD_REQUEST)?;
+                .map_err(|e| Error::AdHocError(e.into()))?
+            {
+                return Err(Error::WebError("Bad request", StatusCode::BAD_REQUEST));
+            }
 
             let id = id.into_inner();
-            match db
-                .upsert(&id, &sub)
-                .into_internal()?
-                .tap(|_| waker.signal())
-            {
+            match db.upsert(&id, &sub)?.tap(|_| waker.signal()) {
                 Some(res) => {
-                    records.remove_all(&id).into_internal()?;
-                    actix_web::Result::<_>::Ok(Either::Left(Json(json!({
+                    records.remove_all(&id)?;
+                    Result::<_>::Ok(Either::Left(Json(json!({
                         "result": "updated",
                         "content": res,
                     }))))
                 }
-                None => actix_web::Result::<_>::Ok(Either::Right(Json(json!({
+                None => Result::<_>::Ok(Either::Right(Json(json!({
                     "result": "created",
                     "content": sub,
                 })))),
@@ -110,25 +107,23 @@ where
 
         let handle_delete_sub = |db: Subs, records: Recs, id: Path<String>| async move {
             let id = id.into_inner();
-            match db.remove(&id).into_internal()? {
+            match db.remove(&id)? {
                 Some(res) => {
-                    records.remove_all(&id).into_internal()?;
-                    actix_web::Result::<_>::Ok(Either::Left(Json(res)))
+                    records.remove_all(&id)?;
+                    Result::<_>::Ok(Either::Left(Json(res)))
                 }
-                None => actix_web::Result::<_>::Ok(Either::Right(HttpResponse::NotFound())),
+                None => Result::<_>::Ok(Either::Right(HttpResponse::NotFound())),
             }
         };
 
         let handle_delete_subs = |db: Subs, records: Recs, req: Json<DelSubs>| async move {
             let ids = req.into_inner().ids;
-            db.remove_batch(ids.iter()).into_internal()?;
-            ids.iter()
-                .try_for_each(|id| records.remove_all(id).into_internal())?;
-            actix_web::Result::<_>::Ok(Json(Confirm::default()))
+            db.remove_batch(ids.iter())?;
+            ids.iter().try_for_each(|id| records.remove_all(id))?;
+            Result::<_>::Ok(Json(Confirm::default()))
         };
 
-        let handle_get_config =
-            |db: Data<Config>| async move { actix_web::Result::<_>::Ok(Json(db)) };
+        let handle_get_config = |db: Data<Config>| async move { Result::<_>::Ok(Json(db)) };
 
         HttpServer::new(move || {
             let _auth = HttpAuthentication::basic(|req, auth| async move {
@@ -176,59 +171,31 @@ struct DelSubs {
     pub ids: Vec<String>,
 }
 
-trait ErrorConvert<T, E> {
-    fn into_internal(self) -> Result<T, InternalError<E>>;
-    fn into_internal_with<C>(self, cause: C, code: StatusCode) -> Result<T, InternalError<C>>;
-}
-
-impl<T> ErrorConvert<T, &'static str> for color_eyre::Result<T, Report> {
-    fn into_internal(self) -> Result<T, InternalError<&'static str>> {
-        self.map_err(|error| {
-            warn!(%error);
-            InternalError::new("Internal Error", StatusCode::INTERNAL_SERVER_ERROR)
-        })
+impl ResponseError for Error {
+    fn status_code(&self) -> StatusCode {
+        if let Error::WebError(_, code) = self {
+            *code
+        } else {
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
     }
 
-    fn into_internal_with<C>(self, cause: C, code: StatusCode) -> Result<T, InternalError<C>> {
-        self.map_err(|error| {
-            warn!(%error);
-            InternalError::new(cause, code)
-        })
-    }
-}
+    fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
+        let mut res = HttpResponse::new(self.status_code());
 
-impl<T> ErrorConvert<T, &'static str> for Result<T, bangumi::Error> {
-    fn into_internal(self) -> Result<T, InternalError<&'static str>> {
-        self.map_err(|error| {
-            warn!(%error);
-            InternalError::new("Internal Error", StatusCode::INTERNAL_SERVER_ERROR)
-        })
-    }
+        res.headers_mut().insert(
+            actix_web::http::header::CONTENT_TYPE,
+            HeaderValue::from_static("text/plain; charset=utf-8"),
+        );
 
-    fn into_internal_with<C>(self, cause: C, code: StatusCode) -> Result<T, InternalError<C>> {
-        self.map_err(|error| {
-            warn!(%error);
-            InternalError::new(cause, code)
-        })
+        res.set_body(BoxBody::new(if let Error::WebError(status, _) = self {
+            status
+        } else {
+            warn!(%self);
+            "Internal Server Error"
+        }))
     }
 }
-
-impl<T> ErrorConvert<T, &'static str> for Result<T, bangumi::rustify::errors::ClientError> {
-    fn into_internal(self) -> Result<T, InternalError<&'static str>> {
-        self.map_err(|error| {
-            warn!(%error);
-            InternalError::new("Internal Error", StatusCode::INTERNAL_SERVER_ERROR)
-        })
-    }
-
-    fn into_internal_with<C>(self, cause: C, code: StatusCode) -> Result<T, InternalError<C>> {
-        self.map_err(|error| {
-            warn!(%error);
-            InternalError::new(cause, code)
-        })
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Tags(pub Vec<Id>);
 

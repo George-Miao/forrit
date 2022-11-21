@@ -1,14 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use color_eyre::{
-    eyre::{ensure, eyre},
-    Report, Result,
-};
 use forrit_core::{typetag, Downloader, DownloaderConfig, Job};
 use futures::future::try_join_all;
 use transmission_rpc::{types as tt, SharableTransClient};
 
-use crate::{config::default, TorrentExt};
+use crate::{config::default, Error, TorrentExt};
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct TransmissionConfig {
@@ -21,6 +17,10 @@ pub struct TransmissionConfig {
     #[serde(default)]
     pub auth: Option<(String, String)>,
 }
+
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Adhoc error: {0}")]
+pub struct AdHocError(String);
 
 #[typetag::serde(name = "transmission")]
 impl DownloaderConfig for TransmissionConfig {
@@ -35,7 +35,7 @@ pub struct Transmission {
 
 impl Downloader for Transmission {
     type Config = TransmissionConfig;
-    type Error = Report;
+    type Error = Error;
     type Id = tt::Id;
 
     async fn new(config: &Self::Config) -> Result<Self, Self::Error>
@@ -46,16 +46,18 @@ impl Downloader for Transmission {
         if let Some((user, password)) = config.auth.clone() {
             trans.set_auth(tt::BasicAuth { user, password })
         };
-        let res = trans
-            .session_get()
-            .await
-            .map_err(|e| eyre!("Unable to call transmission rpc: {}", e))?;
-        ensure!(
-            res.is_ok(),
-            "Transmission rpc returned an error ({})",
-            res.result
-        );
-        Ok(Self { trans })
+        let res = match trans.session_get().await {
+            Ok(x) => x,
+            Err(e) => return Err(Error::AdHocError(e)),
+        };
+        if !res.is_ok() {
+            Err(Error::AdHocStringError(format!(
+                "transmission session_get failed ({})",
+                res.result
+            )))
+        } else {
+            Ok(Self { trans })
+        }
     }
 
     async fn download<I: AsRef<str>>(&self, job: Job<I>) -> Result<Option<Self::Id>, Self::Error> {
@@ -65,13 +67,7 @@ impl Downloader for Transmission {
 
         let arg = tt::TorrentAddArgs {
             filename: Some(url.to_string()),
-            download_dir: Some(
-                path.to_str()
-                    .ok_or_else(|| {
-                        eyre!("Path `{}` contains non UTF-8 char, skipped", path.display())
-                    })?
-                    .to_owned(),
-            ),
+            download_dir: Some(path.to_str().ok_or(Error::NonUTF8Error)?.to_owned()),
             ..tt::TorrentAddArgs::default()
         };
 
@@ -79,7 +75,7 @@ impl Downloader for Transmission {
             .trans
             .torrent_add(arg)
             .await
-            .map_err(|e| eyre!(e))?
+            .map_err(Error::AdHocError)?
             .arguments
         {
             TorrentDuplicate(t) | TorrentAdded(t) => Ok(t.id()),
@@ -102,7 +98,7 @@ impl Downloader for Transmission {
                 Some(vec![id.clone()]),
             )
             .await
-            .map_err(|e| eyre!(e))?;
+            .map_err(Error::AdHocError)?;
         let Some(files) = torrent.arguments
             .torrents.get(0).and_then(|t| t.files.as_ref()) else {
                 return Ok(())
@@ -114,8 +110,8 @@ impl Downloader for Transmission {
             self.trans
                 .torrent_rename_path(vec![id.clone()], old.to_owned(), new)
                 .await
-                .map_err(|e| eyre!(e))?;
-            Result::<_>::Ok(())
+                .map_err(Error::AdHocError)?;
+            Result::<_, Error>::Ok(())
         }))
         .await?;
 
@@ -136,7 +132,7 @@ impl Downloader for Transmission {
                 Some(id),
             )
             .await
-            .map_err(|e| eyre!(e))?;
+            .map_err(Error::AdHocError)?;
         Ok(())
     }
 }

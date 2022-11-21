@@ -13,19 +13,15 @@
 #![feature(try_blocks)]
 #![feature(once_cell)]
 
-mod_use::mod_use![server, ext, config, util, downloaders, sites];
+mod_use::mod_use![server, ext, config, util, downloaders, sites, error];
 
 use std::{borrow::Cow, env, fmt::Debug, ops::Deref, path::PathBuf};
 
-use color_eyre::{
-    eyre::{ensure, eyre},
-    Result,
-};
 use forrit_core::{BangumiSubscription, Downloader, IntoStream, Job, Site, SiteCtx};
 use futures::{future::join_all, stream::StreamExt};
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Serialize};
-use tap::{Pipe, Tap};
+use tap::{Pipe, Tap, TapFallible};
 use tokio::{fs, select};
 use tracing::{debug, info, metadata::LevelFilter, warn};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -33,7 +29,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 use crate::{init, sites::bangumi::Bangumi, transmission::Transmission, Config};
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     fmt()
         .with_env_filter(
             EnvFilter::builder()
@@ -44,9 +40,10 @@ async fn main() -> Result<()> {
                 .add_directive("transmission_rpc=warn".parse().unwrap()),
         )
         .init();
-    color_eyre::install()?;
 
-    run().await
+    drop(run().await.tap_err(|e| {
+        warn!("Error: {}", e);
+    }));
 }
 
 async fn run() -> Result<()> {
@@ -107,7 +104,6 @@ impl<S: Site, D: Downloader> Forrit<S, D>
 where
     S::Sub: Serialize + DeserializeOwned,
     S::Id: Debug,
-    D::Error: Into<color_eyre::Report>,
 {
     pub async fn new(site: S, downloader: D) -> Result<Self> {
         let conf = get_config();
@@ -133,12 +129,11 @@ where
     pub async fn validate_config(&self) -> Result<()> {
         let Config { data_dir, .. } = &get_config();
 
-        ensure!(
-            data_dir.is_absolute(),
-            "`data_dir` should be an absolute path"
-        );
-
-        Ok(())
+        if data_dir.is_absolute() {
+            Ok(())
+        } else {
+            Err(Error::ConfigError("data_dir must be an absolute path"))
+        }
     }
 
     async fn handle_jobs(&self, jobs: impl Iterator<Item = Job<S::Id>>) {
@@ -161,7 +156,7 @@ where
             .for_each_concurrent(None, |id| async {
                 self.downloader
                     .rename(id, |name| {
-                        let Cow::Owned(modified) =     normalize_title(name) else { return None};
+                        let Cow::Owned(modified) = normalize_title(name) else { return None };
                         Some(modified)
                     })
                     .await
@@ -171,7 +166,7 @@ where
         self.downloader
             .add_tracker(ids, config.trackers.iter().map(|x| x.to_string()).collect())
             .await
-            .map_err(|e| eyre!(e))?;
+            .map_err(|e| Error::AdHocError(e.into()))?;
         Ok(())
     }
 
