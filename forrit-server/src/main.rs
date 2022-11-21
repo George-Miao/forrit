@@ -214,7 +214,7 @@ where
                                     false
                                 } else {
                                     self.records.upsert(x.id.as_ref(), &x.url).warn_err_end();
-                                    info!(url = ?x.url, "Adding job");
+                                    info!(url = %x.url, "Adding job");
                                     true
                                 }
                             }))

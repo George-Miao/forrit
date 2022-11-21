@@ -21,13 +21,13 @@ pub enum Error {
     #[error("Request status error({0})")]
     StatusError(StatusCode),
 
-    #[error("Unknown request error: {0}")]
+    #[error("Request error: {0}")]
     RequestError(reqwest::Error),
 
-    #[error("Unknown error: {0}")]
+    #[error("Error: {0}")]
     AdHocError(#[from] Box<dyn std::error::Error + Send + Sync>),
 
-    #[error("Unknown error: {0}")]
+    #[error("Error: {0}")]
     AdHocStringError(String),
 
     #[error("Non-utf8 char found")]
