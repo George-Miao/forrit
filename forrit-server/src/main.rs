@@ -137,15 +137,18 @@ where
     }
 
     async fn handle_jobs(&self, jobs: impl Iterator<Item = Job<S::Id>>) {
-        join_all(jobs.map(|x| self.downloader.download(x)))
-            .await
-            .into_iter()
-            .filter_map(|r| r.warn_err().ok().flatten())
-            .collect::<Vec<_>>()
-            .tap_dbg(|ids| debug!(?ids))
-            .pipe(|ids| self.postprocess(ids))
-            .await
-            .warn_err_end();
+        join_all(jobs.map(|x| {
+            info!(url=%x.url, "Downloading job");
+            self.downloader.download(x)
+        }))
+        .await
+        .into_iter()
+        .filter_map(|r| r.warn_err().ok().flatten())
+        .collect::<Vec<_>>()
+        .tap_dbg(|ids| debug!(?ids))
+        .pipe(|ids| self.postprocess(ids))
+        .await
+        .warn_err_end();
     }
 
     async fn postprocess(&self, ids: Vec<D::Id>) -> Result<()> {
