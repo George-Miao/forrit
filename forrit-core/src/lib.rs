@@ -12,6 +12,7 @@ mod_use::mod_use![model, error, notification, downloader, sites];
 pub use bangumi;
 pub use typetag;
 
+#[doc(hidden)]
 pub mod __reexport {
     pub use paste;
     pub use serde;

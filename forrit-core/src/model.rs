@@ -69,6 +69,15 @@ impl Default for Confirm {
 #[serde(tag = "type", content = "payload")]
 pub enum Event {
     JobAdded(Job),
-    DownloadStart { url: Url },
+    DownloadStart {
+        url: Url,
+    },
     Warn(String),
+    SubscriptionAdded(BangumiSubscription),
+    SubscriptionUpdated {
+        old: BangumiSubscription,
+        new: BangumiSubscription,
+    },
+    SubscriptionRemoved(BangumiSubscription),
+    MultipleSubscriptionRemoved(Vec<String>),
 }

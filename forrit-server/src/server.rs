@@ -13,30 +13,28 @@ use actix_web_httpauth::{
     middleware::HttpAuthentication,
 };
 use bangumi::Id;
-use forrit_core::{with, Confirm, Site};
+use forrit_core::{with, Confirm, Event, Site};
 use futures::{
     future::{err, ok, ready, Ready},
     StreamExt,
 };
 use reqwest::{header::HeaderValue, StatusCode, Url};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tap::{Pipe, Tap, TapFallible};
 use tracing::{info, warn};
 
 use crate::{
-    get_config, BangumiSubscription, Config, Error, Events, Flag, Forrit, Result, SerdeTree,
+    bangumi::Bangumi, get_config, BangumiSubscription, Config, Error, Events, Flag, Forrit, Result,
+    SerdeTree,
 };
 
 type Subs = SerdeTree<BangumiSubscription>;
 type Recs = SerdeTree<Url>;
 
-impl<S, D> Forrit<S, D>
+impl<D> Forrit<Bangumi, D>
 where
     D: Send + 'static,
-    S: Site + Clone + Send + Sync + 'static,
-    S::Sub: Send + Serialize + DeserializeOwned,
-    S::Error: Send + Sync,
 {
     pub async fn server(&self) -> Result<()> {
         let config = get_config().clone();
@@ -52,15 +50,16 @@ where
 
         info!("Staring server");
 
-        let handle_list_subs = |db: SerdeTree<S::Sub>| async move {
+        let handle_list_subs = |db: SerdeTree<BangumiSubscription>| async move {
             let res = db.iter_with_id().collect::<Result<Vec<_>>>()?;
             Result::<_>::Ok(Json(res))
         };
 
-        let handle_post_sub = |api: Data<S>,
-                               db: SerdeTree<S::Sub>,
+        let handle_post_sub = |api: Data<Bangumi>,
+                               db: SerdeTree<BangumiSubscription>,
                                waker: Flag,
-                               Json(sub): Json<S::Sub>| async move {
+                               Json(sub): Json<BangumiSubscription>,
+                               events: Events| async move {
             if !api
                 .validate(&sub)
                 .await
@@ -70,6 +69,7 @@ where
             }
 
             let id = db.insert(&sub)?;
+            events.emit(&Event::SubscriptionAdded(sub.clone()))?;
             waker.signal();
             Result::<_>::Ok(Json(with!(id, content = sub)))
         };
@@ -83,12 +83,13 @@ where
                 .pipe(Result::<_>::Ok)
         };
 
-        let handle_put_sub = |api: Data<S>,
-                              db: SerdeTree<S::Sub>,
+        let handle_put_sub = |api: Data<Bangumi>,
+                              db: SerdeTree<BangumiSubscription>,
                               waker: Data<Flag>,
                               id: Path<String>,
                               records: Recs,
-                              Json(sub): Json<S::Sub>| async move {
+                              events: Events,
+                              Json(sub): Json<BangumiSubscription>| async move {
             if !api
                 .validate(&sub)
                 .await
@@ -99,35 +100,44 @@ where
 
             let id = id.into_inner();
             match db.upsert(&id, &sub)?.tap(|_| waker.signal()) {
-                Some(res) => {
+                Some(old) => {
                     records.remove_all(&id)?;
+                    events.emit(&Event::SubscriptionUpdated {
+                        old: old.clone(),
+                        new: sub,
+                    })?;
                     Result::<_>::Ok(Either::Left(Json(json!({
                         "result": "updated",
-                        "content": res,
+                        "content": old,
                     }))))
                 }
-                None => Result::<_>::Ok(Either::Right(Json(json!({
-                    "result": "created",
-                    "content": sub,
-                })))),
+                None => {
+                    events.emit(&Event::SubscriptionAdded(sub.clone()))?;
+                    Result::<_>::Ok(Either::Right(Json(json!({
+                        "result": "created",
+                        "content": sub,
+                    }))))
+                }
             }
         };
 
-        let handle_delete_sub = |db: Subs, records: Recs, id: Path<String>| async move {
+        let handle_delete_sub = |db: Subs, records: Recs, id: Path<String>, events: Events| async move {
             let id = id.into_inner();
             match db.remove(&id)? {
-                Some(res) => {
+                Some(sub) => {
                     records.remove_all(&id)?;
-                    Result::<_>::Ok(Either::Left(Json(res)))
+                    events.emit(&Event::SubscriptionRemoved(sub.clone()))?;
+                    Result::<_>::Ok(Either::Left(Json(sub)))
                 }
                 None => Result::<_>::Ok(Either::Right(HttpResponse::NotFound())),
             }
         };
 
-        let handle_delete_subs = |db: Subs, records: Recs, req: Json<DelSubs>| async move {
+        let handle_delete_subs = |db: Subs, records: Recs, req: Json<DelSubs>, events: Events| async move {
             let ids = req.into_inner().ids;
             db.remove_batch(ids.iter())?;
             ids.iter().try_for_each(|id| records.remove_all(id))?;
+            events.emit(&Event::MultipleSubscriptionRemoved(ids))?;
             Result::<_>::Ok(Json(Confirm::default()))
         };
 
@@ -184,11 +194,20 @@ where
 }
 
 async fn handle_get_events(events: Events) -> Result<HttpResponse> {
+    #[derive(Serialize)]
+    struct EventWrapper {
+        time: u64,
+        #[serde(flatten)]
+        event: Event,
+    }
     HttpResponse::Ok()
-        .streaming(events.subscribe()?.map(|x| {
-            serde_json::to_vec(&x)
-                .tap_ok_mut(|b| b.push(b'\n'))
-                .map(Into::into)
+        .streaming(events.subscribe()?.map(|(t, e)| {
+            serde_json::to_vec(&EventWrapper {
+                time: t.timestamp(),
+                event: e,
+            })
+            .tap_ok_mut(|b| b.push(b'\n'))
+            .map(Into::into)
         }))
         .pipe(Ok)
 }

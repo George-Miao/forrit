@@ -23,7 +23,7 @@ use nanoid::nanoid;
 use regex::Regex;
 use reqwest::{StatusCode, Url};
 use serde::{de::DeserializeOwned, Serialize};
-use sled::{Batch, Tree};
+use sled::{Batch, IVec, Tree};
 use tap::Pipe;
 
 use crate::Result;
@@ -201,7 +201,7 @@ where
         self.tree.apply_batch(batch).map_err(Into::into)
     }
 
-    pub fn watch(&self, prefix: impl AsRef<[u8]>) -> impl Stream<Item = T> {
+    pub fn watch(&self, prefix: impl AsRef<[u8]>) -> impl Stream<Item = (IVec, T)> {
         SledSerdeStream::new(self.tree.watch_prefix(prefix))
     }
 }
@@ -339,6 +339,10 @@ impl TimeKey {
         Self::from_micros(time.as_micros().try_into().expect("TimeKey overflow"))
     }
 
+    pub fn timestamp(&self) -> u64 {
+        u64::from_be_bytes(self.0)
+    }
+
     pub fn from_micros(ts: u64) -> Self {
         Self(ts.to_be_bytes())
     }
@@ -431,14 +435,14 @@ impl<T> Stream for SledSerdeStream<T>
 where
     T: DeserializeOwned,
 {
-    type Item = T;
+    type Item = (IVec, T);
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match ready!(self.project().receiver.poll(cx)) {
             Some(e) => match e {
-                sled::Event::Insert { value, .. } => serde_json::from_slice::<T>(value.deref())
+                sled::Event::Insert { value, key } => serde_json::from_slice::<T>(value.deref())
                     .unwrap()
-                    .pipe(|x| Poll::Ready(Some(x))),
+                    .pipe(|x| Poll::Ready(Some((key, x)))),
                 _ => Poll::Pending,
             },
             None => Poll::Ready(None),

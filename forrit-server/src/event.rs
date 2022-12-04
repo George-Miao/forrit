@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use forrit_core::Event;
 use futures::{stream, Stream, StreamExt};
 use sled::Tree;
@@ -15,13 +17,17 @@ impl Events {
         Self { tree }
     }
 
-    pub fn subscribe(&self) -> Result<impl Stream<Item = Event>> {
+    pub fn subscribe(&self) -> Result<impl Stream<Item = (TimeKey, Event)>> {
         self.tree
             .latest(10)?
             .into_iter()
-            .map(|(_, v)| v)
             .pipe(stream::iter)
-            .chain(self.tree.watch(""))
+            .chain(self.tree.watch("").map(|(k, v)| {
+                (
+                    TimeKey::from_be_bytes(k.deref().try_into().expect("Bad TimeKey bytes")),
+                    v,
+                )
+            }))
             .pipe(Ok)
     }
 
