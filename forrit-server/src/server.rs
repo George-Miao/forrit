@@ -21,7 +21,7 @@ use futures::{
 use reqwest::{header::HeaderValue, StatusCode, Url};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
-use tap::{Pipe, Tap};
+use tap::{Pipe, Tap, TapFallible};
 use tracing::{info, warn};
 
 use crate::{
@@ -165,7 +165,7 @@ where
                         .route(delete().to(handle_delete_sub)),
                 )
                 .service(resource("/config").route(get().to(handle_get_config)))
-                .service(resource("/event").route(get().to(handle_get_events)))
+                .service(resource("/events").route(get().to(handle_get_events)))
         })
         .workers(num_workers)
         .keep_alive(Duration::from_secs(90))
@@ -178,11 +178,11 @@ where
 
 async fn handle_get_events(events: Events) -> Result<HttpResponse> {
     HttpResponse::Ok()
-        .streaming(
-            events
-                .subscribe()?
-                .map(|x| serde_json::to_vec(&x).map(Into::into)),
-        )
+        .streaming(events.subscribe()?.map(|x| {
+            serde_json::to_vec(&x)
+                .tap_ok_mut(|b| b.push(b'\n'))
+                .map(Into::into)
+        }))
         .pipe(Ok)
 }
 
