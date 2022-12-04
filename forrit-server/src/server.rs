@@ -168,7 +168,7 @@ where
                 .service(
                     resource("/events")
                         .route(get().to(handle_get_events))
-                        .route(delete().to(|events: Data<Events>| async move {
+                        .route(delete().to(|events: Events| async move {
                             events.clear()?;
                             Result::<_>::Ok(Json(Confirm::default()))
                         })),
