@@ -25,19 +25,20 @@ use tap::Pipe;
 use crate::Result;
 
 pub fn normalize_title(title: &str) -> Cow<'_, str> {
-    const EXPECT_ERR: &str = "Regex should compile";
+    macro_rules! rule {
+        ($reg:literal) => {
+            Regex::new($reg).expect("Regex should compile")
+        };
+    }
     static PATTERNS: LazyLock<[Regex; 7]> = LazyLock::new(|| {
         [
-            Regex::new(r#"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#)
-                .expect(EXPECT_ERR),
-            Regex::new(r#"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#)
-                .expect(EXPECT_ERR),
-            Regex::new(r#"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)"#).expect(EXPECT_ERR),
-            Regex::new(r#"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)"#).expect(EXPECT_ERR),
-            Regex::new(r#"(.*)第(\d*\.*\d*)话(?:END)?(.*)"#).expect(EXPECT_ERR),
-            Regex::new(r#"(.*)第(\d*\.*\d*)話(?:END)?(.*)"#).expect(EXPECT_ERR),
-            Regex::new(r#"(.*)-\s*(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)"#)
-                .expect(EXPECT_ERR),
+            rule!(r#"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
+            rule!(r#"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
+            rule!(r#"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)"#),
+            rule!(r#"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)"#),
+            rule!(r#"(.*)第(\d*\.*\d*)话(?:END)?(.*)"#),
+            rule!(r#"(.*)第(\d*\.*\d*)話(?:END)?(.*)"#),
+            rule!(r#"(.*)-\s*(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)"#),
         ]
     });
 
