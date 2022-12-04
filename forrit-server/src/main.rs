@@ -108,7 +108,7 @@ impl<D: Downloader> Forrit<D> {
         fs::create_dir_all(&conf.data_dir).await?;
 
         let db = sled::open(conf.db_dir())?;
-        let subs = db.open_tree("bangumi")?.into();
+        let subs = db.open_tree("bangumi.moe")?.into();
         let records = db.open_tree("records")?.into();
         let events = db.open_tree("events")?.into();
 
