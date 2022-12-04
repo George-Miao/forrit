@@ -31,11 +31,13 @@ pub struct PostSub {
 pub struct PutSub {
     #[endpoint(skip)]
     id: String,
+    #[endpoint(body)]
+    #[serde(flatten)]
     sub: BangumiSubscription,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "status", content = "content", rename_all = "lowercase")]
+#[serde(tag = "result", content = "content", rename_all = "lowercase")]
 pub enum PutResult {
     Updated(BangumiSubscription),
     Created(BangumiSubscription),

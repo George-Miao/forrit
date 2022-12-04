@@ -81,7 +81,7 @@ where
 
         let handle_put_sub = |api: Data<Bangumi>,
                               db: SerdeTree<BangumiSubscription>,
-                              waker: Data<Flag>,
+                              waker: Flag,
                               id: Path<String>,
                               records: Recs,
                               Json(sub): Json<BangumiSubscription>| async move {
