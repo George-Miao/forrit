@@ -165,7 +165,14 @@ where
                         .route(delete().to(handle_delete_sub)),
                 )
                 .service(resource("/config").route(get().to(handle_get_config)))
-                .service(resource("/events").route(get().to(handle_get_events)))
+                .service(
+                    resource("/events")
+                        .route(get().to(handle_get_events))
+                        .route(delete().to(|events: Data<Events>| async move {
+                            events.clear()?;
+                            Result::<_>::Ok(Json(Confirm::default()))
+                        })),
+                )
         })
         .workers(num_workers)
         .keep_alive(Duration::from_secs(90))

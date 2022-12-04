@@ -66,6 +66,7 @@ impl Default for Confirm {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "payload")]
 pub enum Event {
     JobAdded(Job),
     DownloadStart { url: Url },

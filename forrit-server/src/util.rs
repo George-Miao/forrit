@@ -152,6 +152,10 @@ impl<K: ?Sized, T> SerdeTree<T, K> {
             _marker: std::marker::PhantomData,
         }
     }
+
+    pub fn clear(&self) -> Result<()> {
+        self.tree.clear().map_err(Into::into)
+    }
 }
 
 impl<K, T> SerdeTree<T, K>

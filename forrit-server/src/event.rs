@@ -28,6 +28,10 @@ impl Events {
     pub fn emit(&self, event: &Event) -> Result<TimeKey> {
         self.tree.insert(event)
     }
+
+    pub fn clear(&self) -> Result<()> {
+        self.tree.clear()
+    }
 }
 
 impl From<Tree> for Events {
