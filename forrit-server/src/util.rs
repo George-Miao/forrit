@@ -336,10 +336,10 @@ impl TimeKey {
 
     pub fn with_systemtime(time: &SystemTime) -> Self {
         let time = time.duration_since(UNIX_EPOCH).unwrap();
-        Self::from_timestamp(time.as_secs())
+        Self::from_micros(time.as_micros().try_into().expect("TimeKey overflow"))
     }
 
-    pub fn from_timestamp(ts: u64) -> Self {
+    pub fn from_micros(ts: u64) -> Self {
         Self(ts.to_be_bytes())
     }
 
@@ -436,9 +436,9 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match ready!(self.project().receiver.poll(cx)) {
             Some(e) => match e {
-                sled::Event::Insert { value, .. } => {
-                    serde_json::from_slice(value.deref()).ok().pipe(Poll::Ready)
-                }
+                sled::Event::Insert { value, .. } => serde_json::from_slice::<T>(value.deref())
+                    .unwrap()
+                    .pipe(|x| Poll::Ready(Some(x))),
                 _ => Poll::Pending,
             },
             None => Poll::Ready(None),
@@ -448,16 +448,16 @@ where
 
 #[test]
 fn test_time_key() {
-    let t1 = TimeKey::from_timestamp(114514);
-    let t2 = TimeKey::from_timestamp(1919810);
-    let t3 = TimeKey::from_timestamp(120398109238091283);
+    let t1 = TimeKey::from_micros(114514);
+    let t2 = TimeKey::from_micros(1919810);
+    let t3 = TimeKey::from_micros(120398109238091283);
     let db = sled::Config::new().temporary(true).open().unwrap();
     let tree: SerdeTree<[u8; 0], TimeKey> = db.open_tree("test").unwrap().into();
     let sub = tree.tree.watch_prefix("");
     tree.upsert(&t1, &[]).unwrap();
     tree.upsert(&t2, &[]).unwrap();
     tree.upsert(&t3, &[]).unwrap();
-    let c = tree.range(TimeKey::from_timestamp(115000)..).count();
+    let c = tree.range(TimeKey::from_micros(115000)..).count();
     assert_eq!(c, 2);
     let l = tree.latest(2).unwrap();
     assert_eq!(l, vec![(t2, []), (t3, [])]);

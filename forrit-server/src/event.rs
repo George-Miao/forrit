@@ -39,3 +39,34 @@ impl From<Tree> for Events {
         Self::new(tree.into())
     }
 }
+
+#[tokio::test]
+async fn test_events() {
+    use tap::Tap;
+
+    let e: Events = sled::Config::new()
+        .temporary(true)
+        .open()
+        .unwrap()
+        .open_tree("events")
+        .unwrap()
+        .into();
+
+    e.emit(&Event::DownloadStart {
+        url: "https://example.com".parse().unwrap(),
+    })
+    .unwrap();
+    e.emit(&Event::DownloadStart {
+        url: "https://123.com".parse().unwrap(),
+    })
+    .unwrap();
+    e.emit(&Event::Warn("apisjdpiasjd".into())).unwrap();
+    e.tree
+        .latest(1000)
+        .unwrap()
+        .tap_deref(|x| println!("{:?}", x));
+    e.subscribe()
+        .unwrap()
+        .for_each(|x| async move { println!("{:?}", x) })
+        .await;
+}
