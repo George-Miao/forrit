@@ -130,9 +130,9 @@ fn write_indent_with(w: &mut dyn Write, s: &str, num: usize) -> std::io::Result<
     write!(w, "{0:>1$} ", s.green().bold(), num)
 }
 
-fn print_sub_with_id(sub: &WithId<String, BangumiSubscription>) {
-    write_sub_with_id(&mut stdout(), sub).unwrap()
-}
+// fn print_sub_with_id(sub: &WithId<String, BangumiSubscription>) {
+//     write_sub_with_id(&mut stdout(), sub).unwrap()
+// }
 
 fn write_sub_with_id(
     w: &mut dyn Write,

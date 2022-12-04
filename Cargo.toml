@@ -7,7 +7,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-forrit-core = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/", package = "forrit-core" }
+forrit-core = { version = "0.1.0", path = "forrit-core" }
+bangumi     = { version = "0.1.0", path = "bangumi" }
 
 rustify_derive = { version = "0.5.2", git = "https://github.com/George-Miao/rustify/", package = "rustify_derive" }
 rustify        = { version = "0.5.3", git = "https://github.com/George-Miao/rustify/" }
@@ -16,7 +17,6 @@ tokio      = { version = "1.21.2", default-features = false, features = ["rt", "
 clap       = { version = "4.0.18", features = ["derive"] }
 toml_edit  = { version = "0.15.0", features = ["serde", "easy"] }
 url        = { version = "2.3.1", features = ["serde"] }
-bangumi    = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/", package = "bangumi" }
 color-eyre = { version = "0.6.2", default-features = false }
 owo-colors = { version = "3.5.0", features = ["supports-colors"] }
 

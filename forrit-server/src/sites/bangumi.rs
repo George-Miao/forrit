@@ -1,9 +1,11 @@
+use std::path::Path;
+
 use bangumi::{
     endpoints::{FetchTags, SearchTorrents},
-    rustify::Client,
+    rustify::{errors::ClientError, Client},
     Endpoint,
 };
-use forrit_core::{BangumiSubscription, Job, Site, SiteCtx};
+use forrit_core::{BangumiSubscription, Job};
 use tap::{Pipe, TapFallible};
 use tracing::{debug, warn};
 use url::Url;
@@ -33,15 +35,12 @@ impl Default for Bangumi {
     }
 }
 
-impl Site for Bangumi {
-    type Error = bangumi::rustify::errors::ClientError;
-    type Sub = BangumiSubscription;
-
-    const NAME: &'static str = "bangumi.moe";
-
-    async fn update(&self, ctx: SiteCtx<'_, BangumiSubscription>) -> Result<Vec<Job>, Self::Error> {
-        let SiteCtx { sub, download_dir } = ctx;
-
+impl Bangumi {
+    pub async fn update(
+        &self,
+        sub: &BangumiSubscription,
+        download_dir: &Path,
+    ) -> Result<Vec<Job>, ClientError> {
         let torrents = SearchTorrents::builder()
             .tags(sub.tags().map(|x| x.0.to_owned()).collect::<Vec<_>>())
             .build()
@@ -92,7 +91,7 @@ impl Site for Bangumi {
         Ok(jobs)
     }
 
-    async fn validate(&self, sub: &Self::Sub) -> Result<bool, Self::Error> {
+    pub async fn validate(&self, sub: &BangumiSubscription) -> Result<bool, ClientError> {
         sub.tags()
             .map(|x| x.0.to_owned())
             .collect::<Vec<_>>()

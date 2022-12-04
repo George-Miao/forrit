@@ -18,10 +18,9 @@ mod_use::mod_use![server, ext, config, util, downloaders, sites, error, event];
 
 use std::{borrow::Cow, env, ops::Deref, path::PathBuf};
 
-use forrit_core::{BangumiSubscription, Downloader, Event, IntoStream, Job, Site, SiteCtx};
+use forrit_core::{BangumiSubscription, Downloader, Event, IntoStream, Job};
 use futures::{future::join_all, stream::StreamExt};
 use reqwest::Url;
-use serde::{de::DeserializeOwned, Serialize};
 use tap::{Pipe, Tap, TapFallible};
 use tokio::{fs, select};
 use tracing::{debug, info, metadata::LevelFilter, warn};
@@ -93,26 +92,23 @@ async fn run() -> Result<()> {
     Ok(())
 }
 
-pub struct Forrit<S: Site, D> {
-    site: S,
+pub struct Forrit<D> {
+    site: Bangumi,
     downloader: D,
-    subs: SerdeTree<S::Sub>,
+    subs: SerdeTree<BangumiSubscription>,
     records: SerdeTree<Url>,
     flag: Flag,
     events: Events,
 }
 
-impl<S: Site, D: Downloader> Forrit<S, D>
-where
-    S::Sub: Serialize + DeserializeOwned,
-{
-    pub async fn new(site: S, downloader: D) -> Result<Self> {
+impl<D: Downloader> Forrit<D> {
+    pub async fn new(site: Bangumi, downloader: D) -> Result<Self> {
         let conf = get_config();
 
         fs::create_dir_all(&conf.data_dir).await?;
 
         let db = sled::open(conf.db_dir())?;
-        let subs = db.open_tree(S::NAME)?.into();
+        let subs = db.open_tree("bangumi")?.into();
         let records = db.open_tree("records")?.into();
         let events = db.open_tree("events")?.into();
 
@@ -201,7 +197,7 @@ where
                     };
                     let download_dir = config.downloader.download_dir();
 
-                    match self.site.update(SiteCtx { download_dir, sub }).await {
+                    match self.site.update(sub, download_dir).await {
                         Err(error) => {
                             self.events
                                 .emit(&Event::Warn(format!("Failed to retrieve jobs ({})", error)))

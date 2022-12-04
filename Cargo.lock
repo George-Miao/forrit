@@ -320,20 +320,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bangumi"
-version = "0.1.0"
-source = "git+https://github.com/George-Miao/forrit/#aea0e9aae4d55ece997f0448a3e01ec16107b561"
-dependencies = [
- "microtype",
- "paste",
- "rustify",
- "rustify_derive",
- "serde",
- "thiserror",
- "typed-builder 0.11.0",
-]
-
-[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -916,12 +902,12 @@ dependencies = [
 name = "forrit"
 version = "0.1.0"
 dependencies = [
- "bangumi 0.1.0 (git+https://github.com/George-Miao/forrit/)",
+ "bangumi",
  "clap",
  "color-eyre",
  "dirs",
  "either",
- "forrit-core 0.1.0 (git+https://github.com/George-Miao/forrit/)",
+ "forrit-core",
  "mod_use",
  "owo-colors",
  "regex",
@@ -944,27 +930,7 @@ dependencies = [
 name = "forrit-core"
 version = "0.1.0"
 dependencies = [
- "bangumi 0.1.0 (git+https://github.com/George-Miao/forrit/)",
- "dyn-clonable",
- "dyn-clone",
- "futures",
- "mod_use",
- "paste",
- "regex",
- "serde",
- "serde_regex",
- "serde_with",
- "thiserror",
- "typetag",
- "url",
-]
-
-[[package]]
-name = "forrit-core"
-version = "0.1.0"
-source = "git+https://github.com/George-Miao/forrit/#aea0e9aae4d55ece997f0448a3e01ec16107b561"
-dependencies = [
- "bangumi 0.1.0 (git+https://github.com/George-Miao/forrit/)",
+ "bangumi",
  "dyn-clonable",
  "dyn-clone",
  "futures",
@@ -985,9 +951,9 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
- "bangumi 0.1.0",
+ "bangumi",
  "dirs",
- "forrit-core 0.1.0",
+ "forrit-core",
  "futures",
  "humantime-serde",
  "mod_use",

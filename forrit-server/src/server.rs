@@ -13,7 +13,7 @@ use actix_web_httpauth::{
     middleware::HttpAuthentication,
 };
 use bangumi::Id;
-use forrit_core::{with, Confirm, Event, Site};
+use forrit_core::{with, Confirm, Event};
 use futures::{
     future::{err, ok, ready, Ready},
     StreamExt,
@@ -32,7 +32,7 @@ use crate::{
 type Subs = SerdeTree<BangumiSubscription>;
 type Recs = SerdeTree<Url>;
 
-impl<D> Forrit<Bangumi, D>
+impl<D> Forrit<D>
 where
     D: Send + 'static,
 {

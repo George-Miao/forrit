@@ -6,8 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# forrit-core = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/" }
-# bangumi     = { version = "0.1.0", git = "https://github.com/George-Miao/forrit/", package = "bangumi" }
 forrit-core = { version = "0.1.0", path = "../forrit-core" }
 bangumi     = { version = "0.1.0", path = "../bangumi" }
 
@@ -36,4 +34,4 @@ actix-web-httpauth = "0.8.0"
 sled               = "0.34.7"
 nanoid             = "0.4.0"
 thiserror          = "1.0.37"
-pin-project-lite = "0.2.9"
+pin-project-lite   = "0.2.9"
