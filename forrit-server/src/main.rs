@@ -7,17 +7,18 @@
 //! -> Rename
 
 #![allow(incomplete_features)]
+#![feature(type_alias_impl_trait)]
 #![feature(async_fn_in_trait)]
 #![feature(iter_intersperse)]
 #![feature(let_chains)]
 #![feature(try_blocks)]
 #![feature(once_cell)]
 
-mod_use::mod_use![server, ext, config, util, downloaders, sites, error];
+mod_use::mod_use![server, ext, config, util, downloaders, sites, error, event];
 
-use std::{borrow::Cow, env, fmt::Debug, ops::Deref, path::PathBuf};
+use std::{borrow::Cow, env, ops::Deref, path::PathBuf};
 
-use forrit_core::{BangumiSubscription, Downloader, IntoStream, Job, Site, SiteCtx};
+use forrit_core::{BangumiSubscription, Downloader, Event, IntoStream, Job, Site, SiteCtx};
 use futures::{future::join_all, stream::StreamExt};
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Serialize};
@@ -98,12 +99,12 @@ pub struct Forrit<S: Site, D> {
     subs: SerdeTree<S::Sub>,
     records: SerdeTree<Url>,
     flag: Flag,
+    events: Events,
 }
 
 impl<S: Site, D: Downloader> Forrit<S, D>
 where
     S::Sub: Serialize + DeserializeOwned,
-    S::Id: Debug,
 {
     pub async fn new(site: S, downloader: D) -> Result<Self> {
         let conf = get_config();
@@ -113,12 +114,14 @@ where
         let db = sled::open(conf.db_dir())?;
         let subs = db.open_tree(S::NAME)?.into();
         let records = db.open_tree("records")?.into();
+        let events = db.open_tree("events")?.into();
 
         let this = Self {
             site,
             downloader,
             subs,
             records,
+            events,
             flag: Flag::new(),
         };
         this.validate_config().await?;
@@ -136,8 +139,11 @@ where
         }
     }
 
-    async fn handle_jobs(&self, jobs: impl Iterator<Item = Job<S::Id>>) {
+    async fn handle_jobs(&self, jobs: impl Iterator<Item = Job>) {
         join_all(jobs.map(|x| {
+            self.events
+                .emit(&Event::DownloadStart { url: x.url.clone() })
+                .unwrap();
             info!(url=%x.url, "Downloading job");
             self.downloader.download(x)
         }))
@@ -197,6 +203,9 @@ where
 
                     match self.site.update(SiteCtx { download_dir, sub }).await {
                         Err(error) => {
+                            self.events
+                                .emit(&Event::Warn(format!("Failed to retrieve jobs ({})", error)))
+                                .unwrap();
                             warn!(%error, "Failed to retrieve jobs")
                         }
                         Ok(jobs) => {
@@ -206,18 +215,12 @@ where
                             }
 
                             self.handle_jobs(jobs.into_iter().filter(|x| {
-                                if self
-                                    .records
-                                    .get(x.id.as_ref())
-                                    .warn_err()
-                                    .ok()
-                                    .flatten()
-                                    .is_some()
-                                {
+                                if self.records.get(&x.id).warn_err().ok().flatten().is_some() {
                                     false
                                 } else {
-                                    self.records.upsert(x.id.as_ref(), &x.url).warn_err_end();
+                                    self.records.upsert(&x.id, &x.url).warn_err_end();
                                     info!(url = %x.url, "Adding job");
+                                    self.events.emit(&Event::JobAdded(x.clone())).unwrap();
                                     true
                                 }
                             }))

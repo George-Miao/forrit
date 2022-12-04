@@ -1,12 +1,15 @@
 use std::{
     borrow::{Borrow, Cow},
     fmt::{self, Debug, Formatter},
-    ops::{Deref, DerefMut},
+    marker::PhantomData,
+    ops::{Deref, RangeBounds},
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering::Relaxed},
         Arc, LazyLock,
     },
+    task::ready,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use actix_web::{dev::Payload, error::InternalError, FromRequest, HttpRequest};
@@ -14,6 +17,7 @@ use forrit_core::with;
 use futures::{
     future::{err, ok, Future, Ready},
     task::{AtomicWaker, Context, Poll},
+    Stream,
 };
 use nanoid::nanoid;
 use regex::Regex;
@@ -133,43 +137,41 @@ impl Debug for Flag {
     }
 }
 
-pub struct SerdeTree<T> {
+pub struct SerdeTree<T, K = str>
+where
+    K: ?Sized,
+{
     tree: Tree,
-    _marker: std::marker::PhantomData<T>,
+    _marker: std::marker::PhantomData<for<'a> fn(&'a K) -> T>,
 }
 
-impl<T> SerdeTree<T> {
+impl<K: ?Sized, T> SerdeTree<T, K> {
     pub fn new(tree: Tree) -> Self {
         Self {
             tree,
             _marker: std::marker::PhantomData,
         }
     }
+}
 
-    pub fn get(&self, key: impl AsRef<[u8]>) -> Result<Option<T>>
-    where
-        T: DeserializeOwned,
-    {
-        self.tree
-            .get(key)?
-            .and_then(|v| serde_json::from_slice(&v).ok())
-            .pipe(Ok)
-    }
-
-    /// Insert a value into the tree with a generated key, and return it.
-    pub fn insert(&self, value: &T) -> Result<String>
-    where
-        T: Serialize + DeserializeOwned,
-    {
-        let id = nanoid!();
-        self.upsert(id.as_bytes(), value)?;
-        Ok(id)
+impl<K, T> SerdeTree<T, K>
+where
+    K: ?Sized + AsRef<[u8]>,
+    T: DeserializeOwned,
+{
+    pub fn get(&self, key: &K) -> Result<Option<T>> {
+        match self.tree.get(key)? {
+            Some(b) => serde_json::from_slice(b.deref())
+                .map(Some)
+                .map_err(Into::into),
+            None => Ok(None),
+        }
     }
 
     /// Update or insert. If update, return the old value.
-    pub fn upsert(&self, key: impl AsRef<[u8]>, value: &T) -> Result<Option<T>>
+    pub fn upsert(&self, key: &K, value: &T) -> Result<Option<T>>
     where
-        T: Serialize + DeserializeOwned,
+        T: Serialize,
     {
         let value = serde_json::to_vec(value)?;
         match self.tree.insert(key, value)? {
@@ -178,23 +180,37 @@ impl<T> SerdeTree<T> {
         }
     }
 
-    pub fn remove(&self, key: impl AsRef<[u8]>) -> Result<Option<T>>
-    where
-        T: DeserializeOwned,
-    {
+    pub fn remove(&self, key: &K) -> Result<Option<T>> {
         let Some(res) = self.tree.remove(key)? else {
             return Ok(None);
         };
         Ok(Some(serde_json::from_slice(res.borrow())?))
     }
 
-    pub fn remove_batch(&self, keys: impl IntoIterator<Item = impl AsRef<[u8]>>) -> Result<()>
+    pub fn remove_batch<R>(&'_ self, keys: impl IntoIterator<Item = R>) -> Result<()>
     where
-        T: DeserializeOwned,
+        R: AsRef<K>,
     {
         let mut batch = Batch::default();
-        keys.into_iter().for_each(|key| batch.remove(key.as_ref()));
+        keys.into_iter()
+            .for_each(|key| batch.remove(key.as_ref().as_ref()));
         self.tree.apply_batch(batch).map_err(Into::into)
+    }
+
+    pub fn watch(&self, prefix: impl AsRef<[u8]>) -> impl Stream<Item = T> {
+        SledSerdeStream::new(self.tree.watch_prefix(prefix))
+    }
+}
+
+impl<T> SerdeTree<T, str> {
+    /// Insert a value into the tree with a generated key, and return it.
+    pub fn insert(&self, value: &T) -> Result<String>
+    where
+        T: Serialize + DeserializeOwned,
+    {
+        let id = nanoid!();
+        self.upsert(&id, value)?;
+        Ok(id)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Result<(String, T)>>
@@ -222,16 +238,16 @@ impl<T> SerdeTree<T> {
     }
 }
 
-impl SerdeTree<Url> {
+impl SerdeTree<Url, str> {
     pub fn upsert_record(&self, sub_id: &str, torrent_id: &str, url: &Url) -> Result<()> {
         let key = format!("{}:{}", sub_id, torrent_id);
-        self.upsert(key.as_bytes(), url)?;
+        self.upsert(key.as_ref(), url)?;
         Ok(())
     }
 
     pub fn find_record(&self, sub_id: &str, torrent_id: &str) -> Result<Option<Url>> {
         let key = format!("{}:{}", sub_id, torrent_id);
-        self.get(key.as_bytes())
+        self.get(&key)
     }
 
     pub fn remove_all(&self, sub_id: &str) -> Result<()> {
@@ -246,21 +262,44 @@ impl SerdeTree<Url> {
     }
 }
 
-impl<T> Deref for SerdeTree<T> {
-    type Target = Tree;
+impl<T: DeserializeOwned> SerdeTree<T, TimeKey> {
+    pub fn insert(&self, value: &T) -> Result<TimeKey>
+    where
+        T: Serialize,
+    {
+        let key = TimeKey::now();
+        self.upsert(&key, value)?;
+        Ok(key)
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.tree
+    pub fn iter(&self) -> impl Iterator<Item = Result<(TimeKey, T)>> + DoubleEndedIterator {
+        self.range(..)
+    }
+
+    pub fn latest(&self, count: usize) -> Result<Vec<(TimeKey, T)>> {
+        let mut ret = self
+            .range(..)
+            .rev()
+            .take(count)
+            .collect::<Result<Vec<_>>>()?;
+        ret.reverse();
+        Ok(ret)
+    }
+
+    pub fn range(
+        &self,
+        range: impl RangeBounds<TimeKey>,
+    ) -> impl Iterator<Item = Result<(TimeKey, T)>> + DoubleEndedIterator {
+        self.tree.range(range).map(|x| {
+            let (k, v) = x?;
+            let v = serde_json::from_slice(v.borrow())?;
+            let k = TimeKey::from_be_bytes(k.deref().try_into().expect("Bad TimeKey bytes"));
+            Ok((k, v))
+        })
     }
 }
 
-impl<T> DerefMut for SerdeTree<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.tree
-    }
-}
-
-impl Debug for SerdeTree<()> {
+impl<T, K: ?Sized> Debug for SerdeTree<T, K> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("SerdeTree")
             .field("tree", &self.tree)
@@ -268,13 +307,13 @@ impl Debug for SerdeTree<()> {
     }
 }
 
-impl<T> From<Tree> for SerdeTree<T> {
+impl<T, K: ?Sized> From<Tree> for SerdeTree<T, K> {
     fn from(tree: Tree) -> Self {
         Self::new(tree)
     }
 }
 
-impl<T> Clone for SerdeTree<T> {
+impl<T, K: ?Sized> Clone for SerdeTree<T, K> {
     fn clone(&self) -> Self {
         Self {
             tree: self.tree.clone(),
@@ -283,7 +322,57 @@ impl<T> Clone for SerdeTree<T> {
     }
 }
 
-impl<T: 'static> FromRequest for SerdeTree<T> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TimeKey([u8; 8]);
+
+impl TimeKey {
+    pub fn now() -> Self {
+        Self::with_systemtime(&SystemTime::now())
+    }
+
+    pub fn with_systemtime(time: &SystemTime) -> Self {
+        let time = time.duration_since(UNIX_EPOCH).unwrap();
+        Self::from_timestamp(time.as_secs())
+    }
+
+    pub fn from_timestamp(ts: u64) -> Self {
+        Self(ts.to_be_bytes())
+    }
+
+    pub fn from_be_bytes(bytes: [u8; 8]) -> Self {
+        Self(bytes)
+    }
+}
+
+impl From<SystemTime> for TimeKey {
+    fn from(time: SystemTime) -> Self {
+        Self::with_systemtime(&time)
+    }
+}
+
+impl From<&SystemTime> for TimeKey {
+    fn from(time: &SystemTime) -> Self {
+        Self::with_systemtime(time)
+    }
+}
+
+impl Default for TimeKey {
+    fn default() -> Self {
+        Self::now()
+    }
+}
+
+impl AsRef<[u8]> for TimeKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl<T, K> FromRequest for SerdeTree<T, K>
+where
+    T: 'static,
+    K: ?Sized + 'static,
+{
     type Error = InternalError<&'static str>;
     type Future = Ready<Result<Self, Self::Error>>;
 
@@ -317,18 +406,58 @@ impl FromRequest for Flag {
     }
 }
 
-// pub trait WeakError: Display {
-//     fn as_std(&self) -> Option<&dyn std::error::Error>;
-// }
+pin_project_lite::pin_project! {
+    struct SledSerdeStream<T> {
+        #[pin]
+        receiver: sled::Subscriber,
+        _marker: PhantomData<T>,
+    }
+}
 
-// impl<E: Error> WeakError for E {
-//     fn as_std(&self) -> Option<&dyn std::error::Error> {
-//         Some(self)
-//     }
-// }
+impl<T> SledSerdeStream<T> {
+    pub fn new(receiver: sled::Subscriber) -> Self {
+        Self {
+            receiver,
+            _marker: PhantomData,
+        }
+    }
+}
 
-// impl<E: Deref<Target = dyn Error>> WeakError for E {
-//     fn as_std(&self) -> Option<&dyn std::error::Error> {
-//         Some(self.deref())
-//     }
-// }
+impl<T> Stream for SledSerdeStream<T>
+where
+    T: DeserializeOwned,
+{
+    type Item = T;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match ready!(self.project().receiver.poll(cx)) {
+            Some(e) => match e {
+                sled::Event::Insert { value, .. } => {
+                    serde_json::from_slice(value.deref()).ok().pipe(Poll::Ready)
+                }
+                _ => Poll::Pending,
+            },
+            None => Poll::Ready(None),
+        }
+    }
+}
+
+#[test]
+fn test_time_key() {
+    let t1 = TimeKey::from_timestamp(114514);
+    let t2 = TimeKey::from_timestamp(1919810);
+    let t3 = TimeKey::from_timestamp(120398109238091283);
+    let db = sled::Config::new().temporary(true).open().unwrap();
+    let tree: SerdeTree<[u8; 0], TimeKey> = db.open_tree("test").unwrap().into();
+    let sub = tree.tree.watch_prefix("");
+    tree.upsert(&t1, &[]).unwrap();
+    tree.upsert(&t2, &[]).unwrap();
+    tree.upsert(&t3, &[]).unwrap();
+    let c = tree.range(TimeKey::from_timestamp(115000)..).count();
+    assert_eq!(c, 2);
+    let l = tree.latest(2).unwrap();
+    assert_eq!(l, vec![(t2, []), (t3, [])]);
+    sub.for_each(|x| {
+        dbg!(x);
+    });
+}

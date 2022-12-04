@@ -24,7 +24,7 @@ pub trait Downloader {
     where
         Self: Sized;
 
-    async fn download<I: AsRef<str>>(&self, job: Job<I>) -> Result<Option<Self::Id>, Self::Error>;
+    async fn download(&self, job: Job) -> Result<Option<Self::Id>, Self::Error>;
 
     async fn rename(
         &self,
@@ -69,7 +69,7 @@ impl Downloader for NoopDownloader {
     type Error = std::convert::Infallible;
     type Id = ();
 
-    async fn download<I: AsRef<str>>(&self, _: Job<I>) -> Result<Option<Self::Id>, Self::Error> {
+    async fn download(&self, _: Job) -> Result<Option<Self::Id>, Self::Error> {
         Ok(None)
     }
 

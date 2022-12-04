@@ -60,7 +60,7 @@ impl Downloader for Transmission {
         }
     }
 
-    async fn download<I: AsRef<str>>(&self, job: Job<I>) -> Result<Option<Self::Id>, Self::Error> {
+    async fn download(&self, job: Job) -> Result<Option<Self::Id>, Self::Error> {
         use tt::TorrentAddedOrDuplicate::*;
 
         let Job { url, dir: path, .. } = job;

@@ -35,15 +35,11 @@ impl Default for Bangumi {
 
 impl Site for Bangumi {
     type Error = bangumi::rustify::errors::ClientError;
-    type Id = bangumi::Id;
     type Sub = BangumiSubscription;
 
     const NAME: &'static str = "bangumi.moe";
 
-    async fn update(
-        &self,
-        ctx: SiteCtx<'_, BangumiSubscription>,
-    ) -> Result<Vec<Job<Self::Id>>, Self::Error> {
+    async fn update(&self, ctx: SiteCtx<'_, BangumiSubscription>) -> Result<Vec<Job>, Self::Error> {
         let SiteCtx { sub, download_dir } = ctx;
 
         let torrents = SearchTorrents::builder()
@@ -86,7 +82,7 @@ impl Site for Bangumi {
                 }
 
                 Some(Job {
-                    id,
+                    id: id.0,
                     url,
                     dir: dir.clone(),
                 })

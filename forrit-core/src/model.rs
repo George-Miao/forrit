@@ -48,8 +48,8 @@ impl BangumiSubscription {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Job<I: AsRef<str>> {
-    pub id: I,
+pub struct Job {
+    pub id: String,
     pub url: Url,
     pub dir: PathBuf,
 }
@@ -63,4 +63,11 @@ impl Default for Confirm {
     fn default() -> Self {
         Self { success: true }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Event {
+    JobAdded(Job),
+    DownloadStart { url: Url },
+    Warn(String),
 }

@@ -2,9 +2,11 @@ use std::time::Duration;
 
 use actix_web::{
     body::BoxBody,
+    dev::Payload,
+    error::InternalError,
     middleware::{Logger, NormalizePath},
     web::*,
-    App, Either, FromRequest, HttpResponse, HttpServer, ResponseError,
+    App, Either, FromRequest, HttpRequest, HttpResponse, HttpServer, ResponseError,
 };
 use actix_web_httpauth::{
     extractors::AuthenticationError, headers::www_authenticate::basic::Basic,
@@ -12,14 +14,19 @@ use actix_web_httpauth::{
 };
 use bangumi::Id;
 use forrit_core::{with, Confirm, Site};
-use futures::future::{ready, Ready};
+use futures::{
+    future::{err, ok, ready, Ready},
+    StreamExt,
+};
 use reqwest::{header::HeaderValue, StatusCode, Url};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 use tap::{Pipe, Tap};
 use tracing::{info, warn};
 
-use crate::{get_config, BangumiSubscription, Config, Error, Flag, Forrit, Result, SerdeTree};
+use crate::{
+    get_config, BangumiSubscription, Config, Error, Events, Flag, Forrit, Result, SerdeTree,
+};
 
 type Subs = SerdeTree<BangumiSubscription>;
 type Recs = SerdeTree<Url>;
@@ -40,6 +47,7 @@ where
         let records = self.records.clone();
         let conf = Data::new(config);
         let site = Data::new(self.site.clone());
+        let events = self.events.clone();
         let flag = self.flag.clone();
 
         info!("Staring server");
@@ -139,6 +147,7 @@ where
                 .app_data(conf.clone())
                 .app_data(subs.clone())
                 .app_data(records.clone())
+                .app_data(events.clone())
                 .app_data(flag.clone())
                 .app_data(site.clone())
                 .wrap(Logger::default())
@@ -156,6 +165,7 @@ where
                         .route(delete().to(handle_delete_sub)),
                 )
                 .service(resource("/config").route(get().to(handle_get_config)))
+                .service(resource("/event").route(get().to(handle_get_events)))
         })
         .workers(num_workers)
         .keep_alive(Duration::from_secs(90))
@@ -164,6 +174,16 @@ where
         .await
         .map_err(From::from)
     }
+}
+
+async fn handle_get_events(events: Events) -> Result<HttpResponse> {
+    HttpResponse::Ok()
+        .streaming(
+            events
+                .subscribe()?
+                .map(|x| serde_json::to_vec(&x).map(Into::into)),
+        )
+        .pipe(Ok)
 }
 
 #[derive(Debug, Deserialize)]
@@ -222,5 +242,22 @@ impl FromRequest for Tags {
 impl Tags {
     pub fn as_set(&self) -> std::collections::HashSet<&Id> {
         self.0.iter().collect()
+    }
+}
+
+impl FromRequest for Events {
+    type Error = InternalError<&'static str>;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    #[inline]
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+        if let Some(st) = req.app_data::<Self>() {
+            ok(st.clone())
+        } else {
+            err(InternalError::new(
+                "`Events` not found in app_data",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
     }
 }
