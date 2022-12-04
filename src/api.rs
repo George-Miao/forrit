@@ -1,22 +1,25 @@
-use forrit_core::{Confirm, Subscription, WithId};
+use forrit_core::{BangumiSubscription, Confirm, WithId};
 use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 #[derive(Debug, Clone, Endpoint, TypedBuilder)]
-#[endpoint(path = "/subscription", response = "Vec<WithId<String, Subscription>>")]
+#[endpoint(
+    path = "/subscription",
+    response = "Vec<WithId<String, BangumiSubscription>>"
+)]
 pub struct ListSub {}
 
 #[derive(Debug, Clone, Endpoint, TypedBuilder)]
 #[endpoint(
     path = "/subscription",
     method = "POST",
-    response = "WithId<String, Subscription>"
+    response = "WithId<String, BangumiSubscription>"
 )]
 pub struct PostSub {
     #[endpoint(body)]
     #[serde(flatten)]
-    sub: Subscription,
+    sub: BangumiSubscription,
 }
 
 #[derive(Debug, Clone, Endpoint, TypedBuilder)]
@@ -28,14 +31,14 @@ pub struct PostSub {
 pub struct PutSub {
     #[endpoint(skip)]
     id: String,
-    sub: Subscription,
+    sub: BangumiSubscription,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "status", content = "content", rename_all = "lowercase")]
 pub enum PutResult {
-    Updated(Subscription),
-    Created(Subscription),
+    Updated(BangumiSubscription),
+    Created(BangumiSubscription),
 }
 
 #[derive(Debug, Clone, Endpoint, TypedBuilder)]

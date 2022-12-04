@@ -7,7 +7,7 @@ use std::{
 use bangumi::{endpoints::SearchTags, SearchResult};
 use clap::{Parser, Subcommand};
 use color_eyre::{eyre::bail, Result};
-use forrit_core::{Subscription, WithId};
+use forrit_core::{BangumiSubscription, WithId};
 use owo_colors::OwoColorize;
 use requestty::{
     prompt_one,
@@ -130,21 +130,24 @@ fn write_indent_with(w: &mut dyn Write, s: &str, num: usize) -> std::io::Result<
     write!(w, "{0:>1$} ", s.green().bold(), num)
 }
 
-fn print_sub_with_id(sub: &WithId<String, Subscription>) {
+fn print_sub_with_id(sub: &WithId<String, BangumiSubscription>) {
     write_sub_with_id(&mut stdout(), sub).unwrap()
 }
 
-fn write_sub_with_id(w: &mut dyn Write, sub: &WithId<String, Subscription>) -> std::io::Result<()> {
+fn write_sub_with_id(
+    w: &mut dyn Write,
+    sub: &WithId<String, BangumiSubscription>,
+) -> std::io::Result<()> {
     write_indent_with(w, "Subs ID", 8)?;
     writeln!(w, "{}", sub.id())?;
     write_sub(w, sub.content())
 }
 
-fn print_sub(sub: &Subscription) {
+fn print_sub(sub: &BangumiSubscription) {
     write_sub(&mut stdout(), sub).unwrap();
 }
 
-fn write_sub(w: &mut dyn Write, sub: &Subscription) -> std::io::Result<()> {
+fn write_sub(w: &mut dyn Write, sub: &BangumiSubscription) -> std::io::Result<()> {
     write_indent_with(w, "Name", 8)?;
     writeln!(w, "{}", sub.bangumi.name)?;
 

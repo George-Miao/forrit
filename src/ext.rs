@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Deref};
 
-use forrit_core::Subscription;
+use forrit_core::BangumiSubscription;
 use unicode_width::UnicodeWidthStr;
 
 pub trait SubscriptionExt {
@@ -8,14 +8,14 @@ pub trait SubscriptionExt {
     fn display(&self, padding: usize) -> SubscriptionDisplay;
 }
 
-impl SubscriptionExt for Subscription {
+impl SubscriptionExt for BangumiSubscription {
     fn display(&self, padding: usize) -> SubscriptionDisplay {
         SubscriptionDisplay { sub: self, padding }
     }
 }
 
 pub struct SubscriptionDisplay<'a> {
-    sub: &'a Subscription,
+    sub: &'a BangumiSubscription,
     padding: usize,
 }
 

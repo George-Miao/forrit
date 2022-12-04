@@ -9,7 +9,7 @@ use color_eyre::{
     eyre::{bail, eyre},
     Result,
 };
-use forrit_core::Subscription;
+use forrit_core::BangumiSubscription;
 use owo_colors::OwoColorize;
 use regex::Regex;
 use requestty::{self, ListItem, Question};
@@ -83,7 +83,9 @@ impl SubsCmd {
                 match self {
                     Self::Del => {
                         choices
-                            .pipe(|subs| Question::multi_select("Subscriptions").choices(subs))
+                            .pipe(|subs| {
+                                Question::multi_select("BangumiSubscriptions").choices(subs)
+                            })
                             .ask()?
                             .pipe(|res| res.into_iter().map(|idx| list[idx.index].id().clone()))
                             .collect::<Vec<_>>()
@@ -96,7 +98,7 @@ impl SubsCmd {
                     }
                     Self::Update => {
                         choices
-                            .pipe(|subs| Question::select("Subscriptions").choices(subs))
+                            .pipe(|subs| Question::select("BangumiSubscriptions").choices(subs))
                             .ask()?
                             .pipe(|res| list[res.index].clone())
                             .pipe(|mut sub| async {
@@ -205,7 +207,7 @@ impl SubsAddArg {
             } else {
                 None
             };
-            let sub = Subscription {
+            let sub = BangumiSubscription {
                 bangumi: Record {
                     tag: bangumi,
                     name: tag.preferred_name_owned(),
@@ -269,7 +271,7 @@ impl SubsAddArg {
                     })
                     .collect::<Vec<_>>();
 
-                let mut sub = Subscription {
+                let mut sub = BangumiSubscription {
                     bangumi: bangumi.try_into()?,
                     ..Default::default()
                 };
@@ -285,7 +287,7 @@ impl SubsAddArg {
                 .build()
                 .quick_exec(&forrit_client)
                 .await?;
-            println!("{} Subscription added!", "+".green())
+            println!("{} BangumiSubscription added!", "+".green())
         }
         Ok(())
     }
@@ -293,8 +295,8 @@ impl SubsAddArg {
 
 async fn request_sub(
     bangumi_client: &Client,
-    sub_base: Option<Subscription>,
-) -> Result<Subscription> {
+    sub_base: Option<BangumiSubscription>,
+) -> Result<BangumiSubscription> {
     let Current {
         bangumis,
         working_teams,
@@ -352,7 +354,7 @@ async fn request_sub(
 async fn fill_sub_detail(
     bangumi_client: &Client,
     mut teams: Vec<Record>,
-    sub: &mut Subscription,
+    sub: &mut BangumiSubscription,
 ) -> Result<()> {
     if teams.is_empty() {
     } else if teams.len() == 1 {
