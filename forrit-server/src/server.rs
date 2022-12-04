@@ -2,11 +2,9 @@ use std::time::Duration;
 
 use actix_web::{
     body::BoxBody,
-    dev::Payload,
-    error::InternalError,
     middleware::{Logger, NormalizePath},
     web::*,
-    App, Either, FromRequest, HttpRequest, HttpResponse, HttpServer, ResponseError,
+    App, Either, FromRequest, HttpResponse, HttpServer, ResponseError,
 };
 use actix_web_httpauth::{
     extractors::AuthenticationError, headers::www_authenticate::basic::Basic,
@@ -15,7 +13,7 @@ use actix_web_httpauth::{
 use bangumi::Id;
 use forrit_core::{with, Confirm, Event};
 use futures::{
-    future::{err, ok, ready, Ready},
+    future::{ready, Ready},
     StreamExt,
 };
 use reqwest::{header::HeaderValue, StatusCode, Url};
@@ -25,8 +23,8 @@ use tap::{Pipe, Tap, TapFallible};
 use tracing::{info, warn};
 
 use crate::{
-    bangumi::Bangumi, get_config, BangumiSubscription, Config, Error, Events, Flag, Forrit, Result,
-    SerdeTree,
+    bangumi::Bangumi, clear, emit, get_config, subscribe, BangumiSubscription, Config, Error, Flag,
+    Forrit, Result, SerdeTree,
 };
 
 type Subs = SerdeTree<BangumiSubscription>;
@@ -45,7 +43,6 @@ where
         let records = self.records.clone();
         let conf = Data::new(config);
         let site = Data::new(self.site.clone());
-        let events = self.events.clone();
         let flag = self.flag.clone();
 
         info!("Staring server");
@@ -58,8 +55,7 @@ where
         let handle_post_sub = |api: Data<Bangumi>,
                                db: SerdeTree<BangumiSubscription>,
                                waker: Flag,
-                               Json(sub): Json<BangumiSubscription>,
-                               events: Events| async move {
+                               Json(sub): Json<BangumiSubscription>| async move {
             if !api
                 .validate(&sub)
                 .await
@@ -69,7 +65,7 @@ where
             }
 
             let id = db.insert(&sub)?;
-            events.emit(&Event::SubscriptionAdded(sub.clone()))?;
+            emit(&Event::SubscriptionAdded(sub.clone()))?;
             waker.signal();
             Result::<_>::Ok(Json(with!(id, content = sub)))
         };
@@ -88,7 +84,6 @@ where
                               waker: Data<Flag>,
                               id: Path<String>,
                               records: Recs,
-                              events: Events,
                               Json(sub): Json<BangumiSubscription>| async move {
             if !api
                 .validate(&sub)
@@ -102,7 +97,7 @@ where
             match db.upsert(&id, &sub)?.tap(|_| waker.signal()) {
                 Some(old) => {
                     records.remove_all(&id)?;
-                    events.emit(&Event::SubscriptionUpdated {
+                    emit(&Event::SubscriptionUpdated {
                         old: old.clone(),
                         new: sub,
                     })?;
@@ -112,7 +107,7 @@ where
                     }))))
                 }
                 None => {
-                    events.emit(&Event::SubscriptionAdded(sub.clone()))?;
+                    emit(&Event::SubscriptionAdded(sub.clone()))?;
                     Result::<_>::Ok(Either::Right(Json(json!({
                         "result": "created",
                         "content": sub,
@@ -121,23 +116,23 @@ where
             }
         };
 
-        let handle_delete_sub = |db: Subs, records: Recs, id: Path<String>, events: Events| async move {
+        let handle_delete_sub = |db: Subs, records: Recs, id: Path<String>| async move {
             let id = id.into_inner();
             match db.remove(&id)? {
                 Some(sub) => {
                     records.remove_all(&id)?;
-                    events.emit(&Event::SubscriptionRemoved(sub.clone()))?;
+                    emit(&Event::SubscriptionRemoved(sub.clone()))?;
                     Result::<_>::Ok(Either::Left(Json(sub)))
                 }
                 None => Result::<_>::Ok(Either::Right(HttpResponse::NotFound())),
             }
         };
 
-        let handle_delete_subs = |db: Subs, records: Recs, req: Json<DelSubs>, events: Events| async move {
+        let handle_delete_subs = |db: Subs, records: Recs, req: Json<DelSubs>| async move {
             let ids = req.into_inner().ids;
             db.remove_batch(ids.iter())?;
             ids.iter().try_for_each(|id| records.remove_all(id))?;
-            events.emit(&Event::MultipleSubscriptionRemoved(ids))?;
+            emit(&Event::MultipleSubscriptionRemoved(ids))?;
             Result::<_>::Ok(Json(Confirm::default()))
         };
 
@@ -157,7 +152,6 @@ where
                 .app_data(conf.clone())
                 .app_data(subs.clone())
                 .app_data(records.clone())
-                .app_data(events.clone())
                 .app_data(flag.clone())
                 .app_data(site.clone())
                 .wrap(Logger::default())
@@ -178,8 +172,8 @@ where
                 .service(
                     resource("/events")
                         .route(get().to(handle_get_events))
-                        .route(delete().to(|events: Events| async move {
-                            events.clear()?;
+                        .route(delete().to(|| async move {
+                            clear()?;
                             Result::<_>::Ok(Json(Confirm::default()))
                         })),
                 )
@@ -193,7 +187,7 @@ where
     }
 }
 
-async fn handle_get_events(events: Events) -> Result<HttpResponse> {
+async fn handle_get_events() -> Result<HttpResponse> {
     #[derive(Serialize)]
     struct EventWrapper {
         time: u64,
@@ -201,7 +195,7 @@ async fn handle_get_events(events: Events) -> Result<HttpResponse> {
         event: Event,
     }
     HttpResponse::Ok()
-        .streaming(events.subscribe()?.map(|(t, e)| {
+        .streaming(subscribe()?.map(|(t, e)| {
             serde_json::to_vec(&EventWrapper {
                 time: t.timestamp(),
                 event: e,
@@ -234,10 +228,11 @@ impl ResponseError for Error {
             HeaderValue::from_static("text/plain; charset=utf-8"),
         );
 
-        res.set_body(BoxBody::new(if let Error::WebError(status, _) = self {
-            status
+        res.set_body(BoxBody::new(if let Error::WebError(text, _) = self {
+            text
         } else {
             warn!(%self);
+            emit(&Event::Warn(self.to_string())).unwrap();
             "Internal Server Error"
         }))
     }
@@ -268,22 +263,5 @@ impl FromRequest for Tags {
 impl Tags {
     pub fn as_set(&self) -> std::collections::HashSet<&Id> {
         self.0.iter().collect()
-    }
-}
-
-impl FromRequest for Events {
-    type Error = InternalError<&'static str>;
-    type Future = Ready<Result<Self, Self::Error>>;
-
-    #[inline]
-    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        if let Some(st) = req.app_data::<Self>() {
-            ok(st.clone())
-        } else {
-            err(InternalError::new(
-                "`Events` not found in app_data",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            ))
-        }
     }
 }

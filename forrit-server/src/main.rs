@@ -21,7 +21,7 @@ use std::{borrow::Cow, env, ops::Deref, path::PathBuf};
 use forrit_core::{BangumiSubscription, Downloader, Event, IntoStream, Job};
 use futures::{future::join_all, stream::StreamExt};
 use reqwest::Url;
-use tap::{Pipe, Tap, TapFallible};
+use tap::{Conv, Pipe, Tap, TapFallible};
 use tokio::{fs, select};
 use tracing::{debug, info, metadata::LevelFilter, warn};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -98,7 +98,6 @@ pub struct Forrit<D> {
     subs: SerdeTree<BangumiSubscription>,
     records: SerdeTree<Url>,
     flag: Flag,
-    events: Events,
 }
 
 impl<D: Downloader> Forrit<D> {
@@ -110,14 +109,16 @@ impl<D: Downloader> Forrit<D> {
         let db = sled::open(conf.db_dir())?;
         let subs = db.open_tree("bangumi.moe")?.into();
         let records = db.open_tree("records")?.into();
-        let events = db.open_tree("events")?.into();
+        db.open_tree("events")?
+            .conv::<SerdeTree<Event, TimeKey>>()
+            .pipe(init_events);
 
         let this = Self {
             site,
             downloader,
             subs,
             records,
-            events,
+
             flag: Flag::new(),
         };
         this.validate_config().await?;
@@ -137,9 +138,7 @@ impl<D: Downloader> Forrit<D> {
 
     async fn handle_jobs(&self, jobs: impl Iterator<Item = Job>) {
         join_all(jobs.map(|x| {
-            self.events
-                .emit(&Event::DownloadStart { url: x.url.clone() })
-                .unwrap();
+            emit(&Event::DownloadStart { url: x.url.clone() }).unwrap();
             info!(url=%x.url, "Downloading job");
             self.downloader.download(x)
         }))
@@ -199,8 +198,7 @@ impl<D: Downloader> Forrit<D> {
 
                     match self.site.update(sub, download_dir).await {
                         Err(error) => {
-                            self.events
-                                .emit(&Event::Warn(format!("Failed to retrieve jobs ({})", error)))
+                            emit(&Event::Warn(format!("Failed to retrieve jobs ({})", error)))
                                 .unwrap();
                             warn!(%error, "Failed to retrieve jobs")
                         }
@@ -216,7 +214,7 @@ impl<D: Downloader> Forrit<D> {
                                 } else {
                                     self.records.upsert(&x.id, &x.url).warn_err_end();
                                     info!(url = %x.url, "Adding job");
-                                    self.events.emit(&Event::JobAdded(x.clone())).unwrap();
+                                    emit(&Event::JobAdded(x.clone())).unwrap();
                                     true
                                 }
                             }))
