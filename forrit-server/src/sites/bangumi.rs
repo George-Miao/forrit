@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::PathBuf;
 
 use bangumi::{
     endpoints::{FetchTags, SearchTorrents},
@@ -36,11 +36,7 @@ impl Default for Bangumi {
 }
 
 impl Bangumi {
-    pub async fn update(
-        &self,
-        sub: &BangumiSubscription,
-        download_dir: &Path,
-    ) -> Result<Vec<Job>, ClientError> {
+    pub async fn update(&self, sub: &BangumiSubscription) -> Result<Vec<Job>, ClientError> {
         let torrents = SearchTorrents::builder()
             .tags(sub.tags().map(|x| x.0.to_owned()).collect::<Vec<_>>())
             .build()
@@ -51,7 +47,7 @@ impl Bangumi {
 
         let name = &sub.bangumi.name;
         let season = sub.season.unwrap_or(1);
-        let dir = download_dir.join(format!("{name}/S{season}"));
+        let dir = PathBuf::from(format!("{name}/S{season}"));
 
         debug!(?torrents);
 
@@ -83,7 +79,7 @@ impl Bangumi {
                 Some(Job {
                     id: id.0,
                     url,
-                    dir: dir.clone(),
+                    path: dir.clone(),
                 })
             })
             .collect();

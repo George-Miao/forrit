@@ -30,10 +30,7 @@ use crate::{
 type Subs = SerdeTree<BangumiSubscription>;
 type Recs = SerdeTree<Url>;
 
-impl<D> Forrit<D>
-where
-    D: Send + 'static,
-{
+impl Forrit {
     pub async fn server(&self) -> Result<()> {
         let config = get_config().clone();
         let bind = (config.server.bind, config.server.port);

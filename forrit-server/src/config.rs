@@ -6,7 +6,6 @@ use std::{
     time::Duration,
 };
 
-use forrit_core::{DownloaderConfig, NoopConfig};
 use futures::future::try_join_all;
 use reqwest::{Client, Url};
 use serde::Serialize;
@@ -14,7 +13,7 @@ use tap::{Pipe, TapFallible};
 use tracing::{info, warn};
 use twelf::{config, Layer};
 
-use crate::{Error, Result};
+use crate::{DownloadersConfig, Error, Result};
 
 static CONF_PATH: OnceLock<PathBuf> = OnceLock::new();
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -65,7 +64,7 @@ pub struct Config {
     #[serde(default)]
     pub rate_limit: Option<usize>,
 
-    pub downloader: Box<dyn DownloaderConfig>,
+    pub downloader: DownloadersConfig,
 }
 
 #[config]
@@ -133,7 +132,7 @@ impl Default for Config {
             tracker_lists: Vec::new(),
             server: ServerConfig::default(),
             no_cache: false,
-            downloader: NoopConfig.erase(),
+            downloader: DownloadersConfig::Noop,
             rate_limit: None,
         }
     }

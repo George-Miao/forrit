@@ -1,10 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use forrit_core::{typetag, Downloader, DownloaderConfig, Job};
+use forrit_core::Job;
 use futures::future::try_join_all;
 use transmission_rpc::{types as tt, SharableTransClient};
 
-use crate::{config::default, Error, TorrentExt};
+use crate::{config::default, Downloader, Error, TorrentExt};
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct TransmissionConfig {
@@ -18,19 +18,9 @@ pub struct TransmissionConfig {
     pub auth: Option<(String, String)>,
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("Adhoc error: {0}")]
-pub struct AdHocError(String);
-
-#[typetag::serde(name = "transmission")]
-impl DownloaderConfig for TransmissionConfig {
-    fn download_dir(&self) -> &Path {
-        &self.download_dir
-    }
-}
-
 pub struct Transmission {
     trans: SharableTransClient,
+    conf: TransmissionConfig,
 }
 
 impl Downloader for Transmission {
@@ -38,7 +28,7 @@ impl Downloader for Transmission {
     type Error = Error;
     type Id = tt::Id;
 
-    async fn new(config: &Self::Config) -> Result<Self, Self::Error>
+    async fn new(config: Self::Config) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
@@ -50,24 +40,35 @@ impl Downloader for Transmission {
             Ok(x) => x,
             Err(e) => return Err(Error::AdHocError(e)),
         };
+
         if !res.is_ok() {
             Err(Error::AdHocStringError(format!(
                 "transmission session_get failed ({})",
                 res.result
             )))
         } else {
-            Ok(Self { trans })
+            Ok(Self {
+                trans,
+                conf: config.clone(),
+            })
         }
     }
 
     async fn download(&self, job: Job) -> Result<Option<Self::Id>, Self::Error> {
         use tt::TorrentAddedOrDuplicate::*;
 
-        let Job { url, dir: path, .. } = job;
+        let Job { url, path, .. } = job;
 
         let arg = tt::TorrentAddArgs {
             filename: Some(url.to_string()),
-            download_dir: Some(path.to_str().ok_or(Error::NonUTF8Error)?.to_owned()),
+            download_dir: Some(
+                self.conf
+                    .download_dir
+                    .join(path)
+                    .to_str()
+                    .ok_or(Error::NonUTF8Error)?
+                    .to_owned(),
+            ),
             ..tt::TorrentAddArgs::default()
         };
 

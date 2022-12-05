@@ -7,7 +7,7 @@
 pub use futures;
 use futures::{stream, Stream};
 
-mod_use::mod_use![model, error, notification, downloader];
+mod_use::mod_use![model, error, notification];
 
 pub use bangumi;
 pub use typetag;

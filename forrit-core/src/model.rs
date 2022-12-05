@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bangumi::{Id, Record};
 use regex::Regex;
@@ -51,7 +51,13 @@ impl BangumiSubscription {
 pub struct Job {
     pub id: String,
     pub url: Url,
-    pub dir: PathBuf,
+    pub path: PathBuf,
+}
+
+impl Job {
+    pub fn with_download_dir(&mut self, root: &Path) {
+        self.path = root.join(&self.path);
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

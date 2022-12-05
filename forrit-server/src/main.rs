@@ -16,17 +16,17 @@
 
 mod_use::mod_use![server, ext, config, util, downloaders, sites, error, event];
 
-use std::{borrow::Cow, env, ops::Deref, path::PathBuf};
+use std::{env, path::PathBuf};
 
-use forrit_core::{BangumiSubscription, Downloader, Event, IntoStream, Job};
-use futures::{future::join_all, stream::StreamExt};
+use forrit_core::{BangumiSubscription, Event, IntoStream};
+use futures::stream::StreamExt;
 use reqwest::Url;
 use tap::{Conv, Pipe, Tap, TapFallible};
 use tokio::{fs, select};
 use tracing::{debug, info, metadata::LevelFilter, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
-use crate::{init, sites::bangumi::Bangumi, transmission::Transmission, Config};
+use crate::{init, sites::bangumi::Bangumi, Config};
 
 #[tokio::main]
 async fn main() {
@@ -71,9 +71,7 @@ async fn run() -> Result<()> {
 
     let conf = get_config();
 
-    let downloader = Transmission::new_from_dyn_conf(conf.downloader.deref())
-        .await?
-        .unwrap();
+    let downloader = Downloaders::new(conf.downloader.clone()).await?;
     let bangumi = Bangumi::default();
 
     let forrit = Forrit::new(bangumi, downloader).await?;
@@ -92,17 +90,18 @@ async fn run() -> Result<()> {
     Ok(())
 }
 
-pub struct Forrit<D> {
+pub struct Forrit {
     site: Bangumi,
-    downloader: D,
+    downloader: Downloaders,
     subs: SerdeTree<BangumiSubscription>,
     records: SerdeTree<Url>,
     flag: Flag,
 }
 
-impl<D: Downloader> Forrit<D> {
-    pub async fn new(site: Bangumi, downloader: D) -> Result<Self> {
+impl Forrit {
+    pub async fn new(site: Bangumi, downloader: impl Into<Downloaders>) -> Result<Self> {
         let conf = get_config();
+        let downloader = downloader.into();
 
         fs::create_dir_all(&conf.data_dir).await?;
 
@@ -136,44 +135,6 @@ impl<D: Downloader> Forrit<D> {
         }
     }
 
-    async fn handle_jobs(&self, jobs: impl Iterator<Item = Job>) {
-        join_all(jobs.map(|x| {
-            emit(&Event::DownloadStart { url: x.url.clone() }).unwrap();
-            info!(url=%x.url, "Downloading job");
-            self.downloader.download(x)
-        }))
-        .await
-        .into_iter()
-        .filter_map(|r| r.warn_err().ok().flatten())
-        .collect::<Vec<_>>()
-        .tap_dbg(|ids| debug!(?ids))
-        .pipe(|ids| self.postprocess(ids))
-        .await
-        .warn_err_end();
-    }
-
-    async fn postprocess(&self, ids: Vec<D::Id>) -> Result<()> {
-        let config = get_config();
-
-        ids.iter()
-            .into_stream()
-            .for_each_concurrent(None, |id| async {
-                self.downloader
-                    .rename(id, |name| {
-                        let Cow::Owned(modified) = normalize_title(name) else { return None };
-                        Some(modified)
-                    })
-                    .await
-                    .warn_err_end();
-            })
-            .await;
-        self.downloader
-            .add_tracker(ids, config.trackers.iter().map(|x| x.to_string()).collect())
-            .await
-            .map_err(|e| Error::AdHocError(e.into()))?;
-        Ok(())
-    }
-
     pub async fn main_loop(&self) {
         let mut clock = tokio::time::interval(get_config().check_intervel);
         info!("Starting mainloop");
@@ -194,9 +155,8 @@ impl<D: Downloader> Forrit<D> {
                     let Ok((_, ref sub)) = sub.warn_err() else {
                         return
                     };
-                    let download_dir = config.downloader.download_dir();
 
-                    match self.site.update(sub, download_dir).await {
+                    match self.site.update(sub).await {
                         Err(error) => {
                             emit(&Event::Warn(format!("Failed to retrieve jobs ({})", error)))
                                 .unwrap();
@@ -208,17 +168,25 @@ impl<D: Downloader> Forrit<D> {
                                 return;
                             }
 
-                            self.handle_jobs(jobs.into_iter().filter(|x| {
-                                if self.records.get(&x.id).warn_err().ok().flatten().is_some() {
-                                    false
-                                } else {
-                                    self.records.upsert(&x.id, &x.url).warn_err_end();
-                                    info!(url = %x.url, "Adding job");
-                                    emit(&Event::JobAdded(x.clone())).unwrap();
-                                    true
-                                }
-                            }))
-                            .await;
+                            self.downloader
+                                .handle_jobs(jobs.into_iter().filter(|job| {
+                                    if self
+                                        .records
+                                        .get(&job.id)
+                                        .warn_err()
+                                        .ok()
+                                        .flatten()
+                                        .is_some()
+                                    {
+                                        false
+                                    } else {
+                                        self.records.upsert(&job.id, &job.url).warn_err_end();
+                                        info!(url = %job.url, "Adding job");
+                                        emit(&Event::JobAdded(job.clone())).unwrap();
+                                        true
+                                    }
+                                }))
+                                .await;
                         }
                     }
                 })
