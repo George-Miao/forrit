@@ -57,7 +57,7 @@ impl Downloader for Transmission {
     async fn download(&self, job: Job) -> Result<Option<Self::Id>, Self::Error> {
         use tt::TorrentAddedOrDuplicate::*;
 
-        let Job { url, path, .. } = job;
+        let Job { url, dir: path, .. } = job;
 
         let arg = tt::TorrentAddArgs {
             filename: Some(url.to_string()),

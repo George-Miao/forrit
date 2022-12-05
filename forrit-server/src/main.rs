@@ -1,10 +1,10 @@
 //! ## Looping
 //!
 //! -> Get subscriptions
-//! -> Get RSS (or potentially other sources)
+//! -> Get update
 //! -> Turn into jobs
 //! -> Start download
-//! -> Rename
+//! -> Postprocess (Rename, move, etc)
 
 #![allow(incomplete_features)]
 #![feature(type_alias_impl_trait)]

@@ -79,7 +79,7 @@ impl Bangumi {
                 Some(Job {
                     id: id.0,
                     url,
-                    path: dir.clone(),
+                    dir: dir.clone(),
                 })
             })
             .collect();

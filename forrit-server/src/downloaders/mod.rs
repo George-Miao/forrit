@@ -87,10 +87,21 @@ impl Downloaders {
     }
 
     pub async fn handle_jobs(&self, jobs: impl Iterator<Item = Job>) {
-        join_all(jobs.map(|x| {
-            emit(&Event::DownloadStart { url: x.url.clone() }).unwrap();
-            info!(url=%x.url, "Downloading job");
-            self.download(x)
+        let rename: fn(&str) -> Option<String> = |name| {
+            let Cow::Owned(modified) = normalize_title(name) else { return None };
+            Some(modified)
+        };
+
+        join_all(jobs.map(|job| async {
+            emit(&Event::DownloadStart {
+                url: job.url.clone(),
+            })
+            .unwrap();
+            info!(url=%job.url, "Downloading job");
+            match self {
+                Self::Transmission(t) => Ok(t.download(job).await?.map(DownloaderId::Transmission)),
+                Self::Noop => Result::<_>::Ok(None),
+            }
         }))
         .await
         .into_iter()
@@ -102,40 +113,26 @@ impl Downloaders {
 
             ids.iter()
                 .into_stream()
-                .for_each_concurrent(None, |id| async {
-                    self.rename(id, |name| {
-                        let Cow::Owned(modified) = normalize_title(name) else { return None };
-                        Some(modified)
-                    })
-                    .await
+                .for_each_concurrent(None, |id| async move {
+                    match (self, &id) {
+                        (Self::Transmission(t), DownloaderId::Transmission(id)) => {
+                            t.rename(id, rename).await
+                        }
+                        _ => Ok(()),
+                    }
                     .warn_err_end();
                 })
                 .await;
-            self.add_tracker(ids, config.trackers.iter().map(|x| x.to_string()).collect())
-                .await
-                .map_err(|e| Error::AdHocError(e.into()))?;
+            self.add_tracker(
+                ids,
+                config.trackers.iter().map(ToString::to_string).collect(),
+            )
+            .await
+            .map_err(|e| Error::AdHocError(e.into()))?;
             Result::<_>::Ok(())
         })
         .await
         .warn_err_end();
-    }
-
-    async fn download(&self, job: forrit_core::Job) -> Result<Option<DownloaderId>, Error> {
-        match self {
-            Self::Transmission(t) => Ok(t.download(job).await?.map(DownloaderId::Transmission)),
-            Self::Noop => Ok(None),
-        }
-    }
-
-    async fn rename(
-        &self,
-        id: &DownloaderId,
-        func: impl Fn(&str) -> Option<String>,
-    ) -> Result<(), Error> {
-        match (self, id) {
-            (Self::Transmission(t), DownloaderId::Transmission(id)) => t.rename(id, func).await,
-            _ => Ok(()),
-        }
     }
 
     async fn add_tracker(&self, ids: Vec<DownloaderId>, tracker: Vec<String>) -> Result<(), Error> {

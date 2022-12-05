@@ -51,12 +51,12 @@ impl BangumiSubscription {
 pub struct Job {
     pub id: String,
     pub url: Url,
-    pub path: PathBuf,
+    pub dir: PathBuf,
 }
 
 impl Job {
     pub fn with_download_dir(&mut self, root: &Path) {
-        self.path = root.join(&self.path);
+        self.dir = root.join(&self.dir);
     }
 }
 
