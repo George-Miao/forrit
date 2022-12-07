@@ -3,7 +3,7 @@ use std::{borrow::Cow, fmt::Debug};
 use forrit_core::{Event, IntoStream, Job};
 use futures::{future::join_all, StreamExt};
 use serde::{de::DeserializeOwned, Serialize};
-use tap::{Pipe, Tap};
+use tap::{Pipe, Tap, TapFallible};
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -92,7 +92,7 @@ impl Downloaders {
             Some(modified)
         };
 
-        join_all(jobs.map(|job| async {
+        let res = join_all(jobs.map(|job| async {
             emit(&Event::DownloadStart {
                 url: job.url.clone(),
             })
@@ -103,37 +103,58 @@ impl Downloaders {
                 Self::Noop => Result::<_>::Ok(None),
             }
         }))
-        .await
-        .into_iter()
-        .filter_map(|r| r.warn_err().ok().flatten())
-        .collect::<Vec<_>>()
-        .tap_dbg(|ids| debug!(?ids))
-        .pipe(|ids| async move {
-            info!("{} download(s) added, post processing", ids.len());
-            let config = get_config();
+        .await;
 
-            ids.iter()
-                .into_stream()
-                .for_each_concurrent(None, |id| async move {
-                    match (self, &id) {
-                        (Self::Transmission(t), DownloaderId::Transmission(id)) => {
-                            t.rename(id, rename).await
+        let ok_count = res
+            .iter()
+            .filter_map(|x| match x {
+                Ok(s) => Some(s),
+                Err(e) => {
+                    warn!("Error sending download: {e}");
+                    None
+                }
+            })
+            .count();
+
+        if ok_count != 0 {
+            info!("{ok_count} download(s) added");
+        } else {
+            return;
+        }
+        res.into_iter()
+            .filter_map(|x| x.ok().flatten())
+            .collect::<Vec<_>>()
+            .pipe(|ids| async move {
+                let config = get_config();
+                let id_count = ids.len();
+                if id_count == 0 {
+                    return Result::<_>::Ok(());
+                } else {
+                    info!("{id_count}/{ok_count} download(s) returned id, post processing");
+                }
+
+                ids.iter()
+                    .into_stream()
+                    .for_each_concurrent(None, |id| async move {
+                        match (self, &id) {
+                            (Self::Transmission(t), DownloaderId::Transmission(id)) => {
+                                t.rename(id, rename).await
+                            }
+                            _ => Ok(()),
                         }
-                        _ => Ok(()),
-                    }
-                    .warn_err_end();
-                })
-                .await;
-            self.add_tracker(
-                ids,
-                config.trackers.iter().map(ToString::to_string).collect(),
-            )
+                        .warn_err_end();
+                    })
+                    .await;
+                self.add_tracker(
+                    ids,
+                    config.trackers.iter().map(ToString::to_string).collect(),
+                )
+                .await
+                .map_err(|e| Error::AdHocError(e.into()))?;
+                Result::<_>::Ok(())
+            })
             .await
-            .map_err(|e| Error::AdHocError(e.into()))?;
-            Result::<_>::Ok(())
-        })
-        .await
-        .warn_err_end();
+            .warn_err_end();
     }
 
     async fn add_tracker(&self, ids: Vec<DownloaderId>, tracker: Vec<String>) -> Result<(), Error> {
