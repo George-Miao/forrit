@@ -109,6 +109,7 @@ impl Downloaders {
         .collect::<Vec<_>>()
         .tap_dbg(|ids| debug!(?ids))
         .pipe(|ids| async move {
+            info!("{} download(s) added, post processing", ids.len());
             let config = get_config();
 
             ids.iter()

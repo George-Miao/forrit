@@ -74,6 +74,10 @@ fn test_normalize_title() {
              Tsuku] E01 [1080P][MP4][BIG5][繁中]"
     );
     eq!(
+        "[Sakurato] Bleach-Sennen Kessen Hen [01][HEVC-10bit 1080p AAC][CHS&CHT].mkv" =
+            "[Sakurato] Bleach-Sennen Kessen Hen E01 [HEVC-10bit 1080p AAC][CHS&CHT].mkv"
+    );
+    eq!(
         "[jibaketa]Kanojo, Okarishimasu - 06 [BD 1920x1080 x264 AACx2 SRT TVB CHT].mkv" =
             "[jibaketa]Kanojo, Okarishimasu E06 [BD 1920x1080 x264 AACx2 SRT TVB CHT].mkv"
     );
