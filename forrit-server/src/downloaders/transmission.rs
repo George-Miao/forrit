@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use forrit_core::Job;
 use futures::future::try_join_all;
+use tap::Pipe;
 use transmission_rpc::{types as tt, SharableTransClient};
 
 use crate::{config::default, Downloader, Error, TorrentExt};
@@ -79,7 +80,11 @@ impl Downloader for Transmission {
             .map_err(Error::AdHocError)?
             .arguments
         {
-            TorrentDuplicate(t) | TorrentAdded(t) => Ok(t.id()),
+            TorrentDuplicate(t) | TorrentAdded(t) => t
+                .id()
+                .expect("Transmission did not return torrent id")
+                .pipe(Some)
+                .pipe(Ok),
         }
     }
 

@@ -81,6 +81,10 @@ fn test_normalize_title() {
         "[jibaketa]Kanojo, Okarishimasu - 06 [BD 1920x1080 x264 AACx2 SRT TVB CHT].mkv" =
             "[jibaketa]Kanojo, Okarishimasu E06 [BD 1920x1080 x264 AACx2 SRT TVB CHT].mkv"
     );
+    eq!("
+    [Lilith-Raws] Shinmai Renkinjutsushi no Tenpo Keiei - 08 [Baha][WEB-DL][1080p][AVC \
+         AAC][CHT][MP4].mp4" = "[Lilith-Raws] Shinmai Renkinjutsushi no Tenpo Keiei E08 \
+                                    [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4");
 }
 
 struct Inner {
