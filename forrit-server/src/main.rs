@@ -31,6 +31,7 @@ use crate::{init, sites::bangumi::Bangumi, Config};
 #[tokio::main]
 async fn main() {
     fmt()
+        .without_time()
         .with_env_filter(
             EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
