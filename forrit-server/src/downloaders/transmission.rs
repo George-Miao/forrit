@@ -106,22 +106,25 @@ impl Downloader for Transmission {
             )
             .await
             .map_err(Error::AdHocError)?;
-        let Some(files) = torrent.arguments
-            .torrents.get(0).and_then(|t| t.files.as_ref()) else {
-                return Ok(())
-            };
 
-        try_join_all(files.iter().map(|f| async {
-            let old = &f.name;
-            let Some(new) = func(old) else { return Ok(()) };
-            info!("Renaming transmission file {old} -> {new}");
-            self.trans
-                .torrent_rename_path(vec![id.clone()], old.to_owned(), new)
-                .await
-                .map_err(Error::AdHocError)?;
-            Result::<_, Error>::Ok(())
-        }))
-        .await?;
+        torrent
+            .arguments
+            .torrents
+            .into_iter()
+            .filter_map(|t| t.files)
+            .flat_map(|x| x.into_iter())
+            .map(|f| async {
+                let old = f.name;
+                let Some(new) = func(&old) else { return Ok(()) };
+                info!("Renaming transmission file {old} -> {new}");
+                self.trans
+                    .torrent_rename_path(vec![id.clone()], old.to_owned(), new)
+                    .await
+                    .map_err(Error::AdHocError)?;
+                Result::<_, Error>::Ok(())
+            })
+            .pipe(try_join_all)
+            .await?;
 
         Ok(())
     }
