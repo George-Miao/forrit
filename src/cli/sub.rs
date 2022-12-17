@@ -356,6 +356,15 @@ async fn fill_sub_detail(
     mut teams: Vec<Record>,
     sub: &mut BangumiSubscription,
 ) -> Result<()> {
+    const ADD_MORE_TAGS_FROM_COMMON: char = 'c';
+    const ADD_MORE_TAGS_BY_SEARCH: char = 'f';
+    const SET_SEASON: char = 's';
+    const SET_INCLUDE_PATTERN: char = 'i';
+    const SET_EXCLUDE_PATTERN: char = 'e';
+    const TEST_TORRENT_RESULTS: char = 't';
+    const VIEW_TORRENT_RESULTS: char = 'v';
+    const QUIT: char = 'q';
+
     if teams.is_empty() {
     } else if teams.len() == 1 {
         sub.team = Some(teams.remove(0));
@@ -374,23 +383,23 @@ async fn fill_sub_detail(
         let next = break_on_esc! {
             Question::expand("Next")
                 .choices([
-                    ('c', "Add more tags from common tags"),
-                    ('f', "Add more tags by search"),
-                    ('s', "Set season"),
-                    ('i', "Set include pattern"),
-                    ('e', "Set exclude pattern"),
-                    ('t', "Test torrent results"),
-                    ('v', "View current subscription"),
+                    (ADD_MORE_TAGS_FROM_COMMON, "Add more tags from common tags"),
+                    (ADD_MORE_TAGS_BY_SEARCH, "Add more tags by search"),
+                    (SET_SEASON, "Set season"),
+                    (SET_INCLUDE_PATTERN, "Set include pattern"),
+                    (SET_EXCLUDE_PATTERN, "Set exclude pattern"),
+                    (TEST_TORRENT_RESULTS, "Test torrent results"),
+                    (VIEW_TORRENT_RESULTS, "View current subscription"),
                 ])
                 .default_separator()
-                .choice('q', "Quit")
+                .choice(QUIT, "Quit")
                 .default_separator()
                 .message("Next? (ESC to finish, Enter for detail)")
                 .try_ask()
         }
         .key;
         match next {
-            'c' => {
+            ADD_MORE_TAGS_FROM_COMMON => {
                 if common_tags.is_none() {
                     common_tags = Some(GetCommonTags.quick_exec(bangumi_client).await?);
                 }
@@ -407,7 +416,7 @@ async fn fill_sub_detail(
                     .try_ask()
                 };
             }
-            'f' => {
+            ADD_MORE_TAGS_BY_SEARCH => {
                 let tags = continue_on_esc! {
                     Question::input("search")
                         .message("Search for tag: ")
@@ -429,7 +438,7 @@ async fn fill_sub_detail(
                     .map(|ListItem { index, .. }| tags[index].id.clone())
                     .pipe(|x| sub.tags.extend(x));
             }
-            's' => continue_on_esc! {
+            SET_SEASON => continue_on_esc! {
                 Question::int("season")
                 .message("Season: ")
                 .validate(|x, _| {
@@ -442,7 +451,7 @@ async fn fill_sub_detail(
                 .try_ask()
             }
             .pipe(|season| sub.season = Some(season as u8)),
-            'i' | 'e' => continue_on_esc! {
+            SET_INCLUDE_PATTERN | SET_EXCLUDE_PATTERN => continue_on_esc! {
                 Question::input("pattern")
                     .message("Input a regex: ")
                     .validate(|x, _| {
@@ -457,11 +466,11 @@ async fn fill_sub_detail(
             .pipe_as_ref(Regex::new)
             .unwrap()
             .pipe(|x| match next {
-                'i' => sub.include_pattern = Some(x),
-                'e' => sub.exclude_pattern = Some(x),
+                SET_INCLUDE_PATTERN => sub.include_pattern = Some(x),
+                SET_EXCLUDE_PATTERN => sub.exclude_pattern = Some(x),
                 _ => unreachable!(),
             }),
-            't' => sub
+            TEST_TORRENT_RESULTS => sub
                 .tags()
                 .map(|id| id.to_string())
                 .collect::<Vec<_>>()
@@ -487,8 +496,8 @@ async fn fill_sub_detail(
                     })
                 })
                 .for_each(|t| println!("{}", t.title)),
-            'v' => print_sub(sub),
-            'q' => bail!("Aborted"),
+            VIEW_TORRENT_RESULTS => print_sub(sub),
+            QUIT => bail!("Aborted"),
             _ => unreachable!(),
         }
     }

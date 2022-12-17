@@ -3,8 +3,8 @@ use std::{borrow::Cow, fmt::Debug};
 use forrit_core::{Event, IntoStream, Job};
 use futures::{future::join_all, StreamExt};
 use serde::{de::DeserializeOwned, Serialize};
-use tap::{Pipe, Tap, TapFallible};
-use tracing::{debug, info, warn};
+use tap::Pipe;
+use tracing::{info, warn};
 
 use crate::{
     emit, get_config, normalize_title, transmission::Transmission, Error, Result, TapErrExt,
@@ -138,7 +138,12 @@ impl Downloaders {
                     .for_each_concurrent(None, |id| async move {
                         match (self, &id) {
                             (Self::Transmission(t), DownloaderId::Transmission(id)) => {
+                                info!("Renaming transmission id ({id:?})");
                                 t.rename(id, rename).await
+                            }
+                            (Self::Noop, DownloaderId::Transmission(_)) => {
+                                warn!("Renaming error");
+                                Ok(())
                             }
                             _ => Ok(()),
                         }

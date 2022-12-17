@@ -1,6 +1,11 @@
-use std::path::{Path, PathBuf};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
-use bangumi::{Id, Record};
+use bangumi::{Id, Record, Tag};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -86,4 +91,41 @@ pub enum Event {
     },
     SubscriptionRemoved(BangumiSubscription),
     MultipleSubscriptionRemoved(Vec<String>),
+}
+
+pub fn normalize_title(title: &str) -> Cow<'_, str> {
+    macro_rules! rule {
+        ($reg:literal) => {
+            Regex::new($reg).expect("Regex should compile")
+        };
+    }
+    static PATTERNS: LazyLock<[Regex; 7]> = LazyLock::new(|| {
+        [
+            rule!(r#"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
+            rule!(r#"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
+            rule!(r#"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)"#),
+            rule!(r#"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)"#),
+            rule!(r#"(.*)第(\d*\.*\d*)话(?:END)?(.*)"#),
+            rule!(r#"(.*)第(\d*\.*\d*)話(?:END)?(.*)"#),
+            rule!(r#"(.*)-\s*(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)"#),
+        ]
+    });
+
+    PATTERNS
+        .iter()
+        .find_map(|pat| {
+            pat.captures(title).and_then(|cap| {
+                let pre = cap.get(1)?.as_str().trim();
+                let episode = cap.get(2)?.as_str().trim();
+                let suf = cap.get(3)?.as_str().trim();
+
+                Some(format!("{pre} E{episode} {suf}").into())
+            })
+        })
+        .unwrap_or_else(|| title.into())
+}
+
+#[test]
+fn test() {
+    println!("{}", u16::MAX)
 }

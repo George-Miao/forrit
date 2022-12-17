@@ -6,7 +6,7 @@ use std::{
     io::Write,
     ops::{Deref, DerefMut},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{exit, Command, Stdio},
 };
 
 use clap::Parser;
@@ -35,19 +35,20 @@ fn show_spinner() {
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let Err(e) = tokio::runtime::Builder::new_current_thread()
+    match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap()
         .block_on(async {
             let conf = Config::load().await?;
             Arg::parse().run(conf).await
-        }) else {
-            return Ok(())
-        };
-    println!("{}", e);
-
-    Ok(())
+        }) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            eprintln!("{}", e.red());
+            exit(-1);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

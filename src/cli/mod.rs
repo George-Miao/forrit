@@ -7,7 +7,7 @@ use std::{
 use bangumi::{endpoints::SearchTags, SearchResult};
 use clap::{Parser, Subcommand};
 use color_eyre::{eyre::bail, Result};
-use forrit_core::{BangumiSubscription, WithId};
+use forrit_core::{BangumiSubscription, Event, WithId};
 use owo_colors::OwoColorize;
 use requestty::{
     prompt_one,
@@ -18,6 +18,7 @@ use requestty::{
     symbols, ErrorKind, ExpandItem, ListItem, OnEsc,
 };
 use rustify::{Client, Endpoint};
+use serde_json::from_slice;
 use tap::Pipe;
 use url::Url;
 
@@ -56,7 +57,11 @@ enum Cmd {
     },
 
     /// Search for tags on bangumi.moe
-    Search { query: String },
+    Search {
+        query: String,
+    },
+
+    Events,
 }
 
 impl Cmd {
@@ -65,6 +70,10 @@ impl Cmd {
         match self {
             Cmd::Subs(cmd) => cmd.run(config).await,
             Cmd::Config { cmd } => cmd.unwrap_or_default().run(config).await,
+            Cmd::Events => {
+                print_events(config).await?;
+                Ok(())
+            }
             Cmd::Search { query } => {
                 let res = SearchTags::builder()
                     .name(query.as_str())
@@ -101,6 +110,55 @@ impl<E: Endpoint> QuickExec<E> for E {
             (&w).flush()?;
             Result::<E::Response>::Ok(res)
         }
+    }
+}
+
+async fn print_events(config: Config) -> Result<()> {
+    let mut req = reqwest::get(format!("{}/events", config.server))
+        .await?
+        .error_for_status()?;
+    let mut buf = Vec::with_capacity(1 << 8);
+    while let Some(chunk) = req.chunk().await? {
+        if chunk.is_empty() {
+            break;
+        }
+        if chunk.contains(&b'\n') {
+            let mut lines = chunk.split_inclusive(|c| c == &b'\n');
+            buf.extend_from_slice(lines.next().unwrap());
+            let [data @ .., _] = buf.as_slice() else {
+                break
+            };
+            let event = from_slice::<Event>(data)?;
+            println!("{:#?}", event);
+            buf.clear();
+
+            for line in lines {
+                if line.last().unwrap() == &b'\n' {
+                    let [data @ .., _] = line else {
+                        unreachable!()
+                    };
+                    let event = from_slice::<Event>(data)?;
+                    println!("{:#?}", event);
+                } else {
+                    buf.extend_from_slice(line);
+                }
+            }
+        } else {
+            buf.extend_from_slice(&chunk);
+        }
+    }
+    Ok(())
+}
+
+fn print_event(e: &Event) {
+    match e {
+        Event::JobAdded(j) => println!("{}", "Job added".blue()),
+        Event::DownloadStart { url } => todo!(),
+        Event::Warn(w) => todo!(),
+        Event::SubscriptionAdded(s) => todo!(),
+        Event::SubscriptionUpdated { old, new } => todo!(),
+        Event::SubscriptionRemoved(s) => todo!(),
+        Event::MultipleSubscriptionRemoved(s) => todo!(),
     }
 }
 

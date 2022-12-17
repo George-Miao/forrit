@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use forrit_core::Job;
 use futures::future::try_join_all;
 use tap::Pipe;
+use tracing::info;
 use transmission_rpc::{types as tt, SharableTransClient};
 
 use crate::{config::default, Downloader, Error, TorrentExt};
@@ -113,6 +114,7 @@ impl Downloader for Transmission {
         try_join_all(files.iter().map(|f| async {
             let old = &f.name;
             let Some(new) = func(old) else { return Ok(()) };
+            info!("Renaming transmission file {old} -> {new}");
             self.trans
                 .torrent_rename_path(vec![id.clone()], old.to_owned(), new)
                 .await
