@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use forrit_core::Job;
 use futures::future::try_join_all;
 use tap::Pipe;
-use tracing::info;
+use tracing::warn;
 use transmission_rpc::{types as tt, SharableTransClient};
 
 use crate::{config::default, Downloader, Error, TorrentExt};
@@ -94,8 +94,7 @@ impl Downloader for Transmission {
         id: &Self::Id,
         func: impl Fn(&str) -> Option<String>,
     ) -> Result<(), Self::Error> {
-        let torrent = self
-            .trans
+        self.trans
             .torrent_get(
                 Some(vec![
                     tt::TorrentGetField::Id,
@@ -105,20 +104,75 @@ impl Downloader for Transmission {
                 Some(vec![id.clone()]),
             )
             .await
-            .map_err(Error::AdHocError)?;
-
-        torrent
+            .map_err(Error::AdHocError)?
             .arguments
             .torrents
-            .into_iter()
-            .filter_map(|t| t.files)
-            .flat_map(|x| x.into_iter())
+            .iter()
+            .filter_map(|t| {
+                let id = t.id()?;
+                match &t.files {
+                    Some(f) if f.is_empty() => {
+                        warn!("Transmission API returned empty files for id = {id:?}");
+                        None
+                    }
+                    None => {
+                        warn!("Transmission API returned none files for id = {id:?}");
+                        None
+                    }
+                    f => f.as_ref(),
+                }
+            })
+            .flat_map(|x| x.iter())
             .map(|f| async {
-                let old = f.name;
-                let Some(new) = func(&old) else { return Ok(()) };
-                info!("Renaming transmission file {old} -> {new}");
+                let old = &f.name;
+                let Some(new) = func(old) else { return Ok(()) };
                 self.trans
                     .torrent_rename_path(vec![id.clone()], old.to_owned(), new)
+                    .await
+                    .map_err(Error::AdHocError)?;
+                Result::<_, Error>::Ok(())
+            })
+            .pipe(try_join_all)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn rename_all(&self, func: impl Fn(&str) -> Option<String>) -> Result<(), Self::Error> {
+        self.trans
+            .torrent_get(
+                Some(vec![
+                    tt::TorrentGetField::Id,
+                    tt::TorrentGetField::HashString,
+                    tt::TorrentGetField::Files,
+                ]),
+                None,
+            )
+            .await
+            .map_err(Error::AdHocError)?
+            .arguments
+            .torrents
+            .iter()
+            .filter_map(|t| {
+                let id = t.id()?;
+                match &t.files {
+                    Some(f) if f.is_empty() => {
+                        warn!("Transmission API returned empty files for id = {id:?}");
+                        None
+                    }
+                    None => {
+                        warn!("Transmission API returned none files for id = {id:?}");
+                        None
+                    }
+                    f => (id, f.as_ref()?).pipe(Some),
+                }
+            })
+            .flat_map(|(id, x)| std::iter::repeat(id).zip(x.iter()))
+            .map(|(id, t)| async {
+                let old = &t.name;
+                let Some(new) = func(old) else { return Ok(()) };
+                self.trans
+                    .torrent_rename_path(vec![id], old.to_owned(), new)
                     .await
                     .map_err(Error::AdHocError)?;
                 Result::<_, Error>::Ok(())

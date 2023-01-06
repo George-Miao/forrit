@@ -1,9 +1,10 @@
-use std::{borrow::Cow, fmt::Debug};
+use std::{borrow::Cow, fmt::Debug, time::Duration};
 
 use forrit_core::{Event, IntoStream, Job};
 use futures::{future::join_all, StreamExt};
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
+use tokio::time::sleep;
 use tracing::{info, warn};
 
 use crate::{
@@ -34,6 +35,10 @@ pub trait Downloader {
         _: &Self::Id,
         _: impl Fn(&str) -> Option<String>,
     ) -> Result<(), Self::Error> {
+        Result::<(), Self::Error>::Ok(())
+    }
+
+    async fn rename_all(&self, _: impl Fn(&str) -> Option<String>) -> Result<(), Self::Error> {
         Result::<(), Self::Error>::Ok(())
     }
 }
@@ -87,9 +92,10 @@ impl Downloaders {
     }
 
     pub async fn handle_jobs(&self, jobs: impl Iterator<Item = Job>) {
-        let rename: fn(&str) -> Option<String> = |name| {
-            let Cow::Owned(modified) = normalize_title(name) else { return None };
-            Some(modified)
+        let rename: fn(&str) -> Option<String> = |old| {
+            let Cow::Owned(new) = normalize_title(old) else { debug!("Skip renaming transmission file {old}");return None };
+            info!("Renaming transmission file {old} -> {new}");
+            Some(new)
         };
 
         let res = join_all(jobs.map(|job| async {
@@ -139,13 +145,13 @@ impl Downloaders {
                         match (self, &id) {
                             (Self::Transmission(t), DownloaderId::Transmission(id)) => {
                                 info!("Renaming transmission id ({id:?})");
+                                sleep(Duration::from_secs(5)).await;
                                 t.rename(id, rename).await
                             }
                             (Self::Noop, DownloaderId::Transmission(_)) => {
                                 warn!("Renaming error");
                                 Ok(())
                             }
-                            _ => Ok(()),
                         }
                         .warn_err_end();
                     })
@@ -160,6 +166,17 @@ impl Downloaders {
             })
             .await
             .warn_err_end();
+    }
+
+    pub async fn rename_all(&self) -> Result<(), Error> {
+        match self {
+            Downloaders::Transmission(t) => t.rename_all(|old| {
+                let Cow::Owned(new) = normalize_title(old) else { info!("Skip renaming transmission file {old}");return None };
+                info!("Renaming transmission file {old} -> {new}");
+                Some(new)
+            }).await,
+            Downloaders::Noop => Ok(()),
+        }
     }
 
     async fn add_tracker(&self, ids: Vec<DownloaderId>, tracker: Vec<String>) -> Result<(), Error> {

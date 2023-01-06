@@ -9,7 +9,20 @@
     "**/.classpath": true,
     "**/.project": true,
     "**/.settings": true,
-    "**/.factorypath": true
+    "**/.factorypath": true,
+    "[!f]*/**": true,
+    "f[!o]*/**": true,
+    "fo[!r]*/**": true,
+    "for[!r]*/**": true,
+    "forr[!i]*/**": true,
+    "forri[!t]*/**": true,
+    "forrit[!-]*/**": true,
+    "forrit-[!s]*/**": true,
+    "forrit-s[!e]*/**": true,
+    "forrit-se[!r]*/**": true,
+    "forrit-ser[!v]*/**": true,
+    "forrit-serv[!e]*/**": true,
+    "forrit-serve[!r]*/**": true
   },
   "hide-files.files": [],
   "cSpell.words": [

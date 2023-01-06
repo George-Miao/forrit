@@ -192,6 +192,7 @@ impl Forrit {
                     }
                 })
                 .await;
+            self.downloader.rename_all().await.warn_err_end();
             debug!("Done");
         }
     }
