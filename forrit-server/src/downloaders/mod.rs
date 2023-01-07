@@ -5,7 +5,7 @@ use futures::{future::join_all, StreamExt};
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
 use tokio::time::sleep;
-use tracing::{info, warn};
+use tracing::{info, warn, debug};
 
 use crate::{
     emit, get_config, normalize_title, transmission::Transmission, Error, Result, TapErrExt,
