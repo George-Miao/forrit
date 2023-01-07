@@ -5,7 +5,7 @@ use futures::{future::join_all, StreamExt};
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
 use tokio::time::sleep;
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 use crate::{
     emit, get_config, normalize_title, transmission::Transmission, Error, Result, TapErrExt,
@@ -171,7 +171,7 @@ impl Downloaders {
     pub async fn rename_all(&self) -> Result<(), Error> {
         match self {
             Downloaders::Transmission(t) => t.rename_all(|old| {
-                let Cow::Owned(new) = normalize_title(old) else { info!("Skip renaming transmission file {old}");return None };
+                let Cow::Owned(new) = normalize_title(old) else { debug!("Skip renaming transmission file {old}");return None };
                 info!("Renaming transmission file {old} -> {new}");
                 Some(new)
             }).await,
