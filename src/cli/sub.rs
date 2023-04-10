@@ -159,6 +159,15 @@ pub struct SubsAddArg {
     )]
     season: Option<u8>,
 
+    /// Directory to store the torrent
+    #[clap(
+        short,
+        long,
+        requires = "bangumi",
+        long_help = "Directory to store the torrent, default to the bangumi name."
+    )]
+    directory: Option<String>,
+
     /// Regex pattern to include torrent
     #[clap(
         short,
@@ -186,6 +195,7 @@ impl SubsAddArg {
             team,
             tag: tags,
             season,
+            directory,
             include_pattern,
             exclude_pattern,
         } = self;
@@ -215,6 +225,7 @@ impl SubsAddArg {
                 team,
                 season,
                 tags,
+                dir: directory,
                 include_pattern,
                 exclude_pattern,
             };
@@ -359,6 +370,7 @@ async fn fill_sub_detail(
     const ADD_MORE_TAGS_FROM_COMMON: char = 'c';
     const ADD_MORE_TAGS_BY_SEARCH: char = 'f';
     const SET_SEASON: char = 's';
+    const SET_DIRECTORY: char = 'd';
     const SET_INCLUDE_PATTERN: char = 'i';
     const SET_EXCLUDE_PATTERN: char = 'e';
     const TEST_TORRENT_RESULTS: char = 't';
@@ -386,6 +398,7 @@ async fn fill_sub_detail(
                     (ADD_MORE_TAGS_FROM_COMMON, "Add more tags from common tags"),
                     (ADD_MORE_TAGS_BY_SEARCH, "Add more tags by search"),
                     (SET_SEASON, "Set season"),
+                    (SET_DIRECTORY, "Set directory"),
                     (SET_INCLUDE_PATTERN, "Set include pattern"),
                     (SET_EXCLUDE_PATTERN, "Set exclude pattern"),
                     (TEST_TORRENT_RESULTS, "Test torrent results"),
@@ -451,6 +464,13 @@ async fn fill_sub_detail(
                 .try_ask()
             }
             .pipe(|season| sub.season = Some(season as u8)),
+            SET_DIRECTORY => continue_on_esc! {
+                Question::input("directory")
+                .message("Directory: ")
+                .try_ask()
+
+            }
+            .pipe(|dir| sub.dir = Some(dir)),
             SET_INCLUDE_PATTERN | SET_EXCLUDE_PATTERN => continue_on_esc! {
                 Question::input("pattern")
                     .message("Input a regex: ")
