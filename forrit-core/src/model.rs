@@ -1,11 +1,10 @@
 use std::{
     borrow::Cow,
-    collections::HashMap,
     path::{Path, PathBuf},
     sync::LazyLock,
 };
 
-use bangumi::{Id, Record, Tag};
+use bangumi::{Id, Record};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -27,6 +26,9 @@ pub struct BangumiSubscription {
 
     #[serde(default)]
     pub season: Option<u8>, // TODO: possibly use string for season and add resolving function
+
+    #[serde(default)]
+    pub dir: Option<String>,
 
     #[serde(with = "serde_regex")]
     #[serde(default)]

@@ -45,7 +45,7 @@ impl Bangumi {
             .parse()?
             .torrents;
 
-        let name = &sub.bangumi.name;
+        let name = sub.dir.as_ref().unwrap_or(&sub.bangumi.name);
         let season = sub.season.unwrap_or(1);
         let dir = PathBuf::from(format!("{name}/S{season}"));
 
