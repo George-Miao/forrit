@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 forrit-core = { version = "0.1.0", path = "../forrit-core" }
-bangumi     = { version = "0.1.0", path = "../bangumi" }
+bangumi     = { version = "0.1.0", git = "https://github.com/George-Miao/bangumi" }
 
 futures            = { version = "0.3.24", default-features = false, features = ["alloc", "std"] }
 twelf              = { version = "0.7.0", default-features = false, features = ["env", "toml"] }

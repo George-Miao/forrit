@@ -1,5 +1,5 @@
 [workspace]
-members = ["bangumi", "forrit*"]
+members = ["forrit*"]
 
 [package]
 name    = "forrit"
@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 forrit-core = { version = "0.1.0", path = "forrit-core" }
-bangumi     = { version = "0.1.0", path = "bangumi" }
+bangumi     = { version = "0.1.0", git = "https://github.com/George-Miao/bangumi/" }
 
 rustify_derive = { version = "0.5.2", git = "https://github.com/George-Miao/rustify/", package = "rustify_derive" }
 rustify        = { version = "0.5.3", git = "https://github.com/George-Miao/rustify/" }
