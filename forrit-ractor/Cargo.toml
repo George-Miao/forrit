@@ -1,0 +1,33 @@
+[package]
+name    = "forrit-ractor"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bangumi          = { version = "0.1.0", git = "https://github.com/George-Miao/bangumi" }
+forrit-core      = { version = "0.1.0", path = "../forrit-core" }
+serde            = { version = "1.0.160", default-features = false, features = ["derive"] }
+tracing          = { version = "0.1.37", features = ["log"] }
+ractor           = { version = "0.7.5", features = ["cluster"] }
+twelf            = { version = "0.7.0", default-features = false, features = ["env", "toml"] }
+qbit-rs          = { version = "0.2.0", default-features = false, features = ["builder"] }
+transmission-rpc = { version = "0.4.1", features = ["sync"] }
+color-eyre       = { version = "0.6.2", default-features = false }
+http-client      = { version = "6.5.3", default-features = false, features = ["hyper", "hyper_client"] }
+
+mongodb            = "2.4.0"
+tap                = "1.0.1"
+tracing-subscriber = "0.3.16"
+mod_use            = "0.2.1"
+async-trait        = "0.1.68"
+url                = "2.3.1"
+serde_with         = "2.3.2"
+humantime-serde    = "1.1.1"
+dirs               = "5.0.0"
+thiserror          = "1.0.40"
+regex              = "1.7.3"
+
+[dev-dependencies]
+tokio = { version = "1.27.0", features = ["rt", "rt-multi-thread", "macros"] }
