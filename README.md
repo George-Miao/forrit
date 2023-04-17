@@ -13,7 +13,7 @@ Constantly running, fetching updates from source sites and send it to configured
 ### Downloader
 
 - [x] Transmission
-- [ ] QbitTorrent
+- [x] QbitTorrent
 - [ ] Deluge
 - [ ] uTorrent
 - [ ] aria2
