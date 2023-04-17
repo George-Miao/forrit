@@ -2345,9 +2345,9 @@ dependencies = [
 
 [[package]]
 name = "qbit-rs"
-version = "0.3.2"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "380e478d8eb71a045fb7b326a493578e132ccc9fb67258d92cf1cff703aa935d"
+checksum = "4322fa03a3848dcb3db33656e162db9064145fd523cf3ef14497ab72cbe67dc5"
 dependencies = [
  "mod_use",
  "reqwest",
