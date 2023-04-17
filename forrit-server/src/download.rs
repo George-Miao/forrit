@@ -95,7 +95,7 @@ enum Client {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DownloadWorkerMessage {
     Job(ForritJob),
-    Rename(Option<String>),
+    Rename(Option<String>, u8),
 }
 
 pub struct DownloadWorkerState {
@@ -146,7 +146,7 @@ impl DownloadWorker {
                 factory.send_after(Duration::SECOND, move || {
                     FactoryMessage::Dispatch(Job {
                         key,
-                        msg: DownloadWorkerMessage::Rename(None),
+                        msg: DownloadWorkerMessage::Rename(None, 3),
                         options: JobOptions::default(),
                     })
                 });
@@ -176,7 +176,7 @@ impl DownloadWorker {
                         key,
                         msg: trans_id_to_string(id.clone())
                             .pipe(Some)
-                            .pipe(DownloadWorkerMessage::Rename),
+                            .pipe(|x| DownloadWorkerMessage::Rename(x, 3)),
                         options: JobOptions::default(),
                     })
                 });
@@ -188,6 +188,7 @@ impl DownloadWorker {
     async fn rename(
         &self,
         key: Id,
+        retry_count: u8,
         id: Option<String>,
         state: &mut DownloadWorkerState,
     ) -> Result<(), ActorProcessingErr> {
@@ -196,6 +197,21 @@ impl DownloadWorker {
             Client::Qbit((client, _)) => {
                 if let Some(id) = id {
                     let files = client.get_torrent_contents(&id, None).await?;
+                    if files.is_empty() {
+                        if retry_count != 0 {
+                            factory.send_after(Duration::SECOND * 5, move || {
+                                FactoryMessage::Dispatch(Job {
+                                    key,
+                                    msg: DownloadWorkerMessage::Rename(
+                                        Some(id.clone()),
+                                        retry_count - 1,
+                                    ),
+                                    options: JobOptions::default(),
+                                })
+                            });
+                        }
+                        return Ok(());
+                    }
                     files
                         .into_iter()
                         .filter_map(|x| {
@@ -223,13 +239,13 @@ impl DownloadWorker {
                             ((UNIX_EPOCH + Duration::from_secs(x.added_on? as u64))
                                 .elapsed()
                                 .ok()?
-                                < 5 * 60 * Duration::SECOND) // 5 minutes
+                                < 60 * 60 * Duration::SECOND) // 1 hour
                                 .then_some(x.hash?)
                         })
                         .try_for_each(|x| {
                             factory.send_message(FactoryMessage::Dispatch(Job {
                                 key,
-                                msg: DownloadWorkerMessage::Rename(Some(x)),
+                                msg: DownloadWorkerMessage::Rename(Some(x), 3),
                                 options: JobOptions::default(),
                             }))
                         })?
@@ -239,7 +255,7 @@ impl DownloadWorker {
                 let Some(id) = id else { return Ok(()) };
                 let id = trans_string_to_id(id);
 
-                client
+                let t = client
                     .torrent_get(
                         Some(vec![
                             tr::TorrentGetField::Id,
@@ -250,8 +266,23 @@ impl DownloadWorker {
                     )
                     .await?
                     .arguments
-                    .torrents
-                    .iter()
+                    .torrents;
+                if t.is_empty() {
+                    if retry_count != 0 {
+                        factory.send_after(Duration::SECOND * 5, move || {
+                            FactoryMessage::Dispatch(Job {
+                                key,
+                                msg: DownloadWorkerMessage::Rename(
+                                    Some(trans_id_to_string(id.clone())),
+                                    retry_count - 1,
+                                ),
+                                options: JobOptions::default(),
+                            })
+                        });
+                    }
+                    return Ok(());
+                }
+                t.iter()
                     .filter_map(|t| {
                         let id = t.id()?;
                         match &t.files {
@@ -334,8 +365,8 @@ impl Actor for DownloadWorker {
                     DownloadWorkerMessage::Job(job) => {
                         self.download(key, job, state).await?;
                     }
-                    DownloadWorkerMessage::Rename(id) => {
-                        self.rename(key, id, state).await?;
+                    DownloadWorkerMessage::Rename(id, retry_count) => {
+                        self.rename(key, retry_count, id, state).await?;
                     }
                 }
                 state
