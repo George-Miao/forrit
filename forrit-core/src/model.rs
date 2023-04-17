@@ -25,7 +25,7 @@ pub struct BangumiSubscription {
     pub tags: Vec<Id>,
 
     #[serde(default)]
-    pub season: Option<u8>, // TODO: possibly use string for season and add resolving function
+    pub season: Option<u8>,
 
     #[serde(default)]
     pub dir: Option<String>,

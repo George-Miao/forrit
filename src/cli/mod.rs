@@ -152,13 +152,13 @@ async fn print_events(config: Config) -> Result<()> {
 
 fn print_event(e: &Event) {
     match e {
-        Event::JobAdded(j) => println!("{}", "Job added".blue()),
-        Event::DownloadStart { url } => todo!(),
-        Event::Warn(w) => todo!(),
-        Event::SubscriptionAdded(s) => todo!(),
-        Event::SubscriptionUpdated { old, new } => todo!(),
-        Event::SubscriptionRemoved(s) => todo!(),
-        Event::MultipleSubscriptionRemoved(s) => todo!(),
+        Event::JobAdded(_j) => println!("{}", "Job added".blue()),
+        Event::DownloadStart { url: _ } => todo!(),
+        Event::Warn(_w) => todo!(),
+        Event::SubscriptionAdded(_s) => todo!(),
+        Event::SubscriptionUpdated { old: _, new: _ } => todo!(),
+        Event::SubscriptionRemoved(_s) => todo!(),
+        Event::MultipleSubscriptionRemoved(_s) => todo!(),
     }
 }
 

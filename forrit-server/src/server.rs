@@ -1,264 +1,261 @@
-use std::time::Duration;
+use std::{net::SocketAddr, str::FromStr};
 
-use actix_web::{
-    body::BoxBody,
-    middleware::{Logger, NormalizePath},
-    web::*,
-    App, Either, FromRequest, HttpResponse, HttpServer, ResponseError,
+use color_eyre::Result;
+use forrit_core::{futures::TryStreamExt, BangumiSubscription};
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    options::ReturnDocument,
+    Collection,
 };
-use actix_web_httpauth::{
-    extractors::AuthenticationError, headers::www_authenticate::basic::Basic,
-    middleware::HttpAuthentication,
+use poem::{
+    error::ResponseError,
+    get, handler,
+    http::StatusCode,
+    listener::TcpListener,
+    middleware::Tracing,
+    web::{Data, Json, Path},
+    EndpointExt, IntoResponse, Route, Server,
 };
-use bangumi::Id;
-use forrit_core::{with, Confirm, Event};
-use futures::{
-    future::{ready, Ready},
-    StreamExt,
-};
-use reqwest::{header::HeaderValue, StatusCode, Url};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use tap::{Pipe, Tap, TapFallible};
-use tracing::{info, warn};
+use serde_with::DeserializeFromStr;
+use tap::Pipe;
 
-use crate::{
-    bangumi::Bangumi, clear, emit, get_config, subscribe, BangumiSubscription, Config, Error, Flag,
-    Forrit, Result, SerdeTree,
-};
+use crate::{get_config, source, validate, Id, WithId};
 
-type Subs = SerdeTree<BangumiSubscription>;
-type Recs = SerdeTree<Url>;
+type Read<'a> = Data<&'a Collection<WithId<BangumiSubscription>>>;
+type Write<'a> = Data<&'a Collection<BangumiSubscription>>;
 
-impl Forrit {
-    pub async fn server(&self) -> Result<()> {
-        let config = get_config().clone();
-        let bind = (config.server.bind, config.server.port);
-        let num_workers = config.server.workers;
+pub async fn start(
+    read: Collection<WithId<BangumiSubscription>>,
+    update: Collection<BangumiSubscription>,
+) -> Result<()> {
+    let config = &get_config().server;
 
-        let subs = self.subs.clone();
-        let records = self.records.clone();
-        let conf = Data::new(config);
-        let site = Data::new(self.site.clone());
-        let flag = self.flag.clone();
-
-        info!("Staring server");
-
-        let handle_list_subs = |db: SerdeTree<BangumiSubscription>| async move {
-            let res = db.iter_with_id().collect::<Result<Vec<_>>>()?;
-            Result::<_>::Ok(Json(res))
-        };
-
-        let handle_post_sub = |api: Data<Bangumi>,
-                               db: SerdeTree<BangumiSubscription>,
-                               waker: Flag,
-                               Json(sub): Json<BangumiSubscription>| async move {
-            if !api
-                .validate(&sub)
-                .await
-                .map_err(|e| Error::AdHocError(e.into()))?
-            {
-                return Err(Error::WebError("Bad request", StatusCode::BAD_REQUEST));
-            }
-
-            let id = db.insert(&sub)?;
-            emit(&Event::SubscriptionAdded(sub.clone()))?;
-            waker.signal();
-            Result::<_>::Ok(Json(with!(id, content = sub)))
-        };
-
-        let handle_get_sub = |db: Subs, id: Path<String>| async move {
-            db.get(id.as_str())
-                .map(|x| match x {
-                    Some(x) => Json(x).pipe(Either::Left),
-                    None => HttpResponse::NotFound().pipe(Either::Right),
-                })?
-                .pipe(Result::<_>::Ok)
-        };
-
-        let handle_put_sub = |api: Data<Bangumi>,
-                              db: SerdeTree<BangumiSubscription>,
-                              waker: Flag,
-                              id: Path<String>,
-                              records: Recs,
-                              Json(sub): Json<BangumiSubscription>| async move {
-            if !api
-                .validate(&sub)
-                .await
-                .map_err(|e| Error::AdHocError(e.into()))?
-            {
-                return Err(Error::WebError("Bad request", StatusCode::BAD_REQUEST));
-            }
-
-            let id = id.into_inner();
-            match db.upsert(&id, &sub)?.tap(|_| waker.signal()) {
-                Some(old) => {
-                    records.remove_all(&id)?;
-                    emit(&Event::SubscriptionUpdated {
-                        old: old.clone(),
-                        new: sub,
-                    })?;
-                    Result::<_>::Ok(Either::Left(Json(json!({
-                        "result": "updated",
-                        "content": old,
-                    }))))
-                }
-                None => {
-                    emit(&Event::SubscriptionAdded(sub.clone()))?;
-                    Result::<_>::Ok(Either::Right(Json(json!({
-                        "result": "created",
-                        "content": sub,
-                    }))))
-                }
-            }
-        };
-
-        let handle_delete_sub = |db: Subs, records: Recs, id: Path<String>| async move {
-            let id = id.into_inner();
-            match db.remove(&id)? {
-                Some(sub) => {
-                    records.remove_all(&id)?;
-                    emit(&Event::SubscriptionRemoved(sub.clone()))?;
-                    Result::<_>::Ok(Either::Left(Json(sub)))
-                }
-                None => Result::<_>::Ok(Either::Right(HttpResponse::NotFound())),
-            }
-        };
-
-        let handle_delete_subs = |db: Subs, records: Recs, req: Json<DelSubs>| async move {
-            let ids = req.into_inner().ids;
-            db.remove_batch(ids.iter())?;
-            ids.iter().try_for_each(|id| records.remove_all(id))?;
-            emit(&Event::MultipleSubscriptionRemoved(ids))?;
-            Result::<_>::Ok(Json(Confirm::default()))
-        };
-
-        let handle_get_config = |db: Data<Config>| async move { Result::<_>::Ok(Json(db)) };
-
-        HttpServer::new(move || {
-            let _auth = HttpAuthentication::basic(|req, auth| async move {
-                let conf = req.app_data::<Data<Config>>().unwrap();
-                if let Some((username, password)) = &conf.server.auth {
-                    if auth.user_id() != username || auth.password() != Some(password.as_str()) {
-                        return Err((AuthenticationError::new(Basic::new()).into(), req));
-                    }
-                }
-                Ok(req)
-            });
-            App::new()
-                .app_data(conf.clone())
-                .app_data(subs.clone())
-                .app_data(records.clone())
-                .app_data(flag.clone())
-                .app_data(site.clone())
-                .wrap(Logger::default())
-                .wrap(NormalizePath::trim())
-                .service(
-                    resource("/subscription")
-                        .route(get().to(handle_list_subs))
-                        .route(post().to(handle_post_sub))
-                        .route(delete().to(handle_delete_subs)),
+    SocketAddr::new(config.bind, config.port)
+        .pipe(TcpListener::bind)
+        .pipe(Server::new)
+        .run(
+            Route::new()
+                .at(
+                    "/subscription",
+                    get(subscription::list)
+                        .post(subscription::create)
+                        .delete(subscription::delete_many),
                 )
-                .service(
-                    resource("/subscription/{id}")
-                        .route(get().to(handle_get_sub))
-                        .route(put().to(handle_put_sub))
-                        .route(delete().to(handle_delete_sub)),
+                .at(
+                    "/subscription/:id",
+                    get(subscription::read)
+                        .put(subscription::update)
+                        .delete(subscription::delete),
                 )
-                .service(resource("/config").route(get().to(handle_get_config)))
-                .service(
-                    resource("/events")
-                        .route(get().to(handle_get_events))
-                        .route(delete().to(|| async move {
-                            clear()?;
-                            Result::<_>::Ok(Json(Confirm::default()))
-                        })),
-                )
-        })
-        .workers(num_workers)
-        .keep_alive(Duration::from_secs(90))
-        .bind(bind)?
-        .run()
+                .at("/config", get(config::get))
+                .with(Tracing)
+                .data(read)
+                .data(update),
+        )
         .await
-        .map_err(From::from)
+        .map_err(Into::into)
+}
+
+mod config {
+    use super::*;
+
+    #[handler]
+    pub async fn get() -> impl IntoResponse {
+        crate::get_config().pipe(Json)
     }
 }
 
-async fn handle_get_events() -> Result<HttpResponse> {
-    #[derive(Serialize)]
-    struct EventWrapper {
-        time: u64,
-        #[serde(flatten)]
-        event: Event,
+mod subscription {
+    use mongodb::options::FindOneAndUpdateOptions;
+
+    use super::*;
+
+    #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Serialize, Deserialize)]
+    pub struct Ids {
+        ids: Vec<Id>,
     }
-    HttpResponse::Ok()
-        .streaming(subscribe()?.map(|(t, e)| {
-            serde_json::to_vec(&EventWrapper {
-                time: t.timestamp(),
-                event: e,
-            })
-            .tap_ok_mut(|b| b.push(b'\n'))
-            .map(Into::into)
+
+    #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Serialize, DeserializeFromStr)]
+    pub struct IdParam(Id);
+
+    impl FromStr for IdParam {
+        type Err = ApiError;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            ObjectId::from_str(s)
+                .map_err(|_| ApiError::InvalidSubscription)
+                .map(Id)
+                .map(IdParam)
+        }
+    }
+
+    #[handler]
+    pub async fn list(Data(col): Read<'_>) -> ApiResult<impl IntoResponse> {
+        col.find(None, None)
+            .await?
+            .try_collect::<Vec<_>>()
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[handler]
+    pub async fn create(
+        Data(col): Write<'_>,
+        Json(sub): Json<BangumiSubscription>,
+    ) -> ApiResult<impl IntoResponse> {
+        if !validate(&sub).await? {
+            return Err(ApiError::InvalidSubscription);
+        }
+
+        let id = col.insert_one(&sub, None).await?.inserted_id;
+
+        source::update();
+
+        Ok(Json(WithId {
+            id: Id(id.as_object_id().unwrap()),
+            inner: sub,
         }))
+    }
+
+    #[handler]
+    pub async fn read(
+        Data(col): Read<'_>,
+        Path(IdParam(id)): Path<IdParam>,
+    ) -> ApiResult<impl IntoResponse> {
+        col.find_one(doc! { "_id": id.0 }, None)
+            .await?
+            .ok_or_else(|| ApiError::SubscriptionNotFound(id))
+            .map(Json)
+    }
+
+    #[handler]
+    pub async fn update(
+        Data(col): Write<'_>,
+        Path(IdParam(id)): Path<IdParam>,
+        Json(sub): Json<BangumiSubscription>,
+    ) -> ApiResult<impl IntoResponse> {
+        if !validate(&sub).await? {
+            return Err(ApiError::InvalidSubscription);
+        }
+        #[derive(Serialize)]
+        #[serde(rename_all = "lowercase")]
+        enum UpdateResult {
+            Updated,
+            // Unable to determine if the document was created or updated with mongo. Keep here
+            // for compatibility.
+            #[allow(dead_code)]
+            Created,
+        }
+        #[derive(Serialize)]
+        struct UpdateReturn {
+            result: UpdateResult,
+            content: BangumiSubscription,
+        }
+
+        source::update();
+
+        col.find_one_and_update(
+            doc! { "_id": id.0 },
+            doc! { "$set": mongodb::bson::to_bson(&sub)? },
+            FindOneAndUpdateOptions::builder()
+                .return_document(ReturnDocument::Before)
+                .upsert(true)
+                .build(),
+        )
+        .await?
+        .unwrap_or(sub)
+        .pipe(|content| UpdateReturn {
+            result: UpdateResult::Updated,
+            content,
+        })
+        .pipe(Json)
         .pipe(Ok)
+    }
+
+    #[handler]
+    pub async fn delete(
+        Data(col): Read<'_>,
+        Path(IdParam(id)): Path<IdParam>,
+    ) -> ApiResult<impl IntoResponse> {
+        col.find_one_and_delete(doc! { "_id": id.0 }, None)
+            .await?
+            .map(Json)
+            .ok_or_else(|| ApiError::SubscriptionNotFound(id))
+    }
+
+    #[handler]
+    pub async fn delete_many(
+        Data(col): Read<'_>,
+        Json(Ids { ids }): Json<Ids>,
+    ) -> ApiResult<impl IntoResponse> {
+        let ids = ids.into_iter().map(|id| id.0).collect::<Vec<_>>();
+
+        let deleted = col
+            .delete_many(
+                doc! { "_id": {
+                    "$in": ids
+                } },
+                None,
+            )
+            .await?
+            .deleted_count;
+
+        Ok(Json(deleted))
+    }
 }
 
-#[derive(Debug, Deserialize)]
-struct DelSubs {
-    pub ids: Vec<String>,
+#[derive(Debug, thiserror::Error)]
+pub enum ApiError {
+    #[error("Invalid subscription")]
+    InvalidSubscription,
+
+    #[error("Subscription ID not found: {0}")]
+    SubscriptionNotFound(Id),
+
+    #[error("Database error: {0}")]
+    MongoDBError(#[from] mongodb::error::Error),
+
+    #[error("Bson error: {0}")]
+    BsonError(#[from] mongodb::bson::ser::Error),
+
+    #[error("Client error: {0}")]
+    ClientError(#[from] bangumi::rustify::errors::ClientError),
 }
 
-impl ResponseError for Error {
-    fn status_code(&self) -> StatusCode {
-        if let Error::WebError(_, code) = self {
-            *code
-        } else {
-            StatusCode::INTERNAL_SERVER_ERROR
+impl ApiError {
+    pub fn is_internal(&self) -> bool {
+        matches!(self, ApiError::MongoDBError(_) | ApiError::ClientError(_))
+    }
+}
+
+impl ResponseError for ApiError {
+    fn status(&self) -> StatusCode {
+        match self {
+            ApiError::InvalidSubscription => StatusCode::BAD_REQUEST,
+            ApiError::SubscriptionNotFound(_) => StatusCode::NOT_FOUND,
+            ApiError::MongoDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::ClientError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::BsonError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
-    fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
-        let mut res = HttpResponse::new(self.status_code());
-
-        res.headers_mut().insert(
-            actix_web::http::header::CONTENT_TYPE,
-            HeaderValue::from_static("text/plain; charset=utf-8"),
-        );
-
-        res.set_body(BoxBody::new(if let Error::WebError(text, _) = self {
-            text
-        } else {
-            warn!(%self);
-            emit(&Event::Warn(self.to_string())).unwrap();
-            "Internal Server Error"
-        }))
-    }
-}
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Tags(pub Vec<Id>);
-
-impl FromRequest for Tags {
-    type Error = actix_web::Error;
-    type Future = Ready<Result<Self, Self::Error>>;
-
-    fn from_request(
-        req: &actix_web::HttpRequest,
-        payload: &mut actix_web::dev::Payload,
-    ) -> Self::Future {
-        #[derive(Debug, Deserialize)]
-        struct TagsQuery {
-            tags: String,
-        }
-
-        ready(Ok(Query::<TagsQuery>::from_request(req, payload)
-            .into_inner()
-            .map(|query| Tags(query.tags.split('+').map(|x| Id(x.to_string())).collect()))
-            .unwrap_or_else(|_| Tags(vec![]))))
+    fn as_response(&self) -> poem::Response
+    where
+        Self: std::error::Error + Send + Sync + 'static,
+    {
+        let status = self.status();
+        poem::Response::builder().status(status).body(
+            status
+                .is_server_error()
+                .then(|| {
+                    warn!(error = %self);
+                    "Server Error".into()
+                })
+                .unwrap_or_else(|| self.to_string()),
+        )
     }
 }
 
-impl Tags {
-    pub fn as_set(&self) -> std::collections::HashSet<&Id> {
-        self.0.iter().collect()
-    }
-}
+type ApiResult<T, E = ApiError> = Result<T, E>;

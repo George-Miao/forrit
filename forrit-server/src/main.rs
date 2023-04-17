@@ -1,199 +1,72 @@
-//! ## Looping
-//!
-//! -> Get subscriptions
-//! -> Get update
-//! -> Turn into jobs
-//! -> Start download
-//! -> Postprocess (Rename, move, etc)
+#![feature(let_chains, once_cell, duration_constants, default_free_fn)]
 
-#![allow(incomplete_features)]
-#![feature(type_alias_impl_trait)]
-#![feature(async_fn_in_trait)]
-#![feature(iter_intersperse)]
-#![feature(let_chains)]
-#![feature(try_blocks)]
-#![feature(once_cell)]
+#[macro_use]
+extern crate tracing;
 
-mod_use::mod_use![server, ext, config, util, downloaders, sites, error, event];
+use std::{borrow::Cow, sync::LazyLock};
 
-use std::{env, path::PathBuf};
+use color_eyre::{eyre::eyre, Result};
+use reqwest::Client;
+use tracing::metadata::LevelFilter;
+use tracing_subscriber::EnvFilter;
 
-use forrit_core::{BangumiSubscription, Event, IntoStream};
-use futures::stream::StreamExt;
-use reqwest::Url;
-use tap::{Conv, Pipe, Tap, TapFallible};
-use tokio::{fs, select};
-use tracing::{debug, info, metadata::LevelFilter, warn};
-use tracing_subscriber::{fmt, EnvFilter};
+mod_use::mod_use![source, download, notify, config, server, util];
 
-use crate::{init, sites::bangumi::Bangumi, Config};
+pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+pub static BANGUMI_CLIENT: LazyLock<bangumi::rustify::Client> =
+    LazyLock::new(|| bangumi::rustify::Client::new(bangumi::DEFAULT_DOMAIN, HTTP_CLIENT.clone()));
 
 #[tokio::main]
 async fn main() {
-    fmt()
-        .without_time()
+    color_eyre::install().unwrap();
+
+    run().await.unwrap();
+}
+
+async fn run() -> Result<()> {
+    tracing_subscriber::fmt::fmt()
         .with_env_filter(
             EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
                 .with_env_var("FORRIT_LOG")
-                .from_env_lossy()
-                .add_directive("actix_server=warn".parse().unwrap())
-                .add_directive("transmission_rpc=warn".parse().unwrap()),
+                .from_env_lossy(),
         )
-        .init();
+        .without_time()
+        .try_init()
+        .map_err(|_| eyre!("Failed to initialize tracing"))?;
 
-    drop(run().await.tap_err(|e| {
-        warn!("Error: {}", e);
-    }));
-}
-
-async fn run() -> Result<()> {
-    let conf_path = env::args()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            dirs::config_dir()
-                .expect("Unable to find config dir")
-                .join("forrit_server/config.toml")
-                .tap(|dir| {
-                    info!("Using default config path: {}", dir.display());
-                })
-        })
-        .tap(|path| {
-            info!("Using config path: {}", path.display());
-        });
-
-    if !conf_path.exists() {
-        info!("Config file not found, creating a new one");
-        Config::default().save_to_path(&conf_path).await?;
-    }
+    let conf_path = {
+        let mut iter = std::env::args();
+        let prog = iter.next().map(Cow::from).unwrap_or("forrit-ractor".into());
+        iter.next()
+            .ok_or_else(|| eyre!("Usage: {prog} <config path>"))?
+    };
 
     init(conf_path).await?;
 
-    let conf = get_config();
+    let config = get_config();
 
-    let downloader = Downloaders::new(conf.downloader.clone()).await?;
-    let bangumi = Bangumi::default();
+    let database = {
+        let c = mongodb::Client::with_uri_str(&config.database.url).await?;
+        c.list_databases(None, None).await?;
+        info!("Database connected");
+        c.database(&config.database.database_name)
+    };
 
-    let forrit = Forrit::new(bangumi, downloader).await?;
-    select! {
-        _ = forrit.main_loop() => {}
-        res = forrit.server() => {
-            res?;
-        }
-        res = tokio::signal::ctrl_c() => {
-            info!("Ctrl-C received, exiting");
-            res?;
+    download::DownloadCluster::new(config.downloader.clone())
+        .spawn()
+        .await?;
+    let read = database.collection(&config.database.subscription_collection_name);
+    let update = database.collection(&config.database.subscription_collection_name);
+    let torrents = database.collection(&config.database.torrent_collection_name);
+    let (src, _) = source::SourceCluster::new(read.clone(), torrents)
+        .spawn()
+        .await?;
 
-        }
+    tokio::select! {
+        _ = server::start(read, update) => {}
+        _ = src.send_interval(config.check_intervel, || SourceMessage::Update) => {}
+        _ = tokio::signal::ctrl_c() => {}
     }
-
     Ok(())
-}
-
-pub struct Forrit {
-    site: Bangumi,
-    downloader: Downloaders,
-    subs: SerdeTree<BangumiSubscription>,
-    records: SerdeTree<Url>,
-    flag: Flag,
-}
-
-impl Forrit {
-    pub async fn new(site: Bangumi, downloader: impl Into<Downloaders>) -> Result<Self> {
-        let conf = get_config();
-        let downloader = downloader.into();
-
-        fs::create_dir_all(&conf.data_dir).await?;
-
-        let db = sled::open(conf.db_dir())?;
-        let subs = db.open_tree("bangumi.moe")?.into();
-        let records = db.open_tree("records")?.into();
-        db.open_tree("events")?
-            .conv::<SerdeTree<Event, TimeKey>>()
-            .pipe(init_events);
-
-        let this = Self {
-            site,
-            downloader,
-            subs,
-            records,
-
-            flag: Flag::new(),
-        };
-        this.validate_config().await?;
-
-        Ok(this)
-    }
-
-    pub async fn validate_config(&self) -> Result<()> {
-        let Config { data_dir, .. } = &get_config();
-
-        if data_dir.is_absolute() {
-            Ok(())
-        } else {
-            Err(Error::ConfigError("data_dir must be an absolute path"))
-        }
-    }
-
-    pub async fn main_loop(&self) {
-        let mut clock = tokio::time::interval(get_config().check_intervel);
-        info!("Starting mainloop");
-
-        loop {
-            select! {
-                _ = clock.tick() => {},
-                _ = self.flag.clone() => {
-                    info!("New subscription added, fetching now");
-                }
-            }
-            let config = get_config();
-            debug!("Checking for new episodes");
-            self.subs
-                .iter()
-                .into_stream()
-                .for_each_concurrent(config.rate_limit, |sub| async {
-                    let Ok((_, ref sub)) = sub.warn_err() else {
-                        return
-                    };
-
-                    match self.site.update(sub).await {
-                        Err(error) => {
-                            emit(&Event::Warn(format!("Failed to retrieve jobs ({})", error)))
-                                .unwrap();
-                            warn!(%error, "Failed to retrieve jobs")
-                        }
-                        Ok(jobs) => {
-                            if config.dry_run {
-                                info!(?jobs);
-                                return;
-                            }
-
-                            self.downloader
-                                .handle_jobs(jobs.into_iter().filter(|job| {
-                                    if self
-                                        .records
-                                        .get(&job.id)
-                                        .warn_err()
-                                        .ok()
-                                        .flatten()
-                                        .is_some()
-                                    {
-                                        false
-                                    } else {
-                                        self.records.upsert(&job.id, &job.url).warn_err_end();
-                                        info!(url = %job.url, "Adding job");
-                                        emit(&Event::JobAdded(job.clone())).unwrap();
-                                        true
-                                    }
-                                }))
-                                .await;
-                        }
-                    }
-                })
-                .await;
-            self.downloader.rename_all().await.warn_err_end();
-            debug!("Done");
-        }
-    }
 }
