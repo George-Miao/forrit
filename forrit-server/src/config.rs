@@ -1,33 +1,20 @@
-use std::{
-    fmt::Debug,
-    net::IpAddr,
-    path::{Path, PathBuf},
-    sync::OnceLock,
-    time::Duration,
-};
+use std::{fmt::Debug, net::IpAddr, path::PathBuf, sync::OnceLock, time::Duration};
 
-use futures::future::try_join_all;
-use reqwest::{Client, Url};
+use color_eyre::Result;
 use serde::Serialize;
-use tap::{Pipe, TapFallible};
-use tracing::{info, warn};
+use tracing::info;
 use twelf::{config, Layer};
-
-use crate::{DownloadersConfig, Error, Result};
+use url::Url;
 
 static CONF_PATH: OnceLock<PathBuf> = OnceLock::new();
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
 pub async fn init(path: impl Into<PathBuf>) -> Result<()> {
-    CONF_PATH
-        .set(path.into())
-        .map_err(|_| Error::ConfigInitError("Config path already set"))?;
-    let mut config = Config::from_dir(CONF_PATH.get().unwrap())?;
-    config.load_trackers().await?;
+    drop(CONF_PATH.set(path.into()));
+    let config = Config::from_dir(CONF_PATH.get().unwrap())?;
+    // config.load_trackers().await?;
     info!("Loaded {} tracker(s)", config.trackers.len());
-    CONFIG
-        .set(config)
-        .map_err(|_| Error::ConfigInitError("Config already set"))?;
+    drop(CONFIG.set(config));
     Ok(())
 }
 
@@ -39,18 +26,12 @@ pub fn get_config<'a>() -> &'a Config {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize)]
 pub struct Config {
-    #[serde(default = "default::data_dir")]
-    pub data_dir: PathBuf,
-
     #[serde(default)]
     pub dry_run: bool,
 
     #[serde(default = "default::check_intervel")]
     #[serde(with = "humantime_serde")]
     pub check_intervel: Duration,
-
-    #[serde(default)]
-    pub server: ServerConfig,
 
     #[serde(default)]
     pub trackers: Vec<Url>,
@@ -64,7 +45,27 @@ pub struct Config {
     #[serde(default)]
     pub rate_limit: Option<usize>,
 
+    #[serde(default)]
+    pub server: ServerConfig,
+
     pub downloader: DownloadersConfig,
+
+    pub database: DatabaseConfig,
+}
+
+#[config]
+#[derive(Debug, Clone, Serialize)]
+pub struct DatabaseConfig {
+    pub url: String,
+
+    #[serde(default = "default::database_name")]
+    pub database_name: String,
+
+    #[serde(default = "default::subscription_collection")]
+    pub subscription_collection_name: String,
+
+    #[serde(default = "default::torrent_collection")]
+    pub torrent_collection_name: String,
 }
 
 #[config]
@@ -83,10 +84,47 @@ pub struct ServerConfig {
     pub workers: usize,
 }
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum DownloadersConfig {
+    Transmission(TransmissionConfig),
+    Qbittorrent(QbittorrentConfig),
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct TransmissionConfig {
+    #[serde(default = "default::download_dir")]
+    pub download_dir: PathBuf,
+
+    #[serde(default = "default::transmission_url")]
+    pub url: url::Url,
+
+    #[serde(default, flatten)]
+    pub auth: Option<Auth>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct QbittorrentConfig {
+    #[serde(default = "default::download_dir")]
+    pub download_dir: PathBuf,
+
+    #[serde(default = "default::transmission_url")]
+    pub url: url::Url,
+
+    #[serde(flatten)]
+    pub auth: Auth,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct Auth {
+    pub username: String,
+    pub password: String,
+}
+
 pub mod default {
     use std::{net::IpAddr, path::PathBuf};
 
-    use reqwest::Url;
+    use url::Url;
 
     pub fn data_dir() -> PathBuf {
         dirs::data_dir().unwrap().join("forrit_server")
@@ -109,6 +147,15 @@ pub mod default {
     pub fn server_workers() -> usize {
         4
     }
+    pub fn database_name() -> String {
+        "forrit".to_string()
+    }
+    pub fn subscription_collection() -> String {
+        "subscriptions".to_string()
+    }
+    pub fn torrent_collection() -> String {
+        "torrents".to_string()
+    }
 }
 
 impl Default for ServerConfig {
@@ -122,71 +169,36 @@ impl Default for ServerConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            data_dir: default::data_dir(),
-            dry_run: false,
-            check_intervel: default::check_intervel(),
-            trackers: Vec::new(),
-            tracker_lists: Vec::new(),
-            server: ServerConfig::default(),
-            no_cache: false,
-            downloader: DownloadersConfig::Noop,
-            rate_limit: None,
-        }
-    }
-}
-
 impl Config {
     pub fn from_dir(dir: impl Into<PathBuf>) -> Result<Self> {
         Config::with_layers(&[Layer::Toml(dir.into()), Layer::Env(Some("FORRIT_".into()))])
             .map_err(Into::into)
     }
 
-    pub async fn load_trackers(&mut self) -> Result<()> {
-        let client = Client::new();
-        self.tracker_lists
-            .iter()
-            .map(|x| async { client.get(x.as_str()).send().await?.text().await })
-            .collect::<Vec<_>>()
-            .pipe(try_join_all)
-            .await?
-            .join("\n")
-            .lines()
-            .filter_map(|x| {
-                if x.trim().is_empty() {
-                    return None;
-                }
-                Url::parse(x)
-                    .tap_err(|error| warn!(%error, "Unable to parse url"))
-                    .ok()
-            })
-            .into_iter()
-            .for_each(|x| {
-                if !self.trackers.contains(&x) {
-                    self.trackers.push(x)
-                }
-            });
-        Ok(())
-    }
-
-    pub fn db_dir(&self) -> PathBuf {
-        self.data_dir.join("database")
-    }
-
-    pub async fn save_to_path(&self, path: impl AsRef<Path>) -> Result<()> {
-        let t = toml::to_string_pretty(self)?;
-        let path = path.as_ref();
-        if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
-        }
-        tokio::fs::write(path, t).await?;
-        Ok(())
-    }
-
-    pub async fn write_back(&self) -> Result<()> {
-        self.save_to_path(CONF_PATH.get().expect("Config is not initialized"))
-            .await
-    }
+    // pub async fn load_trackers(&mut self) -> Result<()> {
+    //     let client = Client::new();
+    //     self.tracker_lists
+    //         .iter()
+    //         .map(|x| async { client.get(x.as_str()).send().await?.text().await })
+    //         .collect::<Vec<_>>()
+    //         .pipe(try_join_all)
+    //         .await?
+    //         .join("\n")
+    //         .lines()
+    //         .filter_map(|x| {
+    //             if x.trim().is_empty() {
+    //                 return None;
+    //             }
+    //             Url::parse(x)
+    //                 .tap_err(|error| warn!(%error, "Unable to parse url"))
+    //                 .ok()
+    //         })
+    //         .into_iter()
+    //         .for_each(|x| {
+    //             if !self.trackers.contains(&x) {
+    //                 self.trackers.push(x)
+    //             }
+    //         });
+    //     Ok(())
+    // }
 }

@@ -1,83 +1,44 @@
 use std::{
     borrow::Cow,
     ops::Deref,
-    sync::{Arc, LazyLock},
-    time::Duration,
+    sync::Arc,
+    time::{Duration, UNIX_EPOCH},
 };
 
 use color_eyre::Result;
-use forrit_core::{futures::future::try_join_all, Job as ForritJob};
-use http_client::hyper::HyperClient;
-use mongodb::bson::oid::ObjectId;
+use forrit_core::{futures::future::try_join_all, normalize_title, Job as ForritJob};
 use qbit_rs::model as qb;
 use ractor::{
     factory::{
         Factory, FactoryMessage, Job, JobOptions, WorkerBuilder, WorkerId, WorkerMessage,
         WorkerStartContext,
     },
-    Actor, ActorProcessingErr, ActorRef, BytesConvertable, Message,
+    Actor, ActorProcessingErr, ActorRef,
 };
-use regex::Regex;
 use tap::Pipe;
 use tracing::{debug, info, warn};
 use transmission_rpc::types as tr;
 
-use crate::{DownloadersConfig, QbittorrentConfig, TransmissionConfig};
-
-pub fn normalize_title(title: &str) -> Cow<'_, str> {
-    macro_rules! rule {
-        ($reg:literal) => {
-            Regex::new($reg).expect("Regex should compile")
-        };
-    }
-    static PATTERNS: LazyLock<[Regex; 7]> = LazyLock::new(|| {
-        [
-            rule!(r#"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
-            rule!(r#"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
-            rule!(r#"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)"#),
-            rule!(r#"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)"#),
-            rule!(r#"(.*)第(\d*\.*\d*)话(?:END)?(.*)"#),
-            rule!(r#"(.*)第(\d*\.*\d*)話(?:END)?(.*)"#),
-            rule!(r#"(.*)-\s*(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)"#),
-        ]
-    });
-
-    PATTERNS
-        .iter()
-        .find_map(|pat| {
-            pat.captures(title).and_then(|cap| {
-                let pre = cap.get(1)?.as_str().trim();
-                let episode = cap.get(2)?.as_str().trim();
-                let suf = cap.get(3)?.as_str().trim();
-
-                Some(format!("{pre} E{episode} {suf}").into())
-            })
-        })
-        .unwrap_or_else(|| title.into())
-}
+use crate::{
+    get_config, new_factory, DownloadersConfig, Id, QbittorrentConfig, TransmissionConfig,
+    HTTP_CLIENT,
+};
 
 pub struct DownloadCluster {
     client: Arc<Client>,
 }
 
-pub enum DownloadWorkerMessage {
-    Job(ForritJob),
-    Rename(String),
-}
-
-impl Message for DownloadWorkerMessage {}
-
 impl DownloadCluster {
-    pub fn new(config: DownloadersConfig) -> Result<Self> {
+    pub fn new(config: DownloadersConfig) -> Self {
         match config {
             DownloadersConfig::Qbittorrent(config) => {
-                let client = qbit_rs::Qbit::new(
+                let client = qbit_rs::Qbit::new_with_client(
                     config.url.clone(),
                     qb::Credential::new(
                         config.auth.username.to_owned(),
                         config.auth.password.to_owned(),
                     ),
-                    HyperClient::new(),
+                    HTTP_CLIENT.clone(),
                 );
                 Client::Qbit((client, config))
             }
@@ -94,7 +55,15 @@ impl DownloadCluster {
         }
         .pipe(Arc::new)
         .pipe(|client| Self { client })
-        .pipe(Ok)
+    }
+
+    pub async fn spawn(self) -> Result<()> {
+        let factory = new_factory();
+        let builder = self.worker_builder();
+
+        Actor::spawn(Some("downloader".to_owned()), factory, builder).await?;
+
+        Ok(())
     }
 
     fn worker_builder(&self) -> Box<dyn WorkerBuilder<DownloadWorker>> {
@@ -115,41 +84,25 @@ impl DownloadCluster {
             client: self.client.clone(),
         })
     }
-
-    pub async fn spawn(self) -> Result<()> {
-        let factory = Factory::default(); // TODO: factory config
-        let builder = self.worker_builder();
-
-        Actor::spawn(Some("downloader_cluster".to_owned()), factory, builder).await?;
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
-struct Id(ObjectId);
-
-impl BytesConvertable for Id {
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self(ObjectId::from_bytes(bytes[..12].try_into().unwrap()))
-    }
-
-    fn into_bytes(self) -> Vec<u8> {
-        self.0.bytes().to_vec()
-    }
 }
 
 #[allow(clippy::large_enum_variant)]
 enum Client {
-    Qbit((qbit_rs::Qbit<HyperClient>, QbittorrentConfig)),
+    Qbit((qbit_rs::Qbit, QbittorrentConfig)),
     Transmission((transmission_rpc::SharableTransClient, TransmissionConfig)),
 }
 
-struct DownloadWorkerState {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DownloadWorkerMessage {
+    Job(ForritJob),
+    Rename(Option<String>),
+}
+
+pub struct DownloadWorkerState {
     factory: ActorRef<Factory<Id, DownloadWorkerMessage, DownloadWorker>>,
 }
 
-struct DownloadWorker {
+pub struct DownloadWorker {
     id: WorkerId,
     client: Arc<Client>,
 }
@@ -157,12 +110,19 @@ struct DownloadWorker {
 impl DownloadWorker {
     async fn download(
         &self,
-        job_key: Id,
+        key: Id,
         forrit_job: ForritJob,
         state: &mut DownloadWorkerState,
     ) -> Result<(), ActorProcessingErr> {
-        let ForritJob { url, dir, .. } = forrit_job;
+        let ForritJob { url, dir, id } = forrit_job;
+        debug!(%url, dir = %dir.display(), %id, "Downloading");
         let DownloadWorkerState { factory } = state;
+
+        if get_config().dry_run {
+            info!(%url, dir = %dir.display(), %id, "Download");
+            return Ok(());
+        }
+
         let dir = dir.to_str().expect("Non utf-8 path").to_owned();
 
         match self.client.deref() {
@@ -173,40 +133,37 @@ impl DownloadWorker {
                     .to_str()
                     .expect("Non utf-8 path")
                     .to_owned();
+                info!(%url, %path, "Adding torrent to qbit");
                 let arg = qb::AddTorrentArg::builder()
                     .source(qb::TorrentSource::Urls {
                         urls: vec![url].into(),
                     })
                     .savepath(path)
                     .build();
-                client.add_torrent(arg).await?.into_iter().for_each(|v| {
-                    let hash = v.hash;
-                    factory.send_after(Duration::SECOND * 5, move || {
-                        FactoryMessage::Dispatch(Job {
-                            key: job_key,
-                            msg: DownloadWorkerMessage::Rename(
-                                hash.clone()
-                                    .expect("Qbittorrent did not return torrent hash"),
-                            ),
-                            options: JobOptions::default(),
-                        })
-                    });
+
+                client.add_torrent(arg).await?;
+
+                factory.send_after(Duration::SECOND, move || {
+                    FactoryMessage::Dispatch(Job {
+                        key,
+                        msg: DownloadWorkerMessage::Rename(None),
+                        options: JobOptions::default(),
+                    })
                 });
             }
             Client::Transmission((client, config)) => {
+                let path = config
+                    .download_dir
+                    .join(dir)
+                    .to_str()
+                    .expect("Non utf-8 path")
+                    .to_owned();
+                info!(%url, %path, "Adding torrent to transmission");
                 let arg = tr::TorrentAddArgs {
                     filename: Some(url.to_string()),
-                    download_dir: Some(
-                        config
-                            .download_dir
-                            .join(dir)
-                            .to_str()
-                            .expect("Non utf-8 path")
-                            .to_owned(),
-                    ),
+                    download_dir: Some(path),
                     ..tr::TorrentAddArgs::default()
                 };
-
                 let id = match client.torrent_add(arg).await?.arguments {
                     tr::TorrentAddedOrDuplicate::TorrentDuplicate(t)
                     | tr::TorrentAddedOrDuplicate::TorrentAdded(t) => {
@@ -216,8 +173,10 @@ impl DownloadWorker {
 
                 factory.send_after(Duration::SECOND, move || {
                     FactoryMessage::Dispatch(Job {
-                        key: job_key,
-                        msg: DownloadWorkerMessage::Rename(trans_id_to_string(id.clone())),
+                        key,
+                        msg: trans_id_to_string(id.clone())
+                            .pipe(Some)
+                            .pipe(DownloadWorkerMessage::Rename),
                         options: JobOptions::default(),
                     })
                 });
@@ -226,30 +185,58 @@ impl DownloadWorker {
         Ok(())
     }
 
-    async fn rename(&self, id: String) -> Result<(), ActorProcessingErr> {
+    async fn rename(
+        &self,
+        key: Id,
+        id: Option<String>,
+        state: &mut DownloadWorkerState,
+    ) -> Result<(), ActorProcessingErr> {
+        let DownloadWorkerState { factory } = state;
         match self.client.deref() {
             Client::Qbit((client, _)) => {
-                let files = client.get_torrent_contents(&id, None).await?;
-                files
-                    .into_iter()
-                    .filter_map(|x| {
-                        let old = &x.name;
-                        if let Cow::Owned(new) = normalize_title(old) {
-                            info!("Renaming qbit file {old} -> {new}");
-                            Some((x.name, new))
-                        } else {
-                            debug!("Skip renaming qbit file {old}");
-                            None
-                        }
-                    })
-                    .map(|(old, new)| async {
-                        client.rename_file(&id, old, new).await?;
-                        Ok::<_, ActorProcessingErr>(())
-                    })
-                    .pipe(try_join_all)
-                    .await?;
+                if let Some(id) = id {
+                    let files = client.get_torrent_contents(&id, None).await?;
+                    files
+                        .into_iter()
+                        .filter_map(|x| {
+                            let old = &x.name;
+                            if let Cow::Owned(new) = normalize_title(old) {
+                                info!("Renaming qbit file {old} -> {new}");
+                                Some((x.name, new))
+                            } else {
+                                debug!("Skip renaming qbit file {old}");
+                                None
+                            }
+                        })
+                        .map(|(old, new)| async {
+                            client.rename_file(&id, old, new).await?;
+                            Ok::<_, ActorProcessingErr>(())
+                        })
+                        .pipe(try_join_all)
+                        .await?;
+                } else {
+                    client
+                        .get_torrent_list(Default::default())
+                        .await?
+                        .into_iter()
+                        .filter_map(|x| {
+                            ((UNIX_EPOCH + Duration::from_secs(x.added_on? as u64))
+                                .elapsed()
+                                .ok()?
+                                < 5 * 60 * Duration::SECOND) // 5 minutes
+                                .then_some(x.hash?)
+                        })
+                        .try_for_each(|x| {
+                            factory.send_message(FactoryMessage::Dispatch(Job {
+                                key,
+                                msg: DownloadWorkerMessage::Rename(Some(x)),
+                                options: JobOptions::default(),
+                            }))
+                        })?
+                }
             }
             Client::Transmission((client, _)) => {
+                let Some(id) = id else { return Ok(()) };
                 let id = trans_string_to_id(id);
 
                 client
@@ -305,21 +292,6 @@ impl DownloadWorker {
     }
 }
 
-fn trans_id_to_string(id: tr::Id) -> String {
-    match id {
-        tr::Id::Id(id) => format!("{}", id),
-        tr::Id::Hash(hash) => hash,
-    }
-}
-
-fn trans_string_to_id(string: String) -> tr::Id {
-    if let Ok(id) = string.parse() {
-        tr::Id::Id(id)
-    } else {
-        tr::Id::Hash(string)
-    }
-}
-
 #[async_trait::async_trait]
 impl Actor for DownloadWorker {
     type Arguments = WorkerStartContext<Id, DownloadWorkerMessage, Self>;
@@ -334,6 +306,16 @@ impl Actor for DownloadWorker {
         Ok(DownloadWorkerState {
             factory: arg.factory,
         })
+    }
+
+    async fn post_start(
+        &self,
+        _: ActorRef<Self>,
+        _: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        info!("Download worker #{} started", self.id);
+
+        Ok(())
     }
 
     async fn handle(
@@ -353,7 +335,7 @@ impl Actor for DownloadWorker {
                         self.download(key, job, state).await?;
                     }
                     DownloadWorkerMessage::Rename(id) => {
-                        self.rename(id).await?;
+                        self.rename(key, id, state).await?;
                     }
                 }
                 state
@@ -362,5 +344,20 @@ impl Actor for DownloadWorker {
             }
         }
         Ok(())
+    }
+}
+
+fn trans_id_to_string(id: tr::Id) -> String {
+    match id {
+        tr::Id::Id(id) => format!("{}", id),
+        tr::Id::Hash(hash) => hash,
+    }
+}
+
+fn trans_string_to_id(string: String) -> tr::Id {
+    if let Ok(id) = string.parse() {
+        tr::Id::Id(id)
+    } else {
+        tr::Id::Hash(string)
     }
 }
