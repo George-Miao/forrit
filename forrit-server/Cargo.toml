@@ -16,7 +16,7 @@ color-eyre         = { version = "0.6.2", default-features = false }
 tokio              = { version = "1.27.0", features = ["rt", "rt-multi-thread", "macros", "signal"] }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
-qbit-rs         = "0.3.2"
+qbit-rs         = "0.3.4"
 ractor          = "0.7.5"
 mongodb         = "2.4.0"
 tap             = "1.0.1"
