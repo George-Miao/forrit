@@ -221,7 +221,7 @@ pub enum ApiError {
     BsonError(#[from] mongodb::bson::ser::Error),
 
     #[error("Client error: {0}")]
-    ClientError(#[from] bangumi::rustify::errors::ClientError),
+    ClientError(#[from] bangumi::rustified::errors::ClientError),
 }
 
 impl ApiError {

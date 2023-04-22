@@ -13,7 +13,7 @@ use forrit_core::BangumiSubscription;
 use owo_colors::OwoColorize;
 use regex::Regex;
 use requestty::{self, ListItem, Question};
-use rustify::{Client, Endpoint};
+use rustified::{Client, Endpoint};
 use tap::{Conv, Pipe, Tap, TryConv};
 use unicode_width::UnicodeWidthStr;
 

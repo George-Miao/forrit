@@ -5,7 +5,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use bangumi::{endpoints::FetchTags, rustify::errors::ClientError, Endpoint};
+use bangumi::{endpoints::FetchTags, rustified::errors::ClientError, Endpoint};
 use forrit_core::BangumiSubscription;
 use mongodb::bson::oid::ObjectId;
 use ractor::{

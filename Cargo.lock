@@ -160,20 +160,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bangumi"
-version = "0.1.0"
-source = "git+https://github.com/George-Miao/bangumi/#bc56e96767b6a59a6839eef0517605600dc81e44"
-dependencies = [
- "microtype",
- "paste",
- "rustify",
- "rustify_derive",
- "serde",
- "thiserror",
- "typed-builder 0.11.0",
-]
-
-[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -813,7 +799,7 @@ dependencies = [
 name = "forrit"
 version = "0.1.0"
 dependencies = [
- "bangumi 0.1.0 (git+https://github.com/George-Miao/bangumi/)",
+ "bangumi",
  "clap",
  "color-eyre",
  "dirs 4.0.0",
@@ -824,8 +810,8 @@ dependencies = [
  "regex",
  "requestty",
  "reqwest",
- "rustify",
- "rustify_derive",
+ "rustified",
+ "rustified_derive",
  "serde",
  "serde_json",
  "spinners",
@@ -842,7 +828,7 @@ dependencies = [
 name = "forrit-core"
 version = "0.1.0"
 dependencies = [
- "bangumi 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bangumi",
  "dyn-clonable",
  "dyn-clone",
  "futures",
@@ -862,7 +848,7 @@ name = "forrit-server"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bangumi 0.1.0 (git+https://github.com/George-Miao/bangumi/)",
+ "bangumi",
  "color-eyre",
  "dirs 5.0.0",
  "forrit-core",
@@ -2164,38 +2150,6 @@ name = "rustified_derive"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "936e3298259b69d20e4936ff7c4a5015710759046840db91dd7a1c44be2bc45d"
-dependencies = [
- "proc-macro2",
- "quote",
- "regex",
- "serde_urlencoded",
- "syn 1.0.109",
- "synstructure",
-]
-
-[[package]]
-name = "rustify"
-version = "0.5.3"
-source = "git+https://github.com/George-Miao/rustify/#b19e39d2b5173750599f18fe32917403f661ee07"
-dependencies = [
- "anyhow",
- "async-trait",
- "bytes",
- "http",
- "reqwest",
- "rustify_derive",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "thiserror",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "rustify_derive"
-version = "0.5.2"
-source = "git+https://github.com/George-Miao/rustify/#b19e39d2b5173750599f18fe32917403f661ee07"
 dependencies = [
  "proc-macro2",
  "quote",

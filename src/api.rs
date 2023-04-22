@@ -1,5 +1,5 @@
 use forrit_core::{BangumiSubscription, Confirm, WithId};
-use rustify_derive::Endpoint;
+use rustified_derive::Endpoint;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 

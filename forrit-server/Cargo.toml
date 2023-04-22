@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bangumi            = { version = "0.1.0", git = "https://github.com/George-Miao/bangumi" }
 forrit-core        = { version = "0.1.0", path = "../forrit-core" }
 serde              = { version = "1.0.160", default-features = false, features = ["derive"] }
 tracing            = { version = "0.1.37", features = ["log"] }
@@ -16,6 +15,7 @@ color-eyre         = { version = "0.6.2", default-features = false }
 tokio              = { version = "1.27.0", features = ["rt", "rt-multi-thread", "macros", "signal"] }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
+bangumi         = "0.1.0"
 qbit-rs         = "0.3.4"
 ractor          = "0.7.5"
 mongodb         = "2.4.0"

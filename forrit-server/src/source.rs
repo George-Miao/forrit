@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 
 use bangumi::{
     endpoints::SearchTorrents,
-    rustify::{errors::ClientError, Client},
+    rustified::{errors::ClientError, Client},
     Endpoint, Torrent,
 };
 use color_eyre::Result;

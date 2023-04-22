@@ -8,10 +8,6 @@ edition = "2021"
 
 [dependencies]
 forrit-core = { version = "0.1.0", path = "forrit-core" }
-bangumi     = { version = "0.1.0", git = "https://github.com/George-Miao/bangumi/" }
-
-rustify_derive = { version = "0.5.2", git = "https://github.com/George-Miao/rustify/", package = "rustify_derive" }
-rustify        = { version = "0.5.3", git = "https://github.com/George-Miao/rustify/" }
 
 tokio      = { version = "1.21.2", default-features = false, features = ["rt", "macros", "fs"] }
 clap       = { version = "4.0.18", features = ["derive"] }
@@ -20,18 +16,21 @@ url        = { version = "2.3.1", features = ["serde"] }
 color-eyre = { version = "0.6.2", default-features = false }
 owo-colors = { version = "3.5.0", features = ["supports-colors"] }
 
-typed-builder = "0.10.0"
-mod_use       = "0.2.1"
-serde         = "1.0.147"
-tap           = "1.0.1"
-dirs          = "4.0.0"
-regex         = "1.6.0"
-requestty     = "0.5.0"
-unicode-width = "0.1.10"
-spinners      = "4.1.0"
-serde_json    = "1.0.87"
-either        = "1.8.0"
-reqwest       = { version = "0.11.13", features = ["stream"] }
+rustified        = "0.5.3"
+rustified_derive = "0.5.3"
+bangumi          = "0.1.0"
+typed-builder    = "0.10.0"
+mod_use          = "0.2.1"
+serde            = "1.0.147"
+tap              = "1.0.1"
+dirs             = "4.0.0"
+regex            = "1.6.0"
+requestty        = "0.5.0"
+unicode-width    = "0.1.10"
+spinners         = "4.1.0"
+serde_json       = "1.0.87"
+either           = "1.8.0"
+reqwest          = { version = "0.11.13", features = ["stream"] }
 
 [profile.release]
 strip         = true

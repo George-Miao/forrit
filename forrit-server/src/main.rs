@@ -13,14 +13,14 @@ use tracing_subscriber::EnvFilter;
 mod_use::mod_use![source, download, notify, config, server, util];
 
 pub static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
-pub static BANGUMI_CLIENT: LazyLock<bangumi::rustify::Client> =
-    LazyLock::new(|| bangumi::rustify::Client::new(bangumi::DEFAULT_DOMAIN, HTTP_CLIENT.clone()));
+pub static BANGUMI_CLIENT: LazyLock<bangumi::rustified::Client> =
+    LazyLock::new(|| bangumi::rustified::Client::new(bangumi::DEFAULT_DOMAIN, HTTP_CLIENT.clone()));
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     color_eyre::install().unwrap();
 
-    run().await.unwrap();
+    run().await
 }
 
 async fn run() -> Result<()> {
@@ -74,5 +74,6 @@ async fn run() -> Result<()> {
         _ = src.send_interval(config.check_intervel, || SourceMessage::Update) => {}
         _ = tokio::signal::ctrl_c() => {}
     }
+
     Ok(())
 }

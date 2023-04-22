@@ -17,7 +17,7 @@ use requestty::{
     },
     symbols, ErrorKind, ExpandItem, ListItem, OnEsc,
 };
-use rustify::{Client, Endpoint};
+use rustified::{Client, Endpoint};
 use serde_json::from_slice;
 use tap::Pipe;
 use url::Url;
@@ -92,15 +92,15 @@ impl Cmd {
     }
 }
 
-type ReqFut<'a, E: Endpoint + 'a, C: rustify::client::Client + 'a> =
+type ReqFut<'a, E: Endpoint + 'a, C: rustified::client::Client + 'a> =
     impl Future<Output = Result<E::Response>> + 'a;
 
 pub trait QuickExec<E: Endpoint> {
-    fn quick_exec<'a, C: rustify::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C>;
+    fn quick_exec<'a, C: rustified::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C>;
 }
 
 impl<E: Endpoint> QuickExec<E> for E {
-    fn quick_exec<'a, C: rustify::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C> {
+    fn quick_exec<'a, C: rustified::client::Client>(&'a self, client: &'a C) -> ReqFut<'a, E, C> {
         async move {
             let mut spin = spinners::Spinner::new(spinners::Spinners::Dots2, "Loading..".into());
             let res = self.exec(client).await?.parse()?;

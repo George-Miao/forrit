@@ -3,7 +3,7 @@ use std::ops::Deref;
 use clap::Subcommand;
 use color_eyre::{eyre::bail, Result};
 use owo_colors::OwoColorize;
-use rustify::Client;
+use rustified::Client;
 use serde_json::Value;
 
 use crate::{pager, prettify_value, Config, GetConfig, QuickExec};
