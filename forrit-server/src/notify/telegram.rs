@@ -118,6 +118,15 @@ impl Actor for Telegram {
         Ok(())
     }
 
+    async fn post_start(
+        &self,
+        _: ActorRef<Self>,
+        _: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        info!("Telegram actor started");
+        Ok(())
+    }
+
     async fn handle(
         &self,
         _: ActorRef<Self>,

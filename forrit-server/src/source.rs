@@ -33,6 +33,8 @@ use crate::{get_config, new_factory, new_job, Id, WithId, BANGUMI_CLIENT};
 pub fn update() {
     if let Some(source) = registry::where_is("source".to_owned()) {
         drop(source.send_message::<SourceCluster>(SourceMessage::Update));
+    } else {
+        error!("Source controller not found");
     }
 }
 

@@ -99,7 +99,7 @@ impl Actor for QbitWorker {
                         let n = Notification::new().with(NotificationChunk::Paragraph {
                             title: "New download added".to_owned(),
                             content: format!(
-                                "Torrent <code>{}</code> has been added to download to \
+                                "Torrent <code>{}</code> is downloading to \
                                  <code>{}</code>",
                                 job.url,
                                 job.dir.display()
@@ -179,7 +179,7 @@ impl QbitWorker {
 
         let (client, _) = self.inner.deref();
 
-        if let Some(id) = id {
+        if let Some(id) = id {myself
             let files = client.get_torrent_contents(&id, None).await?;
             if files.is_empty() {
                 if retry_count != 0 {
