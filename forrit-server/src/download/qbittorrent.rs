@@ -99,7 +99,8 @@ impl Actor for QbitWorker {
                         let n = Notification::new().with(NotificationChunk::Paragraph {
                             title: "New download added".to_owned(),
                             content: format!(
-                                "Torrent {} has been added to download to <code>{}</code>",
+                                "Torrent <code>{}</code> has been added to download to \
+                                 <code>{}</code>",
                                 job.url,
                                 job.dir.display()
                             ),
