@@ -51,11 +51,19 @@ pub struct Record {
 pub struct SourceCluster {
     col: Collection<WithId<BangumiSubscription>>,
     torrent: Collection<Record>,
+    throttle: Option<ThrottlePool>,
 }
 
 impl SourceCluster {
     pub fn new(col: Collection<WithId<BangumiSubscription>>, torrent: Collection<Record>) -> Self {
-        Self { col, torrent }
+        let throttle = get_config()
+            .rate_limit
+            .map(|count| ThrottlePool::new(ThrottleRate::new(count, Duration::from_secs(60))));
+        Self {
+            col,
+            torrent,
+            throttle,
+        }
     }
 
     pub async fn spawn(self) -> Result<(ActorRef<Self>, JoinHandle<()>)> {
@@ -129,7 +137,14 @@ impl Actor for SourceCluster {
                 self.col
                     .find(None, None)
                     .await?
-                    .map_err(|e| e.into())
+                    .map_err(Into::into)
+                    .pipe(|x| {
+                        if let Some(throttle) = self.throttle.clone() {
+                            x.throttle(throttle).pipe(Either::Left)
+                        } else {
+                            x.pipe(Either::Right)
+                        }
+                    })
                     .try_for_each(|entry| async {
                         let entry = entry;
                         let WithId { id, inner } = entry;

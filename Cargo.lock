@@ -1198,6 +1198,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.2",
+ "stream_throttle",
  "tap",
  "thiserror",
  "tokio",
@@ -3060,6 +3061,18 @@ dependencies = [
  "lazy_static",
  "maplit",
  "strum",
+]
+
+[[package]]
+name = "stream_throttle"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b98ddf8e1b97084a330e3e13a515d557da2268ca48444a1f01c1381669f7be8"
+dependencies = [
+ "futures",
+ "log",
+ "pin-utils",
+ "tokio",
 ]
 
 [[package]]

@@ -43,6 +43,7 @@ pub struct Config {
     pub no_cache: bool,
 
     #[serde(default)]
+    /// How many requests can be sent to bangumi.moe per minute
     pub rate_limit: Option<usize>,
 
     #[serde(default)]
