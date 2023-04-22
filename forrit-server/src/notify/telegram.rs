@@ -140,7 +140,7 @@ impl Actor for Telegram {
             .await
             .tap_err(|error| warn!(?error))?;
 
-        info!("Response: {:?}", msgs);
+        debug!(?msgs, "Response");
         Ok(())
     }
 }
