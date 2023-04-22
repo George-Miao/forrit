@@ -18,8 +18,8 @@ use ractor::{
 use tap::Pipe;
 
 use crate::{
-    emit, get_config, new_factory, DownloadWorkerMessage, DownloadWorkerState, Id, Notification,
-    NotificationChunk, QbittorrentConfig, WorkerBuilderClosure, HTTP_CLIENT,
+    emit, get_config, impl_worker_log, new_factory, DownloadWorkerMessage, DownloadWorkerState, Id,
+    Notification, NotificationChunk, QbittorrentConfig, WorkerBuilderClosure, HTTP_CLIENT,
 };
 
 pub struct QbitCluster(Arc<(Qbit, QbittorrentConfig)>);
@@ -62,6 +62,8 @@ impl Actor for QbitWorker {
     type Msg = WorkerMessage<Id, DownloadWorkerMessage>;
     type State = DownloadWorkerState<Self>;
 
+    impl_worker_log!(this => format!("Qbit download worker #{}", this.id));
+
     async fn pre_start(
         &self,
         _: ActorRef<Self>,
@@ -70,16 +72,6 @@ impl Actor for QbitWorker {
         Ok(DownloadWorkerState {
             factory: arg.factory,
         })
-    }
-
-    async fn post_start(
-        &self,
-        _: ActorRef<Self>,
-        _: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        info!("Download worker #{} started", self.id);
-
-        Ok(())
     }
 
     async fn handle(

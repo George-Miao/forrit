@@ -12,7 +12,7 @@ use telegram_bot_raw_ars::{
     Body, ChatId, HttpResponse, ParseMode, Request, ResponseType, SendMessage,
 };
 
-use crate::{Link, Notification, NotificationChunk, TelegramConfig, HTTP_CLIENT};
+use crate::{impl_worker_log, Link, Notification, NotificationChunk, TelegramConfig, HTTP_CLIENT};
 
 pub struct Telegram {
     config: TelegramConfig,
@@ -110,20 +110,13 @@ impl Actor for Telegram {
     type Msg = Notification;
     type State = ();
 
+    impl_worker_log!("Telegram actor");
+
     async fn pre_start(
         &self,
         _: ActorRef<Self>,
         _: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(())
-    }
-
-    async fn post_start(
-        &self,
-        _: ActorRef<Self>,
-        _: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        info!("Telegram actor started");
         Ok(())
     }
 

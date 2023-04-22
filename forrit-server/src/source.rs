@@ -28,7 +28,7 @@ use stream_throttle::{ThrottlePool, ThrottleRate, ThrottledStream};
 use tap::{Pipe, TapFallible};
 use url::Url;
 
-use crate::{get_config, new_factory, new_job, Id, WithId, BANGUMI_CLIENT};
+use crate::{get_config, impl_worker_log, new_factory, new_job, Id, WithId, BANGUMI_CLIENT};
 
 pub fn update() {
     if let Some(source) = registry::where_is("source".to_owned()) {
@@ -108,20 +108,13 @@ impl Actor for SourceCluster {
     type Msg = SourceMessage;
     type State = ();
 
+    impl_worker_log!("Source controller");
+
     async fn pre_start(
         &self,
         _: ActorRef<Self>,
         _: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(())
-    }
-
-    async fn post_start(
-        &self,
-        _: ActorRef<Self>,
-        _: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        info!("Source controller started");
         Ok(())
     }
 

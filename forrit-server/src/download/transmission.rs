@@ -10,8 +10,8 @@ use tap::Pipe;
 use transmission_rpc::{types as tr, SharableTransClient};
 
 use crate::{
-    get_config, new_factory, DownloadWorkerMessage, DownloadWorkerState, Id, TransmissionConfig,
-    WorkerBuilderClosure, HTTP_CLIENT,
+    get_config, impl_worker_log, new_factory, DownloadWorkerMessage, DownloadWorkerState, Id,
+    TransmissionConfig, WorkerBuilderClosure, HTTP_CLIENT,
 };
 
 pub struct TransmissionCluster(Arc<(SharableTransClient, TransmissionConfig)>);
@@ -56,6 +56,8 @@ impl Actor for TransmissionWorker {
     type Msg = WorkerMessage<Id, DownloadWorkerMessage>;
     type State = DownloadWorkerState<Self>;
 
+    impl_worker_log!(this => format!("Transmission download worker #{}", this.id));
+
     async fn pre_start(
         &self,
         _: ActorRef<Self>,
@@ -64,16 +66,6 @@ impl Actor for TransmissionWorker {
         Ok(DownloadWorkerState {
             factory: arg.factory,
         })
-    }
-
-    async fn post_start(
-        &self,
-        _: ActorRef<Self>,
-        _: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        info!("Download worker #{} started", self.id);
-
-        Ok(())
     }
 
     async fn handle(

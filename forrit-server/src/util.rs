@@ -165,3 +165,58 @@ where
         (self.0)(id)
     }
 }
+
+macro_rules! impl_worker_log {
+    ($worker_name:expr) => {
+        impl_worker_log!(_self => $worker_name);
+    };
+    ($self:ident => $worker_name:expr) => {
+        fn post_start<'life0, 'life1, 'async_trait>(
+            &'life0 self,
+            _: ActorRef<Self>,
+            _: &'life1 mut Self::State,
+        ) -> ::core::pin::Pin<
+            Box<
+                dyn ::core::future::Future<Output = Result<(), ActorProcessingErr>>
+                    + ::core::marker::Send
+                    + 'async_trait,
+            >,
+        >
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move {
+                let $self = self;
+                info!("{} started", $worker_name);
+                Ok(())
+            })
+        }
+
+        fn post_stop<'life0, 'life1, 'async_trait>(
+            &'life0 self,
+            _: ActorRef<Self>,
+            _: &'life1 mut Self::State,
+        ) -> ::core::pin::Pin<
+            Box<
+                dyn ::core::future::Future<Output = Result<(), ActorProcessingErr>>
+                    + ::core::marker::Send
+                    + 'async_trait,
+            >,
+        >
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+            Self: 'async_trait,
+        {
+            Box::pin(async move {
+                let $self = self;
+                warn!("{} stopped", $worker_name);
+                Ok(())
+            })
+        }
+    };
+}
+
+pub(crate) use impl_worker_log;
