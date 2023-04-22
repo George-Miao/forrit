@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate tracing;
 
-use std::{borrow::Cow, sync::LazyLock};
+use std::{borrow::Cow, sync::LazyLock, time::Duration};
 
 use color_eyre::{eyre::eyre, Result};
 use reqwest::Client;
@@ -71,9 +71,20 @@ async fn run() -> Result<()> {
 
     notify::init(&config.notify).await?;
 
+    let rename_task = tokio::spawn(async move {
+        // Full rename every 1 minute
+        let mut timer = tokio::time::interval(Duration::SECOND * 60);
+        // timer tick's immediately the first time
+        loop {
+            timer.tick().await;
+            rename().expect("Downloader is not running");
+        }
+    });
+
     tokio::select! {
         _ = server::start(read, update) => {}
         _ = src.send_interval(config.check_intervel, || SourceMessage::Update) => {}
+        _ = rename_task => {}
         _ = tokio::signal::ctrl_c() => {}
     }
 

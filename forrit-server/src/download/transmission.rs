@@ -165,7 +165,7 @@ impl TransmissionWorker {
     ) -> Result<(), ActorProcessingErr> {
         let DownloadWorkerState { factory } = state;
 
-        let (client, config) = self.inner.deref();
+        let (client, _) = self.inner.deref();
 
         let Some(id) = id else { return Ok(()) };
         let id = trans_string_to_id(id);

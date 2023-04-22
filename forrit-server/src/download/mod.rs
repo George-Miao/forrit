@@ -21,6 +21,19 @@ pub fn new_job(key: Id, job: ForritJob) -> Result<(), MessagingErr> {
     }))
 }
 
+pub fn rename() -> Result<(), MessagingErr> {
+    let downloader = registry::where_is("downloader".to_owned()).expect("downloader not running");
+
+    // Actor type passed on here doesn't really matters -- the only thing matters is
+    // the message type. So no matter what worker is actually processing the
+    // download job, we can always use `TransmissionWorker` here.
+    downloader.send_message::<Factory<_, _, TransmissionWorker>>(FactoryMessage::Dispatch(Job {
+        key: Default::default(),
+        msg: DownloadWorkerMessage::Rename(None, 3),
+        options: JobOptions::default(),
+    }))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DownloadWorkerMessage {
     Job(ForritJob),

@@ -69,7 +69,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash, Deserialize, Default)]
 pub struct Id(pub ObjectId);
 
 impl Serialize for Id {
@@ -80,7 +80,7 @@ impl Serialize for Id {
 
 impl From<bangumi::Id> for Id {
     fn from(id: bangumi::Id) -> Self {
-        ObjectId::parse_str(&id.0)
+        ObjectId::parse_str(id)
             .expect("Invalid bangumiL::ID: should be object id")
             .pipe(Self)
     }
