@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 use bangumi::{
     endpoints::SearchTorrents,
@@ -7,7 +7,7 @@ use bangumi::{
 };
 use color_eyre::Result;
 use forrit_core::{
-    futures::{stream, StreamExt, TryStreamExt},
+    futures::{future::Either, stream, StreamExt, TryStreamExt},
     BangumiSubscription, Job as ForritJob,
 };
 use mongodb::{
@@ -24,10 +24,11 @@ use ractor::{
     registry, Actor, ActorProcessingErr, ActorRef,
 };
 use serde::{Deserialize, Serialize};
-use tap::TapFallible;
+use stream_throttle::{ThrottlePool, ThrottleRate, ThrottledStream};
+use tap::{Pipe, TapFallible};
 use url::Url;
 
-use crate::{new_factory, DownloadWorkerMessage, Id, WithId, BANGUMI_CLIENT};
+use crate::{get_config, new_factory, new_job, DownloadWorkerMessage, Id, WithId, BANGUMI_CLIENT};
 
 pub fn update() {
     if let Some(source) = registry::where_is("source".to_owned()) {
@@ -203,10 +204,10 @@ impl SourceWorker {
                     .update_one(
                         doc! { "id": &id.0 },
                         doc! {
-                        "$currentDate":
-                            { "seen": true },
-                        "$set":
-                            {
+                            "$currentDate": {
+                                "seen": true
+                            },
+                            "$set": {
                                 "id": &id.0,
                                 "title": &title,
                                 "magnet": &magnet
@@ -227,7 +228,7 @@ impl SourceWorker {
                     .tap_err(|error| {
                         warn!(
                             ?error,
-                            magnet = %magnet,
+                            %magnet,
                             "Excluded because failed to parse url",
                         )
                     })
@@ -297,18 +298,11 @@ impl Actor for SourceWorker {
                 .send_message(FactoryMessage::WorkerPong(self.id, i))?,
             WorkerMessage::Dispatch(job) => {
                 let Job { key, msg, .. } = job;
-                let downloader = ractor::registry::where_is("downloader".to_owned())
-                    .expect("downloader not found");
+
                 match msg {
                     SourceWorkerMessage::Update((key, sub)) => {
                         for job in self.update(&sub).await? {
-                            downloader.send_message::<Factory<_, _, DownloadWorker>>(
-                                FactoryMessage::Dispatch(Job {
-                                    key,
-                                    msg: DownloadWorkerMessage::Job(job),
-                                    options: JobOptions::default(),
-                                }),
-                            )?
+                            new_job(key, job)?;
                         }
                     }
                 }

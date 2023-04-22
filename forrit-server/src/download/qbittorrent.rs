@@ -166,7 +166,7 @@ impl QbitWorker {
     ) -> Result<(), ActorProcessingErr> {
         let DownloadWorkerState { factory } = state;
 
-        let (client, config) = self.inner.deref();
+        let (client, _) = self.inner.deref();
 
         if let Some(id) = id {
             let files = client.get_torrent_contents(&id, None).await?;
@@ -179,6 +179,8 @@ impl QbitWorker {
                             options: JobOptions::default(),
                         })
                     });
+                } else {
+                    debug!("Did not find files to rename, giving up");
                 }
                 return Ok(());
             }
