@@ -9,7 +9,9 @@ use bangumi::{endpoints::FetchTags, rustify::errors::ClientError, Endpoint};
 use forrit_core::BangumiSubscription;
 use mongodb::bson::oid::ObjectId;
 use ractor::{
-    factory::{DiscardHandler, Factory, Job, JobKey, RoutingMode, WorkerMessage},
+    factory::{
+        DiscardHandler, Factory, Job, JobKey, RoutingMode, WorkerBuilder, WorkerId, WorkerMessage,
+    },
     Actor, Message,
 };
 use serde::{Deserialize, Serialize};
@@ -134,4 +136,32 @@ fn test_id_serde() {
     let de = serde_json::from_str::<Id>(&ser).unwrap();
 
     assert_eq!(id, de);
+}
+
+pub struct WorkerBuilderClosure<F, W>(F, std::marker::PhantomData<W>);
+
+impl<F, W> WorkerBuilderClosure<F, W> {
+    pub fn new(f: F) -> Self {
+        Self(f, std::marker::PhantomData)
+    }
+
+    pub fn boxed(self) -> Box<dyn WorkerBuilder<W>>
+    where
+        W: Actor,
+        F: 'static,
+        Self: WorkerBuilder<W>,
+    {
+        Box::new(self)
+    }
+}
+
+impl<F, W> WorkerBuilder<W> for WorkerBuilderClosure<F, W>
+where
+    F: Fn(WorkerId) -> W,
+    W: Actor,
+    WorkerBuilderClosure<F, W>: Send + Sync,
+{
+    fn build(&self, id: WorkerId) -> W {
+        (self.0)(id)
+    }
 }

@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use tap::TapFallible;
 use url::Url;
 
-use crate::{new_factory, DownloadWorker, DownloadWorkerMessage, Id, WithId, BANGUMI_CLIENT};
+use crate::{new_factory, DownloadWorkerMessage, Id, WithId, BANGUMI_CLIENT};
 
 pub fn update() {
     if let Some(source) = registry::where_is("source".to_owned()) {

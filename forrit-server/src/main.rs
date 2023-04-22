@@ -53,9 +53,15 @@ async fn run() -> Result<()> {
         c.database(&config.database.database_name)
     };
 
-    download::DownloadCluster::new(config.downloader.clone())
-        .spawn()
-        .await?;
+    match config.downloader.clone() {
+        DownloadersConfig::Qbittorrent(config) => {
+            QbitCluster::new(config).spawn().await?;
+        }
+        DownloadersConfig::Transmission(config) => {
+            TransmissionCluster::new(config).spawn().await?;
+        }
+    }
+
     let read = database.collection(&config.database.subscription_collection_name);
     let update = database.collection(&config.database.subscription_collection_name);
     let torrents = database.collection(&config.database.torrent_collection_name);
