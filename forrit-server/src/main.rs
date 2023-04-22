@@ -1,4 +1,4 @@
-#![feature(let_chains, once_cell, duration_constants, default_free_fn)]
+#![feature(let_chains, lazy_cell, duration_constants, default_free_fn)]
 
 #[macro_use]
 extern crate tracing;

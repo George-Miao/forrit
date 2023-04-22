@@ -1,5 +1,5 @@
 #![allow(incomplete_features)]
-#![feature(once_cell)]
+#![feature(lazy_cell)]
 #![feature(async_fn_in_trait)]
 #![feature(iter_intersperse)]
 #![feature(trait_upcasting)]
