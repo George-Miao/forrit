@@ -28,7 +28,7 @@ use stream_throttle::{ThrottlePool, ThrottleRate, ThrottledStream};
 use tap::{Pipe, TapFallible};
 use url::Url;
 
-use crate::{get_config, new_factory, new_job, DownloadWorkerMessage, Id, WithId, BANGUMI_CLIENT};
+use crate::{get_config, new_factory, new_job, Id, WithId, BANGUMI_CLIENT};
 
 pub fn update() {
     if let Some(source) = registry::where_is("source".to_owned()) {

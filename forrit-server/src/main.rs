@@ -42,7 +42,7 @@ async fn run() -> Result<()> {
             .ok_or_else(|| eyre!("Usage: {prog} <config path>"))?
     };
 
-    init(conf_path).await?;
+    config::init(conf_path).await?;
 
     let config = get_config();
 
@@ -68,6 +68,8 @@ async fn run() -> Result<()> {
     let (src, _) = source::SourceCluster::new(read.clone(), torrents)
         .spawn()
         .await?;
+
+    notify::init(&config.notify).await?;
 
     tokio::select! {
         _ = server::start(read, update) => {}

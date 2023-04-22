@@ -634,6 +634,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
+
+[[package]]
 name = "dyn-clonable"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -851,6 +857,7 @@ dependencies = [
  "bangumi",
  "color-eyre",
  "dirs 5.0.0",
+ "dotenv",
  "forrit-core",
  "humantime-serde",
  "mod_use",
@@ -865,6 +872,7 @@ dependencies = [
  "serde_with 2.3.2",
  "stream_throttle",
  "tap",
+ "telegram-bot-raw-ars",
  "thiserror",
  "tokio",
  "tracing",
@@ -2662,6 +2670,19 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "telegram-bot-raw-ars"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62cc50ef8e2b54435ffc9ff1cc0aba233927a1f1bf06df0ce87f3504375133f3"
+dependencies = [
+ "bytes",
+ "serde",
+ "serde-value",
+ "serde_derive",
+ "serde_json",
+]
 
 [[package]]
 name = "tempfile"

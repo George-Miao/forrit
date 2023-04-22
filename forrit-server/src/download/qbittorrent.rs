@@ -18,8 +18,8 @@ use ractor::{
 use tap::Pipe;
 
 use crate::{
-    get_config, new_factory, DownloadWorkerMessage, DownloadWorkerState, Id, QbittorrentConfig,
-    WorkerBuilderClosure, HTTP_CLIENT,
+    emit, get_config, new_factory, DownloadWorkerMessage, DownloadWorkerState, Id, Notification,
+    NotificationChunk, QbittorrentConfig, WorkerBuilderClosure, HTTP_CLIENT,
 };
 
 pub struct QbitCluster(Arc<(Qbit, QbittorrentConfig)>);
@@ -96,7 +96,17 @@ impl Actor for QbitWorker {
                 let Job { key, msg, .. } = job;
                 match msg {
                     DownloadWorkerMessage::Job(job) => {
+                        let n = Notification::new().with(NotificationChunk::Paragraph {
+                            title: "New download added".to_owned(),
+                            content: format!(
+                                "Torrent {} has been added to download to <code>{}</code>",
+                                job.url,
+                                job.dir.display()
+                            ),
+                            title_url: None,
+                        });
                         self.download(key, job, state).await?;
+                        emit(n).ok();
                     }
                     DownloadWorkerMessage::Rename(id, retry_count) => {
                         self.rename(key, retry_count, id, state).await?;

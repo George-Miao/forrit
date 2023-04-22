@@ -52,6 +52,9 @@ pub struct Config {
     pub downloader: DownloadersConfig,
 
     pub database: DatabaseConfig,
+
+    #[serde(default)]
+    pub notify: Vec<NotifierConfig>,
 }
 
 #[config]
@@ -120,6 +123,18 @@ pub struct QbittorrentConfig {
 pub struct Auth {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum NotifierConfig {
+    Telegram(TelegramConfig),
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct TelegramConfig {
+    pub bot_token: String,
+    pub chats: Vec<i64>,
 }
 
 pub mod default {

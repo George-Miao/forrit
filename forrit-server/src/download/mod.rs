@@ -16,7 +16,7 @@ pub fn new_job(key: Id, job: ForritJob) -> Result<(), MessagingErr> {
     // download job, we can always use `TransmissionWorker` here.
     downloader.send_message::<Factory<_, _, TransmissionWorker>>(FactoryMessage::Dispatch(Job {
         key,
-        msg: DownloadWorkerMessage::Job(job.clone()),
+        msg: DownloadWorkerMessage::Job(job),
         options: JobOptions::default(),
     }))
 }
