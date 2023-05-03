@@ -10,9 +10,9 @@ use mongodb::{
 use poem::{
     error::ResponseError,
     get, handler,
-    http::StatusCode,
+    http::{Method, StatusCode},
     listener::TcpListener,
-    middleware::Tracing,
+    middleware::{Cors, Tracing},
     web::{Data, Json, Path},
     EndpointExt, IntoResponse, Route, Server,
 };
@@ -30,6 +30,10 @@ pub async fn start(
     update: Collection<BangumiSubscription>,
 ) -> Result<()> {
     let config = &get_config().server;
+
+    let cors = Cors::new()
+        .allow_method(Method::GET)
+        .allow_method(Method::POST);
 
     SocketAddr::new(config.bind, config.port)
         .pipe(TcpListener::bind)
@@ -50,6 +54,7 @@ pub async fn start(
                 )
                 .at("/config", get(config::get))
                 .with(Tracing)
+                .with(cors)
                 .data(read)
                 .data(update),
         )
