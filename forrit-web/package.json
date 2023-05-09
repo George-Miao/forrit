@@ -1,0 +1,29 @@
+{
+  "name": "forrit-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "13.3.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "swr": "^2.1.5",
+    "typescript": "5.0.4"
+  },
+  "devDependencies": {
+    "@iconify/json": "^2.2.59",
+    "@iconify/tailwind": "^0.1.2",
+    "@types/node": "18.16.3",
+    "@types/react": "18.2.0",
+    "@types/react-dom": "18.2.1",
+    "autoprefixer": "^10.4.14",
+    "eslint": "8.39.0",
+    "eslint-config-next": "13.3.4",
+    "tailwindcss": "^3.3.2"
+  }
+}
