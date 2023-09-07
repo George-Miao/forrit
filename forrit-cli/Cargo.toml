@@ -14,7 +14,7 @@ panic         = "abort"
 
 [[bin]]
 name = "forrit"
-path = "main.rs"
+path = "src/main.rs"
 
 
 [dependencies]
