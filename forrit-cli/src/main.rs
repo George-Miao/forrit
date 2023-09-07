@@ -103,6 +103,7 @@ impl Config {
 
     pub async fn write_back(&self) -> Result<()> {
         let buf = self.orig.to_string();
+        tokio::fs::create_dir_all(&self.path.parent().unwrap()).await?;
         tokio::fs::write(&self.path, buf).await?;
         Ok(())
     }
