@@ -1,2 +1,7 @@
 [workspace]
-members = ["forrit-cli", "forrit-core", "forrit-server"]
+members  = ["packages/*"]
+resolver = "2"
+
+[workspace.dependencies]
+serde   = "1.0.195"
+futures = { version = "0.3.30", default-features = false, features = ["alloc", "async-await", "std"] }

@@ -1,5 +1,4 @@
 /target
 /data
-.env
+*.env
 /.vscode
-
