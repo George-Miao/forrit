@@ -24,6 +24,7 @@
         with pkgs; {
           devShells.default = mkShell {
             buildInputs = [
+              mongosh
               openssl
               pkg-config
               eza

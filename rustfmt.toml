@@ -2,6 +2,8 @@ unstable_features = true
 
 version = "Two"
 
+max_width = 120
+
 group_imports = "StdExternalCrate"
 imports_granularity = "Crate"
 reorder_imports = true
@@ -13,6 +15,7 @@ reorder_impl_items = true
 condense_wildcard_suffixes = true
 enum_discrim_align_threshold = 20
 use_field_init_shorthand = true
+overflow_delimited_expr = true
 
 format_strings = true
 format_code_in_doc_comments = true
