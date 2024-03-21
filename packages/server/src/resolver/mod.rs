@@ -6,38 +6,35 @@ use std::{cell::RefCell, sync::Arc};
 
 use anitomy::{Anitomy, ElementCategory, Elements};
 use bangumi_data::Item;
+use forrit_core::model::{Alias, Meta, Record, WithId};
 use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
 // use color_eyre::eyre::Result;
-use mongodb::{bson::oid::ObjectId, Database};
+use mongodb::bson::oid::ObjectId;
 use ractor::{concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
-use reqwest::Client;
-use tap::{Pipe, Tap, TapFallible, TapOptional};
+use tap::{Pipe, TapFallible, TapOptional};
 use tmdb_api::tvshow::{search::TVShowSearch, SeasonShort, TVShowShort};
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, instrument, trace};
 
-pub use crate::resolver::meta::Meta;
 use crate::{
     config::{get_config, ResolverConfig},
-    db::{CrudCall, CrudMessage, FromCrud, KVCollection, WithId, KV},
+    db::{Collections, CrudCall, CrudMessage, FromCrud, KV},
     resolver::{
         index::{IndexArg, IndexJob, IndexStatRecv},
         util::{is_mostly_ascii, match_title_in_filename},
     },
     util::{Boom, CommandExt, GovernedClient},
-    ACTOR_ERR, RECV_ERR, REQ, SEND_ERR,
+    ACTOR_ERR, RECV_ERR, REQ, RPC_TIMEOUT, SEND_ERR,
 };
 
+mod api;
 mod index;
 mod meta;
 mod util;
 
-#[cfg(not(test))]
-use meta::MetaStorage;
-#[cfg(test)]
+pub use api::index_api;
 pub use meta::MetaStorage;
 
 pub type Datetime = chrono::DateTime<chrono::FixedOffset>;
-pub type AliasCollection = KVCollection<String, ObjectId>;
 pub type AliasKV = KV<String, ObjectId>;
 
 /// Genre ID for animation on TMDB
@@ -45,7 +42,7 @@ pub type AliasKV = KV<String, ObjectId>;
 /// See: https://www.themoviedb.org/genre/16-animation
 const ANIME_GENRE: u64 = 16;
 
-pub async fn start(db: &Database) {
+pub async fn start(db: &Collections) {
     let config = &get_config().resolver;
     let governor: Arc<DefaultDirectRateLimiter> = RateLimiter::direct(Quota::per_second(config.tmdb_rate_limit)).into();
     let client = GovernedClient::new(
@@ -57,11 +54,8 @@ pub async fn start(db: &Database) {
             .boom("Failed to init TMDB client"),
         governor.clone(),
     );
-    let meta = MetaStorage::new(db.collection("meta"));
-    meta.create_indexes()
-        .await
-        .boom("Failed to create index for meta storage");
-    let resolver = Resolver::new(client, meta, db.collection("aliases"), config).await;
+
+    let resolver = Resolver::new(client, db.meta.clone(), db.alias.clone(), config).await;
     Actor::spawn(Some(Resolver::NAME.to_owned()), resolver, ())
         .await
         .boom("Failed to spawn resolver actor");
@@ -78,7 +72,49 @@ pub async fn resolve(file_name: String) -> ExtractResult {
         .expect(RECV_ERR)
 }
 
-pub fn crud_meta() -> CrudCall<Message> {
+pub async fn get_index() -> Option<IndexStatRecv> {
+    ractor::registry::where_is(Resolver::NAME.to_owned())
+        .as_ref()
+        .expect(ACTOR_ERR)
+        .pipe(|res| ractor::rpc::call(res, Message::GetIndexJob, Some(RPC_TIMEOUT)))
+        .await
+        .expect(SEND_ERR)
+        .expect(RECV_ERR)
+}
+
+pub async fn start_index(arg: IndexArg) -> IndexStatRecv {
+    ractor::registry::where_is(Resolver::NAME.to_owned())
+        .as_ref()
+        .expect(ACTOR_ERR)
+        .pipe(|res| {
+            ractor::rpc::call(
+                res,
+                |port| Message::StartIndexJob { arg, port: Some(port) },
+                Some(RPC_TIMEOUT),
+            )
+        })
+        .await
+        .expect(SEND_ERR)
+        .expect(RECV_ERR)
+}
+
+pub fn stop_index() {
+    ractor::registry::where_is(Resolver::NAME.to_owned())
+        .as_ref()
+        .expect(ACTOR_ERR)
+        .send_message(Message::StopIndexJob)
+        .expect(SEND_ERR)
+}
+
+fn index_finished() {
+    ractor::registry::where_is(Resolver::NAME.to_owned())
+        .as_ref()
+        .expect(ACTOR_ERR)
+        .send_message(Message::IndexJobFinished)
+        .expect(SEND_ERR)
+}
+
+pub fn crud_meta() -> CrudCall<Meta, Message> {
     CrudCall::new(Resolver::NAME)
 }
 
@@ -92,6 +128,7 @@ pub struct MatchResult {
 pub struct ExtractResult {
     pub meta: Option<WithId<Meta>>,
     pub group: Option<String>,
+    pub elements: Elements,
 }
 
 pub enum Message {
@@ -113,15 +150,31 @@ pub enum Message {
     /// Stop current index job
     StopIndexJob,
 
+    /// Index job finished, used for internal communication
+    IndexJobFinished,
+
     /// CRUD operations on meta
     CrudMeta(CrudMessage<Meta>),
+
+    /// CRUD operations on alias
+    CrudAlias(CrudMessage<Alias>),
 }
 
-impl FromCrud for Message {
-    type Item = Meta;
+impl FromCrud<Meta> for Message {
+    const ACTOR_NAME: &'static str = Resolver::NAME;
+    const RESOURCE_NAME: &'static str = "meta";
 
     fn from_crud(msg: CrudMessage<Meta>) -> Self {
         Self::CrudMeta(msg)
+    }
+}
+
+impl FromCrud<Alias> for Message {
+    const ACTOR_NAME: &'static str = Resolver::NAME;
+    const RESOURCE_NAME: &'static str = "alias";
+
+    fn from_crud(msg: CrudMessage<Alias>) -> Self {
+        Self::CrudAlias(msg)
     }
 }
 
@@ -140,7 +193,7 @@ enum SearchRes {
 #[derive(Clone)]
 pub struct Resolver {
     tmdb: GovernedClient,
-    aliases: AliasKV,
+    alias: AliasKV,
     meta: MetaStorage,
     config: &'static ResolverConfig,
 }
@@ -148,16 +201,11 @@ pub struct Resolver {
 impl Resolver {
     pub const NAME: &'static str = "resolve";
 
-    pub async fn new(
-        tmdb: GovernedClient,
-        meta: MetaStorage,
-        aliases: AliasCollection,
-        config: &'static ResolverConfig,
-    ) -> Self {
+    pub async fn new(tmdb: GovernedClient, meta: MetaStorage, alias: AliasKV, config: &'static ResolverConfig) -> Self {
         Self {
             tmdb,
             meta,
-            aliases: KV::new(aliases).await.expect("db error"),
+            alias,
             config,
         }
     }
@@ -176,13 +224,13 @@ impl Resolver {
             })
     }
 
+    #[instrument(skip(self, item), fields(title = item.title))]
     async fn match_item(&self, item: &Item) -> MatchResult {
         let arg = SearchArg {
             title: &item.title,
             begin: item.begin.as_ref().and_then(|x| x.into_fixed_offset()),
             end: item.end.as_ref().and_then(|x| x.into_fixed_offset()),
         };
-        // TODO: Search movie
         let Some(tv) = self.search(arg).await else {
             return Default::default();
         };
@@ -220,6 +268,7 @@ impl Resolver {
         MatchResult { tv: Some(tv), season }
     }
 
+    #[instrument(skip(self, arg), fields(title = arg.title))]
     pub async fn search(&self, arg: SearchArg<'_>) -> Option<TVShowShort> {
         for cut in 0.. {
             match self.try_search(&arg, cut).await {
@@ -234,14 +283,20 @@ impl Resolver {
         None
     }
 
+    #[instrument(skip(self, arg), fields(title = arg.title))]
     async fn try_search(&self, arg: &SearchArg<'_>, cut: usize) -> SearchRes {
         let t = match util::cut_title(arg.title, cut) {
             Some(t) => util::remove_postfix(t),
-            None => return SearchRes::Decided(None),
+            None => {
+                debug!("not found");
+                return SearchRes::Decided(None);
+            }
         };
 
         if t != arg.title {
             debug!(from = arg.title, to = t, "Title cut")
+        } else {
+            debug!("try search")
         }
 
         let res = TVShowSearch::new(t.to_owned())
@@ -254,64 +309,56 @@ impl Resolver {
             .find(|show| show.genre_ids.contains(&ANIME_GENRE));
 
         if let Some(res) = res {
+            debug!(?res, "found");
             SearchRes::Decided(Some(res))
         } else {
+            trace!("undecided");
             SearchRes::Undecided
         }
-    }
-
-    /// Search for a TV show given elements parsed from torrent filename
-    async fn search_element(&self, ele: &Elements) -> Option<TVShowShort> {
-        ele.get(ElementCategory::AnimeTitle)
-            .or_else(|| ele.get(ElementCategory::FileName)) // Try search full name if no anime title found
-            .tap_none(|| warn!("No title found in filename"))
-            .tap_some(|title| info!(title, "Parsed title"))?
-            .pipe(|title| {
-                self.search(SearchArg {
-                    title,
-                    begin: None,
-                    end: None,
-                })
-            })
-            .await?
-            .tap(|res| info!(?res, "Search result"))
-            .pipe(Some)
     }
 
     async fn locate_meta(&self, tmdb_id: u64) -> Option<WithId<Meta>> {
         self.meta
             .get_latest(tmdb_id)
             .await
-            .tap_err(|error| warn!(?error, "failed to get meta"))
-            .ok()?
+            .expect("db error")
+            .tap_none(|| debug!(tmdb_id, "failed to locate meta"))
     }
 
-    #[instrument(target = "resolver", skip(self))]
-    async fn extract(&self, filename: &str) -> ExtractResult {
+    #[instrument(skip(self))]
+    async fn resolve(&self, filename: &str) -> ExtractResult {
         let mut titles = match_title_in_filename(filename)
             .map(|(l, r)| vec![l, r])
             .unwrap_or_default();
-        let ele = self.parse_filename(filename);
-        if let Some(title) = ele.get(ElementCategory::AnimeTitle) {
+        let elements = self.parse_filename(filename);
+        if let Some(title) = elements.get(ElementCategory::AnimeTitle) {
             titles.push(title)
         };
-        let group = ele.get(ElementCategory::ReleaseGroup).map(ToOwned::to_owned);
+        let group = elements.get(ElementCategory::ReleaseGroup).map(ToOwned::to_owned);
+        debug!(?titles, ?group);
 
         for title in titles {
             let title = title.to_owned();
-            if let Some(id) = self.aliases.get(&title).await.expect("db error") {
+            if let Some(id) = self.alias.get(&title).await.expect("db error") {
                 // Search alias first
                 debug!(title, ?id, "Alias found");
                 let meta = self.meta.get_by_oid(id).await.expect("db error");
-                return ExtractResult { group, meta };
-            } else if !is_mostly_ascii(&title) {
+                if meta.is_none() {
+                    debug!("Alias target is missing, removing alias");
+                    self.alias.delete(&title).await.expect("db error");
+                } else {
+                    return ExtractResult { group, meta, elements };
+                }
+            }
+            if !is_mostly_ascii(&title) {
                 // If it's not mostly ascii, search database
                 if let Some(meta) = self.meta.text_search(&title).await.expect("db error") {
                     debug!(title, "Mongo text search found");
-                    self.aliases.upsert(&title, &meta.id).await.expect("db error");
+                    self.alias.upsert(&title, &meta.id).await.expect("db error");
                     return ExtractResult {
                         group,
                         meta: Some(meta),
+                        elements,
                     };
                 }
             } else if let Some(m) = async {
@@ -323,25 +370,33 @@ impl Resolver {
                 };
                 let found = self.search(arg).await?;
                 let meta = self.locate_meta(found.inner.id).await?;
-                self.aliases.upsert(&title, &meta.id).await.expect("db error");
+                self.alias.upsert(&title, &meta.id).await.expect("db error");
                 debug!(title, "TMDB search found");
                 Some(meta)
             }
             .await
             {
-                return ExtractResult { group, meta: Some(m) };
+                return ExtractResult {
+                    group,
+                    meta: Some(m),
+                    elements,
+                };
             };
         }
 
         debug!("No meta matched");
 
-        ExtractResult { group, meta: None }
+        ExtractResult {
+            group,
+            meta: None,
+            elements,
+        }
     }
 }
 
 pub struct State {
     index_job: Option<IndexJob>,
-    index_timer: JoinHandle<()>,
+    index_timer: Option<JoinHandle<()>>,
 }
 
 impl Actor for Resolver {
@@ -356,17 +411,20 @@ impl Actor for Resolver {
     ) -> Result<Self::State, ActorProcessingErr> {
         info!("Resolver starting");
 
-        let arg = IndexArg {
-            force: false,
-            max: None,
-            after: None,
-            before: None,
+        let index_timer = if self.config.index.enable {
+            let arg = IndexArg::default();
+            let interval = humantime::format_duration(self.config.index.interval);
+            info!(?arg, %interval, "Index timer set");
+            this.send_message(Message::StartIndexJob { arg, port: None })
+                .expect("Failed to start index job");
+            ractor::time::send_interval(self.config.index.interval, this.get_cell(), move || {
+                Message::StartIndexJob { arg, port: None }
+            })
+            .pipe(Some)
+        } else {
+            info!("Index timer disabled");
+            None
         };
-        this.send_message(Message::StartIndexJob { arg, port: None })
-            .expect("Failed to start index job");
-        let index_timer = ractor::time::send_interval(self.config.index_interval, this.get_cell(), move || {
-            Message::StartIndexJob { arg, port: None }
-        });
         Ok(State {
             index_job: None,
             index_timer,
@@ -377,7 +435,9 @@ impl Actor for Resolver {
         if let Some(job) = state.index_job.take() {
             job.stop();
         }
-        state.index_timer.abort();
+        if let Some(timer) = state.index_timer.take() {
+            timer.abort();
+        }
         Ok(())
     }
 
@@ -389,11 +449,7 @@ impl Actor for Resolver {
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             Message::Resolve { file_name, port } => {
-                port.send(self.extract(&file_name).await)
-                    .tap_err(|error| {
-                        warn!(?error, "failed to send reply");
-                    })
-                    .ok();
+                port.send(self.resolve(&file_name).await).ok();
             }
             Message::StartIndexJob { arg, port } => {
                 let job = match state.index_job.take() {
@@ -416,13 +472,18 @@ impl Actor for Resolver {
                 port.send(state.index_job.as_ref().map(|j| j.stat_recv())).ok();
             }
             Message::StopIndexJob => {
+                info!("Stopping index job");
                 if let Some(j) = state.index_job.take() {
                     j.stop()
                 }
             }
-            Message::CrudMeta(msg) => {
-                self.meta.handle_crud(msg).await.expect("db error");
+            Message::IndexJobFinished => {
+                if let Some(j) = state.index_job.take() {
+                    j.stop()
+                }
             }
+            Message::CrudMeta(msg) => self.meta.handle_crud(msg).await,
+            Message::CrudAlias(msg) => self.alias.handle_crud(msg).await,
         };
 
         Ok(())
@@ -431,25 +492,59 @@ impl Actor for Resolver {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
+    use std::{
+        str::FromStr,
+        time::{Duration, Instant},
+    };
 
+    use ractor::Actor;
     use tap::Pipe;
     use tracing::{info, warn};
 
-    use crate::test::run;
+    use crate::{
+        resolver::{crud_meta, index::IndexArg, Resolver},
+        test::run,
+    };
 
+    // File names with no meta
     #[rustfmt::skip]
     const PROBLEM: &[&str] = &[
-        "[jibaketa合成&音頻壓制][代理商粵語]咒術迴戰 第二季 / Jujutsu Kaisen S2 - 19 [粵日雙語+內封繁體中文字幕](WEB 1920x1080 AVC AACx2 SRT Ani-One CHT)",
-        "【喵萌奶茶屋】★01月新番★[到了30歲還是處男，似乎會變成魔法師 / 30-sai made Doutei dato Mahoutsukai ni Nareru Rashii / Cherimaho][09][1080p][繁日雙語][招募翻譯時軸]",
-        "[DBD-Raws][喜羊羊与灰太狼之喜气羊羊过蛇年/The Mythical Ark: Adventures in Love & Happiness][1080P][WebRip][AVC][国粤韩多语][简繁英双语内封][FLAC+AAC][MKV]"
+        "【喵萌奶茶屋】★02月新番★[忍者神威 / Ninja Kamui][06][1080p][简体][招募翻译]", // bangumi data doesn't have this
+        "【極影字幕·毀片黨】北海道辣妹兒賊招人稀罕 第09集 BIG5 AVC 720p" // Just couldn't find it
     ];
 
     #[test]
     fn test_match() {
         run(|env| async move {
-            let a = env.resolver.extract(PROBLEM[0]).await;
+            let a = env.resolver.resolve(PROBLEM[1]).await;
             info!(?a);
+        })
+    }
+
+    #[test]
+    fn test_list_meta_while_index() {
+        run(|env| async move {
+            let resolver = env.resolver.clone();
+            let j_start = Instant::now();
+            let _j1 = resolver.index_job(IndexArg::default());
+            info!("Index started");
+            let (_, _j2) = Actor::spawn(Some(Resolver::NAME.to_owned()), env.resolver.clone(), ())
+                .await
+                .unwrap();
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            let l_start = Instant::now();
+            info!("List started");
+            let l = crud_meta().list().await.unwrap();
+
+            info!(
+                "List finished: {}, used {:.2}s",
+                l.len(),
+                l_start.elapsed().as_secs_f32()
+            );
+            _j1.wait().await;
+            info!("Index finished, used {:.2}s", j_start.elapsed().as_secs_f32());
         })
     }
 
@@ -469,7 +564,7 @@ mod test {
                 .into_iter()
                 .filter_map(|x| x.title);
             for title in t {
-                let res = env.resolver.extract(&title).await;
+                let res = env.resolver.resolve(&title).await;
                 if let Some(meta) = res.meta {
                     let id = meta.id.to_hex();
                     let matched = &meta.title;

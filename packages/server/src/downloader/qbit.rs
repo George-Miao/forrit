@@ -15,6 +15,7 @@ use tracing::{debug, info, warn};
 use crate::{
     config::{get_config, QbittorrentConfig, RenameConfig},
     downloader::{Job, Message},
+    resolver,
     util::{normalize_title, timestamp},
 };
 
@@ -108,15 +109,19 @@ impl Actor for QbitActor {
 
 impl QbitActor {
     async fn download(&self, job: Job, state: &State) -> Result<(), ActorProcessingErr> {
-        let path = job.path(&state.savepath);
-        let url = job.entry.inner.base.torrent;
+        let meta = resolver::crud_meta()
+            .get(job.entry.meta_id)
+            .await?
+            .expect("non-exist meta id");
+        let path = job.path(&meta, &state.savepath);
+        let url = job.entry.base.torrent;
 
         // if get_config().dry_run {
         //     info!(%url, dir = %dir.display(), %id, "Download");
         //     return Ok(());
         // }
 
-        info!(%url, %path, entry = job.entry.id.to_hex(), "Adding torrent to qbit");
+        info!(%url, %path, "Adding torrent to qbit");
 
         AddTorrentArg::builder()
             .source(TorrentSource::Urls { urls: vec![url].into() })

@@ -1,25 +1,48 @@
-use chrono::{Datelike, NaiveDate, Weekday};
-use mongodb::bson;
+use std::time::{Duration, SystemTime};
 
-pub fn iso8601_to_bson(datetime: iso8601::DateTime) -> bson::DateTime {
-    let chrono = datetime.into_fixed_offset().expect("Invalid ISO8601 datetime");
-    bson::DateTime::from_chrono(chrono)
+use chrono::{Datelike, NaiveDate, Weekday};
+use futures::Future;
+use salvo::oapi::ToSchema;
+use serde::{Deserialize, Serialize};
+use tap::Pipe;
+use tokio::time::{error::Elapsed, timeout, Timeout};
+
+pub fn timestamp(sec: u64) -> SystemTime {
+    SystemTime::UNIX_EPOCH + Duration::from_secs(sec)
 }
+
+pub trait WithTimeout: Sized + Future {
+    fn timeout(self, dur: Duration) -> Timeout<Self> {
+        timeout(dur, self)
+    }
+
+    async fn maybe_timeout(self, dur: Option<Duration>) -> Result<<Self as Future>::Output, Elapsed> {
+        if let Some(dur) = dur {
+            self.timeout(dur + Duration::from_secs(1)).await // Wait for 1 additional second
+        } else {
+            self.await.pipe(Ok)
+        }
+    }
+}
+
+impl<F: Future> WithTimeout for F {}
 
 pub trait DateExt {
     fn year(&self) -> i32 {
         self.yearmonth().year
     }
-    fn month(&self) -> u32 {
+
+    fn month(&self) -> u8 {
         self.yearmonth().month
     }
+
     fn yearmonth(&self) -> YearMonth;
 }
 
 impl DateExt for iso8601::Date {
     fn yearmonth(&self) -> YearMonth {
         match *self {
-            Self::YMD { year, month, .. } => YearMonth::new(year, month),
+            Self::YMD { year, month, .. } => YearMonth::new(year, month as _),
             Self::Week { year, ww, d } => {
                 chrono::NaiveDate::from_isoywd_opt(year, ww, Weekday::try_from(d as u8).expect("Invalid day of week"))
                     .expect("Invalid ISO week date")
@@ -30,23 +53,26 @@ impl DateExt for iso8601::Date {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct YearMonth {
+    #[salvo(schema(example = 2024))]
     pub year: i32,
-    pub month: u32,
+
+    #[salvo(schema(maximum = 12, minimum = 1, example = 3))]
+    pub month: u8,
 }
 
 impl From<NaiveDate> for YearMonth {
     fn from(date: NaiveDate) -> Self {
         Self {
             year: date.year(),
-            month: date.month(),
+            month: date.month() as _,
         }
     }
 }
 
 impl YearMonth {
-    pub fn new(year: i32, month: u32) -> Self {
+    pub fn new(year: i32, month: u8) -> Self {
         Self { year, month }
     }
 }

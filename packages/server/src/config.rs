@@ -1,23 +1,23 @@
-use std::{collections::BTreeMap, num::NonZeroU32, sync::OnceLock, time::Duration};
+use std::{net::SocketAddr, num::NonZeroU32, sync::OnceLock, time::Duration};
 
 use camino::{Utf8Path, Utf8PathBuf};
-use either::Either;
 use figment::{
     providers::{Env, Format, Json, Toml, Yaml},
     Figment,
 };
 use serde::{Deserialize, Serialize};
-use tap::Pipe;
 use tracing::info;
 use url::Url;
+
+use crate::util::MapOrVec;
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
 const MINUTE: Duration = Duration::from_secs(60);
 const ENV_PREFIX: &str = "FORRIT_";
 
-pub fn init_config(dir: Option<impl AsRef<Utf8Path>>) {
-    CONFIG.get_or_init(|| {
+pub fn init_config(dir: Option<impl AsRef<Utf8Path>>) -> Result<&'static Config, figment::Error> {
+    CONFIG.get_or_try_init(|| {
         if let Some(dir) = dir.as_ref().map(AsRef::as_ref) {
             info!("Loading config from {dir} and environment");
 
@@ -38,41 +38,13 @@ pub fn init_config(dir: Option<impl AsRef<Utf8Path>>) {
                 .merge(Yaml::file(conf_dir.join("config.yaml")))
                 .merge(Json::file(conf_dir.join("config.json")))
         }
-        .merge(Env::prefixed(ENV_PREFIX))
+        .merge(Env::prefixed(ENV_PREFIX).split('_'))
         .extract()
-        .expect("failed to load config")
-    });
+    })
 }
 
 pub fn get_config() -> &'static Config {
     CONFIG.get().expect("config not loaded")
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum MapOrVec<T> {
-    Map(BTreeMap<String, T>),
-    Vec(Vec<T>),
-}
-
-impl<T> MapOrVec<T> {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            MapOrVec::Map(map) => map.is_empty(),
-            MapOrVec::Vec(vec) => vec.is_empty(),
-        }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (String, &T)> {
-        match self {
-            MapOrVec::Map(map) => map.iter().map(|(k, v)| (k.to_owned(), v)).pipe(Either::Left),
-            MapOrVec::Vec(vec) => vec
-                .iter()
-                .enumerate()
-                .map(|(i, v)| (i.to_string(), v))
-                .pipe(Either::Right),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -84,10 +56,14 @@ pub struct Config {
     pub database: DatabaseConfig,
 
     /// Sourcer related configuration
-    pub sourcer: BTreeMap<String, SourcerConfig>,
+    pub sourcer: MapOrVec<SourcerConfig>,
 
     /// Downloader related configuration
     pub downloader: DownloaderConfig,
+
+    /// API related configuration
+    #[serde(default)]
+    pub api: ApiConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,9 +75,20 @@ pub struct ResolverConfig {
     #[serde(default = "default::resolver::tmdb_rate_limit")]
     pub tmdb_rate_limit: NonZeroU32,
 
+    /// Index configuration
+    #[serde(default)]
+    pub index: IndexConfig,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IndexConfig {
+    /// Enable the index, default to true
+    #[serde(default = "default::enable")]
+    pub enable: bool,
+
     /// Interval to update the index, default to 7 days
-    #[serde(with = "humantime_serde", default = "default::resolver::index_interval")]
-    pub index_interval: Duration,
+    #[serde(with = "humantime_serde", default = "default::resolver::index::interval")]
+    pub interval: Duration,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -223,20 +210,51 @@ pub struct QbittorrentConfig {
     pub auth: Auth,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApiConfig {
+    /// Enable the API, default to true
+    #[serde(default = "default::enable")]
+    pub enable: bool,
+
+    /// Socket address to bind the API, default to 0.0.0.0:8080
+    #[serde(default = "default::api::bind")]
+    pub bind: SocketAddr,
+
+    /// Enable debug mode, default to true in debug build, false in release
+    /// build
+    #[serde(default = "default::api::debug")]
+    pub debug: bool,
+}
+
 /// Default values for the configuration
-pub mod default {
+mod default {
     pub fn enable() -> bool {
         true
     }
     pub mod resolver {
-        use std::{num::NonZeroU32, time::Duration};
-
-        pub fn index_interval() -> Duration {
-            Duration::from_secs(7 * 24 * 60 * 60)
-        }
+        use std::num::NonZeroU32;
 
         pub fn tmdb_rate_limit() -> NonZeroU32 {
             NonZeroU32::new(40).unwrap()
+        }
+
+        pub mod index {
+            use std::time::Duration;
+
+            use crate::config::{default::enable, IndexConfig};
+
+            impl Default for IndexConfig {
+                fn default() -> Self {
+                    Self {
+                        enable: enable(),
+                        interval: interval(),
+                    }
+                }
+            }
+
+            pub fn interval() -> Duration {
+                Duration::from_secs(7 * 24 * 60 * 60)
+            }
         }
     }
 
@@ -269,14 +287,6 @@ pub mod default {
     pub mod downloader {
         use crate::config::RenameConfig;
 
-        pub fn rename() -> RenameConfig {
-            RenameConfig {
-                enable: true,
-                interval: rename::interval(),
-                format: Default::default(),
-            }
-        }
-
         pub mod rename {
             use std::time::Duration;
 
@@ -289,7 +299,11 @@ pub mod default {
 
         impl Default for RenameConfig {
             fn default() -> Self {
-                rename()
+                RenameConfig {
+                    enable: true,
+                    interval: rename::interval(),
+                    format: Default::default(),
+                }
             }
         }
 
@@ -303,6 +317,30 @@ pub mod default {
             pub fn url() -> url::Url {
                 "http://localhost:8080/".parse().expect("invalid url")
             }
+        }
+    }
+
+    pub mod api {
+        use std::net::SocketAddr;
+
+        use crate::config::ApiConfig;
+
+        impl Default for ApiConfig {
+            fn default() -> Self {
+                Self {
+                    enable: super::enable(),
+                    bind: bind(),
+                    debug: debug(),
+                }
+            }
+        }
+
+        pub fn bind() -> SocketAddr {
+            "0.0.0.0:8080".parse().expect("invalid address")
+        }
+
+        pub fn debug() -> bool {
+            cfg!(debug_assertions)
         }
     }
 }

@@ -1,76 +1,13 @@
-use std::collections::BTreeMap;
-
-use bangumi_data::{Broadcast, Item, ItemType, Language, Site};
-use futures::{StreamExt, TryStreamExt};
+use forrit_core::model::{Meta, WithId};
+use futures::TryStreamExt;
 use mongodb::{
-    bson::{self, doc},
+    bson::{doc, oid::ObjectId},
     options::{FindOneOptions, FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
     ClientSession, Collection, IndexModel,
 };
-use serde::{Deserialize, Serialize};
 use tap::Pipe;
-use tmdb_api::tvshow::{SeasonShort, TVShowShort};
 
-use crate::db::{CrudMessage, GetSet, MongoResult, WithId};
-
-/// Metadata of a bangumi season
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Meta {
-    pub title: String,
-    pub title_translate: BTreeMap<Language, Vec<String>>,
-    #[serde(rename = "type")]
-    pub item_type: ItemType,
-    pub lang: Language,
-    pub official_site: String,
-    pub sites: Vec<Site>,
-    pub broadcast: Option<Broadcast>,
-    pub comment: Option<String>,
-    pub begin: Option<bson::DateTime>,
-    pub end: Option<bson::DateTime>,
-    pub tv: Option<TVShowShort>,
-    pub season: Option<SeasonShort>,
-    pub season_override: Option<SeasonOverride>,
-}
-
-impl Meta {
-    pub fn new(item: Item, tv: Option<TVShowShort>, season: Option<SeasonShort>) -> Self {
-        Self {
-            title: item.title,
-            title_translate: item.title_translate,
-            item_type: item.item_type,
-            lang: item.lang,
-            official_site: item.official_site,
-            sites: item.sites,
-            broadcast: item.broadcast,
-            comment: item.comment,
-            begin: item.begin.map(crate::util::iso8601_to_bson),
-            end: item.end.map(crate::util::iso8601_to_bson),
-            tv,
-            season,
-            season_override: None,
-        }
-    }
-
-    pub fn original_title(&self) -> Option<&str> {
-        self.title_translate
-            .get(&self.lang)
-            .and_then(|x| x.get(0))
-            .map(String::as_str)
-    }
-
-    pub fn season_number(&self) -> Option<u64> {
-        self.season_override
-            .as_ref()
-            .map(|x| x.number)
-            .or_else(|| self.season.as_ref().map(|s| s.inner.season_number))
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct SeasonOverride {
-    pub name: String,
-    pub number: u64,
-}
+use crate::db::{CrudMessage, GetSet, MongoResult};
 
 #[derive(Clone, Debug)]
 pub struct MetaStorage(GetSet<Meta>);
@@ -80,12 +17,10 @@ impl MetaStorage {
     pub const TITLE_INDEX: &'static str = "title";
     pub const TMDB_ID_INDEX: &'static str = "tv.id";
 
-    pub fn new(col: Collection<Meta>) -> Self {
-        Self(GetSet::new(col))
-    }
-
-    pub async fn handle_crud(&self, msg: CrudMessage<Meta>) -> MongoResult<()> {
-        self.0.handle_crud(msg).await
+    pub async fn new(col: Collection<Meta>) -> MongoResult<Self> {
+        let this = Self(GetSet::new(col));
+        this.create_indexes().await?;
+        Ok(this)
     }
 
     pub async fn create_indexes(&self) -> MongoResult<()> {
@@ -124,6 +59,10 @@ impl MetaStorage {
         Ok(())
     }
 
+    pub async fn handle_crud(&self, msg: CrudMessage<Meta>) {
+        self.0.handle_crud(msg).await
+    }
+
     pub async fn text_search(&self, query: &str) -> MongoResult<Option<WithId<Meta>>> {
         self.0.get.find_one(doc! { "$text": { "$search": query } }, None).await
     }
@@ -141,22 +80,16 @@ impl MetaStorage {
     pub async fn get(&self, title: &str) -> MongoResult<Option<WithId<Meta>>> {
         self.0
             .get
-            .find(
-                doc! { Self::TITLE_INDEX: title },
-                FindOptions::builder().limit(1).build(),
-            )
+            .find_one(doc! { Self::TITLE_INDEX: title }, None)
             .await?
-            .next()
-            .await
-            .transpose()?
             .pipe(Ok)
     }
 
-    pub async fn get_by_oid(&self, oid: bson::oid::ObjectId) -> MongoResult<Option<WithId<Meta>>> {
+    pub async fn get_by_oid(&self, oid: ObjectId) -> MongoResult<Option<WithId<Meta>>> {
         self.0.get.find_one(doc! { "_id": oid }, None).await
     }
 
-    pub async fn get_by_id(&self, id: u64) -> MongoResult<Vec<WithId<Meta>>> {
+    pub async fn get_by_tmdb_id(&self, id: u64) -> MongoResult<Vec<WithId<Meta>>> {
         self.0
             .get
             .find(doc! { Self::TMDB_ID_INDEX: id as u32 }, None)
@@ -184,7 +117,7 @@ impl MetaStorage {
             .pipe(Ok)
     }
 
-    pub async fn upsert(&self, meta: Meta) -> MongoResult<()> {
+    pub async fn upsert(&self, meta: &Meta) -> MongoResult<()> {
         let doc = mongodb::bson::to_document(&meta).expect("Failed to convert Meta to bson Document");
         self.0
             .set

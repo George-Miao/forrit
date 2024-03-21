@@ -27,18 +27,11 @@
               mongosh
               openssl
               pkg-config
-              eza
-              fd
               ((rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override
                 {
                   extensions = ["rust-src"];
                 })
             ];
-
-            shellHook = ''
-              alias ls=eza
-              alias find=fd
-            '';
           };
         }
     );

@@ -1,0 +1,18 @@
+[package]
+name    = "client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+forrit-core = { workspace = true }
+reqwest     = { workspace = true }
+serde       = { workspace = true }
+bson        = { workspace = true }
+url         = { workspace = true }
+
+thiserror = "1.0.58"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

@@ -1,17 +1,58 @@
-use std::{
-    borrow::Cow,
-    fmt::Display,
-    process::exit,
-    sync::LazyLock,
-    time::{Duration, SystemTime},
-};
+use std::{collections::BTreeMap, fmt::Display, process::exit};
 
-use regex::Regex;
-use tracing::error;
-
-use crate::config::RenameFormat;
+use either::Either;
+use ractor::RpcReplyPort;
+use tap::Pipe;
+use tracing::{debug, error};
 
 mod_use::mod_use![string, tmdb, time];
+
+pub trait MaybeReply {
+    type Item;
+    fn reply(self, callback: RpcReplyPort<Self::Item>);
+}
+
+impl<T, E: Display> MaybeReply for Result<T, E> {
+    type Item = T;
+
+    fn reply(self, callback: RpcReplyPort<Self::Item>) {
+        match self {
+            Ok(t) => {
+                callback.send(t).ok();
+            }
+            Err(error) => {
+                debug!(%error, "Cancel reply");
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde:: Deserialize)]
+#[serde(untagged)]
+pub enum MapOrVec<T> {
+    Map(BTreeMap<String, T>),
+    Vec(Vec<T>),
+}
+
+impl<T> MapOrVec<T> {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            MapOrVec::Map(map) => map.is_empty(),
+            MapOrVec::Vec(vec) => vec.is_empty(),
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (String, &T)> {
+        match self {
+            MapOrVec::Map(map) => map.iter().map(|(k, v)| (k.to_owned(), v)).pipe(Either::Left),
+            MapOrVec::Vec(vec) => vec
+                .iter()
+                .enumerate()
+                .map(|(i, v)| (i.to_string(), v))
+                .pipe(Either::Right),
+        }
+    }
+}
 
 pub trait Boom {
     type Output;
@@ -38,44 +79,4 @@ impl<T, E: Display> Boom for Result<T, E> {
             exit(1)
         })
     }
-}
-
-pub fn timestamp(sec: u64) -> SystemTime {
-    SystemTime::UNIX_EPOCH + Duration::from_secs(sec)
-}
-
-pub fn normalize_title<'a>(title: &'a str, format: &RenameFormat) -> Cow<'a, str> {
-    macro_rules! rule {
-        ($reg:literal) => {
-            ::regex::Regex::new($reg).expect("Regex should compile")
-        };
-    }
-    static PATTERNS: LazyLock<[Regex; 7]> = LazyLock::new(|| {
-        [
-            rule!(r#"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
-            rule!(r#"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)"#),
-            rule!(r#"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)"#),
-            rule!(r#"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)"#),
-            rule!(r#"(.*)第(\d*\.*\d*)话(?:END)?(.*)"#),
-            rule!(r#"(.*)第(\d*\.*\d*)話(?:END)?(.*)"#),
-            rule!(r#"(.*)-\s*(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)"#),
-        ]
-    });
-
-    PATTERNS
-        .iter()
-        .find_map(|pat| {
-            pat.captures(title).and_then(|cap| {
-                let pre = cap.get(1)?.as_str().trim();
-                let episode = cap.get(2)?.as_str().trim();
-                let suf = cap.get(3)?.as_str().trim();
-
-                let ret = match format {
-                    RenameFormat::Full => format!("{pre} E{episode} {suf}").into(),
-                    RenameFormat::Short => format!("E{episode}").into(),
-                };
-                Some(ret)
-            })
-        })
-        .unwrap_or_else(|| title.into())
 }

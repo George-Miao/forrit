@@ -1,31 +1,46 @@
 use bangumi_data::{Item, ItemType};
 use chrono::{DateTime, Local};
-use forrit_core::IntoStream;
+use forrit_core::{model::Meta, IntoStream};
 use futures::StreamExt;
-use tap::Pipe;
+use salvo::oapi::ToSchema;
+use serde::{Deserialize, Serialize};
 use tokio::sync::watch::{self, error::RecvError, Receiver, Sender};
 use tracing::{debug, info, instrument, trace};
 
 use crate::{
-    resolver::{meta::Meta, Resolver},
+    resolver::Resolver,
     util::{DateExt, YearMonth},
 };
 
-#[derive(Debug, Clone, Default, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct IndexArg {
+    /// Force re-indexing even if the item already exists
+    #[serde(default)]
     pub force: bool,
+
+    /// Maximum number of items to index
+    #[serde(default)]
     pub max: Option<usize>,
+
+    /// Only index items after this date
+    #[serde(default)]
     pub after: Option<YearMonth>,
+
+    /// Only index items before this date
+    #[serde(default)]
     pub before: Option<YearMonth>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct IndexStat {
     /// Indexing argument
     pub arg: IndexArg,
 
     /// Number of items from bangumi data
     pub num_items: u32,
+
+    /// Number of non-TV items
+    pub num_non_tv: u32,
 
     /// Number of items filtered out
     pub num_filtered: u32,
@@ -69,6 +84,7 @@ pub struct IndexJob {
 
 impl IndexJob {
     /// Wait for the index job to finish
+    #[cfg(test)]
     pub async fn wait(self) {
         self.handle.await.expect("Index job panicked");
     }
@@ -92,34 +108,43 @@ pub struct IndexStatRecv(Receiver<IndexStat>);
 
 impl IndexStatRecv {
     /// Wait for the index stat to change and return the new stat
-    pub async fn changes(&mut self) -> Result<IndexStat, RecvError> {
+    pub async fn wait(&mut self) -> Result<IndexStat, RecvError> {
         self.0.changed().await?;
-        (*self.0.borrow_and_update()).pipe(Ok)
+        Ok(self.current())
     }
 
-    /// Get the current index stat
+    /// Get the current index stat. This will mark the stat as read and will not
+    /// be seen again when using [`Self::wait`].
     pub fn current(&mut self) -> IndexStat {
         *self.0.borrow_and_update()
     }
 
+    /// Get the current index stat without marking it as read, so that
+    /// [`Self::wait`] will still return it.
     pub fn snapshot(&self) -> IndexStat {
         *self.0.borrow()
     }
 }
 
 impl Resolver {
-    // TODO: Transactional and unique indexing
+    // TODO: Transactional indexing
     pub fn index_job(self, arg: IndexArg) -> IndexJob {
         let (tx, rx) = watch::channel(IndexStat::new(arg));
-        let handle = tokio::spawn(async move { self.index(tx, arg).await });
+        let handle = tokio::spawn(async move {
+            self.index(tx, arg).await;
+            super::index_finished()
+        });
+        // let handle = tokio::spawn(async move {});
         IndexJob {
             rx: IndexStatRecv(rx),
             handle,
         }
     }
 
+    #[instrument(skip(self, stat))]
     async fn index(&self, stat: Sender<IndexStat>, arg: IndexArg) {
-        info!("Indexing");
+        info!(?arg, "Indexing");
+
         stat.send_modify(|x| x.start_at = Local::now());
         let data = bangumi_data::get_all().await.expect("Failed to get bangumi data").items;
         stat.send_modify(|x| x.num_items = data.len() as u32);
@@ -127,6 +152,7 @@ impl Resolver {
         data.into_iter()
             .filter(|item| {
                 if item.item_type != ItemType::TV {
+                    stat.send_modify(|x| x.num_non_tv += 1);
                     return false;
                 }
                 let Some(date) = item.begin else {
@@ -156,12 +182,13 @@ impl Resolver {
                 });
             })
             .await;
+
         stat.send_modify(|x| x.end_at = Some(Local::now()));
-        info!(state = ?stat.borrow(), "Indexing finished");
+        info!(stat = ?*stat.borrow(), "Indexing finished");
     }
 
     /// Index one item
-    #[instrument(name = "index", target = "resolver", fields(title = item.title), skip(self, item))]
+    #[instrument(fields(title = item.title), skip(self, item))]
     async fn index_one(&self, force: bool, item: Item) -> IndexResult {
         trace!(?item);
         let exist = self.meta.get(&item.title).await.expect("db error").is_some();
@@ -173,9 +200,7 @@ impl Resolver {
         let result = self.match_item(&item).await;
         debug!(?result, "Item matched");
         let meta = Meta::new(item, result.tv, result.season);
-        self.meta.upsert(meta).await.expect("db error");
-        debug!("Meta inserted");
-
+        self.meta.upsert(&meta).await.expect("db error");
         if exist { IndexResult::Updated } else { IndexResult::New }
     }
 }
@@ -197,7 +222,7 @@ mod test {
             let mut recv = handle.stat_recv();
 
             loop {
-                let Ok(_) = recv.changes().await else { break };
+                let Ok(_) = recv.wait().await else { break };
             }
         })
     }

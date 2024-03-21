@@ -1,36 +1,24 @@
-use camino::Utf8PathBuf;
+use forrit_core::model::{Entry, Job, Subscription};
 use futures::{future::ready, TryStreamExt};
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    Collection, Database,
-};
+use mongodb::bson::doc;
 use ractor::Actor;
-use regex::Regex;
-use salvo::oapi::ToSchema;
-use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
 use crate::{
-    db::{CrudCall, CrudMessage, FromCrud, GetSet, WithId},
-    downloader::{self, Job},
-    resolver::crud_meta,
-    sourcer::Entry,
+    db::{Collections, CrudMessage, FromCrud, GetSet},
+    downloader,
     util::Boom,
 };
 
-pub fn new_entry(entry: WithId<Entry>) {
+pub fn new_entry(entry: Entry) {
     ractor::registry::where_is(SubscriptionActor::NAME.to_owned())
         .map(|sub| sub.send_message(super::subscription::Message::NewEntry { entry }));
 }
 
-pub fn crud() -> CrudCall<Message> {
-    CrudCall::new(SubscriptionActor::NAME)
-}
-
-pub async fn start(db: &Database) {
+pub async fn start(db: &Collections) {
     Actor::spawn(
         Some(SubscriptionActor::NAME.to_owned()),
-        SubscriptionActor::new(db.collection(SubscriptionActor::NAME)),
+        SubscriptionActor::new(db.subscription.clone(), db.job.clone()),
         (),
     )
     .await
@@ -40,65 +28,38 @@ pub async fn start(db: &Database) {
 #[derive(Debug)]
 pub enum Message {
     CrudSub(CrudMessage<Subscription>),
-    NewEntry { entry: WithId<Entry> },
+    CrudJob(CrudMessage<Job>),
+    NewEntry { entry: Entry },
 }
 
-impl FromCrud for Message {
-    type Item = Subscription;
+impl FromCrud<Subscription> for Message {
+    const ACTOR_NAME: &'static str = SubscriptionActor::NAME;
+    const RESOURCE_NAME: &'static str = "subscription";
 
     fn from_crud(crud: CrudMessage<Subscription>) -> Self {
         Self::CrudSub(crud)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct Subscription {
-    #[salvo(schema(value_type = String))]
-    meta_id: ObjectId,
-    include: Option<String>,
-    exclude: Option<String>,
-    #[salvo(schema(value_type = String))]
-    directory: Option<Utf8PathBuf>,
-    team: Option<String>,
-}
+impl FromCrud<Job> for Message {
+    const ACTOR_NAME: &'static str = SubscriptionActor::NAME;
+    const RESOURCE_NAME: &'static str = "job";
 
-impl Subscription {
-    fn want_entry(&self, entry: &Entry) -> bool {
-        if let Some(include) = &self.include {
-            let regex = Regex::new(include).expect("Invalid regex");
-            if !regex.is_match(&entry.title) {
-                debug!(?entry.title, pattern = include, "Entry does not match include regex");
-                return false;
-            }
-        }
-        if let Some(exclude) = &self.exclude {
-            let regex = Regex::new(exclude).expect("Invalid regex");
-            if regex.is_match(&entry.title) {
-                debug!(?entry.title, pattern = exclude, "Entry matches exclude regex");
-                return false;
-            }
-        }
-        if let Some(team) = &self.team {
-            if entry.group.as_ref() != Some(team) {
-                debug!(?entry.group, want = team, "Entry does not match team");
-                return false;
-            }
-        }
-        true
+    fn from_crud(crud: CrudMessage<Job>) -> Self {
+        Self::CrudJob(crud)
     }
 }
 
 struct SubscriptionActor {
-    subs: GetSet<Subscription>,
+    sub: GetSet<Subscription>,
+    job: GetSet<Job>,
 }
 
 impl SubscriptionActor {
     pub const NAME: &'static str = "subscription";
 
-    pub fn new(subs: Collection<Subscription>) -> Self {
-        Self {
-            subs: GetSet::new(subs),
-        }
+    pub fn new(sub: GetSet<Subscription>, job: GetSet<Job>) -> Self {
+        Self { sub, job }
     }
 }
 
@@ -116,8 +77,6 @@ impl Actor for SubscriptionActor {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self), level = "debug", parent = None)] // log with message in span when level is debug
-    #[tracing::instrument(skip_all)]
     async fn handle(
         &self,
         _: ractor::ActorRef<Self::Msg>,
@@ -125,16 +84,17 @@ impl Actor for SubscriptionActor {
         _: &mut Self::State,
     ) -> Result<(), ractor::ActorProcessingErr> {
         match message {
-            Message::CrudSub(crud) => self.subs.handle_crud(crud).await.expect("db error"),
+            Message::CrudSub(crud) => self.sub.handle_crud(crud).await,
+            Message::CrudJob(crud) => self.job.handle_crud(crud).await,
             Message::NewEntry { entry } => {
                 debug!(?entry, "New entry");
                 let Some(sub) = self
-                    .subs
+                    .sub
                     .get
                     .find(doc! { "meta_id": &entry.meta_id }, None)
                     .await
                     .expect("db error")
-                    .try_filter(|sub| ready(sub.want_entry(&entry.inner)))
+                    .try_filter(|sub| ready(sub.want_entry(&entry)))
                     .try_next()
                     .await
                     .expect("db error")
@@ -142,13 +102,8 @@ impl Actor for SubscriptionActor {
                     return Ok(());
                 };
 
-                let meta = crud_meta()
-                    .get(entry.meta_id)
-                    .await
-                    .expect("resolver resolves to a non-exist meta");
-
                 let job = Job {
-                    meta,
+                    meta_id: entry.meta_id,
                     entry,
                     directory_override: sub.inner.directory,
                 };

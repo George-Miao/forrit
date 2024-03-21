@@ -41,7 +41,7 @@ pub fn remove_postfix(mut title: &str) -> &str {
         title = &title[..title.len() - last.len_utf8()];
     }
 
-    // "Some Title II" -> "Some Title"
+    // "Some Title II" -> "Some Title "
     for p in POSTFIX {
         if title.ends_with(p) {
             title = &title[..title.len() - p.len()];
