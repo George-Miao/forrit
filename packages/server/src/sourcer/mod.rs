@@ -36,6 +36,7 @@ pub async fn start(db: &Collections) {
         if !conf.enable {
             continue;
         }
+
         match &conf.ty {
             SourcerType::Rss(rss_conf) => {
                 let actor = rss::RssActor::new(rss_conf, REQ.clone(), db.entry.clone());

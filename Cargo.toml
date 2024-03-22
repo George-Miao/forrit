@@ -10,6 +10,7 @@ chrono       = "0.4.35"
 regex        = "1.10.3"
 tracing      = "0.1.40"
 tokio        = "1.35.1"
+ts-rs        = "8.0.0"
 
 forrit-core   = { version = "0.1.0", path = "packages/core" }
 forrit-client = { version = "0.1.0", path = "packages/core" }

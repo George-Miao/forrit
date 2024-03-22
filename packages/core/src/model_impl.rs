@@ -9,6 +9,7 @@ use regex::Regex;
 use salvo_oapi::{schema, Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema};
 use tmdb_api::tvshow::{SeasonShort, TVShowShort};
 use tracing::debug;
+use ts_rs::TS;
 
 use crate::model::*;
 impl<K, V> ToSchema for Record<K, V> {
@@ -35,6 +36,109 @@ impl<T> DerefMut for WithId<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
+}
+// Recursive expansion of TS macro
+// ================================
+
+impl<T> ::ts_rs::TS for WithId<T>
+where
+    T: ::ts_rs::TS,
+{
+    type WithoutGenerics = WithId<::ts_rs::Dummy>;
+
+    fn ident() -> String {
+        "WithId".to_owned()
+    }
+
+    fn name() -> String {
+        format!("WithId<{}>", <T as ::ts_rs::TS>::name())
+    }
+
+    fn decl_concrete() -> String {
+        format!("type WithId = {};", Self::inline())
+    }
+
+    fn decl() -> String {
+        #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+        struct T;
+
+        impl std::fmt::Display for T {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{:?}", self)
+            }
+        }
+        impl TS for T {
+            type WithoutGenerics = T;
+
+            fn name() -> String {
+                stringify!(T).to_owned()
+            }
+
+            fn inline() -> String {
+                panic!("{} cannot be inlined", Self::name())
+            }
+
+            fn inline_flattened() -> String {
+                panic!("{} cannot be flattened", Self::name())
+            }
+
+            fn decl() -> String {
+                panic!("{} cannot be declared", Self::name())
+            }
+
+            fn decl_concrete() -> String {
+                panic!("{} cannot be declared", Self::name())
+            }
+        }
+        let inline = <WithId<T> as ::ts_rs::TS>::inline();
+        format!("type WithId<T> = {inline};")
+    }
+
+    fn inline() -> String {
+        format!(
+            "{{ _id: {} }} & {}",
+            <OidExtJson as ::ts_rs::TS>::name(),
+            <T as ::ts_rs::TS>::name()
+        )
+        .replace(" } & { ", " ")
+    }
+
+    fn inline_flattened() -> String {
+        Self::inline()
+    }
+
+    #[allow(clippy::unused_unit)]
+    fn generics() -> impl ::ts_rs::typelist::TypeList
+    where
+        Self: 'static,
+    {
+        use ::ts_rs::typelist::TypeList;
+        ().push::<T>().extend(<T as ::ts_rs::TS>::generics())
+    }
+
+    fn output_path() -> Option<&'static std::path::Path> {
+        Some(std::path::Path::new("WithId.ts"))
+    }
+
+    #[allow(clippy::unused_unit)]
+    fn dependency_types() -> impl ::ts_rs::typelist::TypeList
+    where
+        Self: 'static,
+    {
+        {
+            use ::ts_rs::typelist::TypeList;
+            ().push::<OidExtJson>()
+                .extend(<OidExtJson as ::ts_rs::TS>::generics())
+                .push::<T>()
+                .extend(<T as ::ts_rs::TS>::generics())
+        }
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn export_bindings_with_id() {
+    <WithId<()> as ::ts_rs::TS>::export_all().expect("could not export type");
 }
 
 impl<T: ToSchema + 'static> ToSchema for WithId<T> {
@@ -81,8 +185,10 @@ impl Meta {
             sites: item.sites,
             broadcast: item.broadcast,
             comment: item.comment,
-            begin: item.begin.map(crate::util::iso8601_to_bson),
-            end: item.end.map(crate::util::iso8601_to_bson),
+            bson_begin: item.begin.map(crate::util::iso8601_to_bson),
+            bson_end: item.end.map(crate::util::iso8601_to_bson),
+            begin: item.begin.map(crate::util::iso8601_to_chrono),
+            end: item.end.map(crate::util::iso8601_to_chrono),
             tv,
             season,
             season_override: None,

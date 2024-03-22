@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{borrow::Borrow, marker::PhantomData};
 
 use bson::oid::ObjectId;
 use forrit_core::model::{UpdateResult, WithId};
@@ -91,12 +91,12 @@ impl<'a, R: Resource> ResourceClient<'a, R> {
             .map_err(Into::into)
     }
 
-    pub async fn get(&self, id: ObjectId) -> Result<WithId<R>>
+    pub async fn get(&self, id: impl Borrow<ObjectId> + Send + Sync) -> Result<WithId<R>>
     where
         R: Read,
     {
         self.req()
-            .get(self.url(Some(&id)))
+            .get(self.url(Some(id.borrow())))
             .send()
             .await?
             .json()
@@ -104,12 +104,12 @@ impl<'a, R: Resource> ResourceClient<'a, R> {
             .map_err(Into::into)
     }
 
-    pub async fn update(&self, id: ObjectId, data: R) -> Result<UpdateResult>
+    pub async fn update(&self, id: impl Borrow<ObjectId> + Send + Sync, data: R) -> Result<UpdateResult>
     where
         R: Update,
     {
         self.req()
-            .put(self.url(Some(&id)))
+            .put(self.url(Some(id.borrow())))
             .json(&data)
             .send()
             .await?
@@ -118,12 +118,12 @@ impl<'a, R: Resource> ResourceClient<'a, R> {
             .map_err(Into::into)
     }
 
-    pub async fn delete(&self, id: ObjectId) -> Result<WithId<R>>
+    pub async fn delete(&self, id: impl Borrow<ObjectId> + Send + Sync) -> Result<WithId<R>>
     where
         R: Delete,
     {
         self.req()
-            .delete(self.url(Some(&id)))
+            .delete(self.url(Some(id.borrow())))
             .send()
             .await?
             .json()
@@ -140,7 +140,11 @@ mod test {
     #[tokio::test]
     async fn test_client() {
         let c = ForritClient::new("http://localhost:8080").unwrap();
-        let res = c.entry().list().await.unwrap();
-        println!("{:#?}", res);
+        let list = c.entry().list().await.unwrap();
+        println!("{:#?}", list);
+        let id = list[0].id;
+        println!("{}", id);
+        let res = c.entry().get(id).await.unwrap();
+        assert_eq!(list[0], res)
     }
 }

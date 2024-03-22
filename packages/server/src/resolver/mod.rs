@@ -6,7 +6,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use anitomy::{Anitomy, ElementCategory, Elements};
 use bangumi_data::Item;
-use forrit_core::model::{Alias, Meta, Record, WithId};
+use forrit_core::model::{Alias, Meta, WithId};
 use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
 // use color_eyre::eyre::Result;
 use mongodb::bson::oid::ObjectId;

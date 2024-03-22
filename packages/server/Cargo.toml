@@ -6,20 +6,18 @@ edition = "2021"
 [dependencies]
 forrit-core = { version = "0.1.0", path = "../core" }
 
-serde        = { workspace = true }
-futures      = { workspace = true }
-bson         = { workspace = true }
 bangumi-data = { workspace = true }
-tmdb-api     = { workspace = true }
-iso8601      = { workspace = true }
 camino       = { workspace = true }
-url          = { workspace = true }
 chrono       = { workspace = true }
-reqwest      = { workspace = true }
+futures      = { workspace = true }
+iso8601      = { workspace = true }
 regex        = { workspace = true }
-tracing      = { workspace = true }
+reqwest      = { workspace = true }
+serde        = { workspace = true }
+tmdb-api     = { workspace = true }
 tokio        = { workspace = true, features = ["macros", "rt-multi-thread"] }
-
+tracing      = { workspace = true }
+url          = { workspace = true }
 
 figment            = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
 governor           = { version = "0.6.0", default-features = false, features = ["futures", "std", "quanta"] }
@@ -30,15 +28,15 @@ tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
 
 anitomy         = "0.2.0"
 dirs            = "5.0.1"
+either          = "1.10.0"
+humantime       = "2.1.0"
 humantime-serde = "1.1.1"
 mod_use         = "0.2.1"
 qbit-rs         = "0.4.1"
 rss             = "2.0.6"
-tap             = "1.0.1"
-either          = "1.10.0"
-thiserror       = "1.0.58"
-humantime       = "2.1.0"
 serde_json      = "1.0.114"
+tap             = "1.0.1"
+thiserror       = "1.0.58"
 
 [dev-dependencies]
 tracing-appender = "0.2.3"

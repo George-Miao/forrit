@@ -55,8 +55,11 @@ pub async fn run() {
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, ToParameters)]
-#[salvo(parameters(names("id")))]
-pub struct OidParam(#[salvo(parameter(value_type = forrit_core::model::ObjectIdSchema))] pub ObjectId);
+#[salvo(extract(default_source(from = "param")))]
+pub struct OidParam {
+    #[salvo(parameter(parameter_in = Path, value_type = forrit_core::model::ObjectIdSchema))]
+    pub id: ObjectId,
+}
 
 macro_rules! build_crud {
     ($msg:ty, $tag:literal, $resource:ty $(,$timeout:expr)?) => {{
@@ -96,7 +99,7 @@ macro_rules! build_crud {
         async fn get(id: OidParam) -> ApiResult<Json<WithId<T>>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
-                .get(id.0)
+                .get(id.id)
                 .await
                 .unwrap_not_found(ACTOR_NAME)?
                 .pipe(Json)
@@ -107,7 +110,7 @@ macro_rules! build_crud {
         async fn put(id: OidParam, obj: JsonBody<T>) -> ApiResult<Json<UpdateResult>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
-                .update(id.0, obj.0)
+                .update(id.id, obj.0)
                 .await?
                 .pipe(|updated| Json(UpdateResult { updated }))
                 .pipe(Ok)
@@ -117,7 +120,7 @@ macro_rules! build_crud {
         async fn delete(id: OidParam) -> ApiResult<Json<WithId<T>>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
-                .delete(id.0)
+                .delete(id.id)
                 .await
                 .unwrap_not_found(ACTOR_NAME)?
                 .pipe(Json)

@@ -13,7 +13,7 @@ use crate::db::{CrudMessage, GetSet, MongoResult};
 pub struct MetaStorage(GetSet<Meta>);
 
 impl MetaStorage {
-    pub const BEGIN_INDEX: &'static str = "begin";
+    pub const BEGIN_INDEX: &'static str = "bson_begin";
     pub const TITLE_INDEX: &'static str = "title";
     pub const TMDB_ID_INDEX: &'static str = "tv.id";
 

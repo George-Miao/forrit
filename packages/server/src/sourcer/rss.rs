@@ -8,10 +8,8 @@ use tracing::{debug, info, instrument};
 
 use crate::{
     config::RssConfig,
-    db::MongoResult,
     sourcer::{EntryStorage, PartialEntry, SourcerMessage},
     subscription::new_entry,
-    util::Boom,
 };
 
 pub struct RssActor {
