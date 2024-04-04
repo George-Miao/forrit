@@ -4,35 +4,49 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = {
     self,
-    nixpkgs,
     rust-overlay,
-    flake-utils,
+    nixpkgs,
     ...
-  }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        overlays = [(import rust-overlay)];
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-      in
+  }: let
+    forAllSystems = function:
+      nixpkgs.lib.genAttrs [
+        "x86_64-linux"
+        "x86_64-darwin"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ] (system:
+        function (import nixpkgs {
+          inherit system;
+          overlays = [(import rust-overlay)];
+        }));
+  in {
+    devShells = forAllSystems (
+      pkgs:
         with pkgs; {
-          devShells.default = mkShell {
-            buildInputs = [
-              mongosh
-              openssl
-              pkg-config
-              ((rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override
-                {
-                  extensions = ["rust-src"];
-                })
-            ];
+          default = mkShell {
+            buildInputs =
+              [
+                mongosh
+                openssl
+                pkg-config
+                ((rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override
+                  {
+                    extensions = ["rust-src"];
+                  })
+              ]
+              ++ (
+                if pkgs.system == "aarch64-darwin" || pkgs.system == "x86_64-darwin"
+                then [
+                  darwin.apple_sdk.frameworks.SystemConfiguration
+                ]
+                else []
+              );
           };
         }
     );
+  };
 }
