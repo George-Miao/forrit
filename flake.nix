@@ -30,6 +30,8 @@
           default = mkShell {
             buildInputs =
               [
+                just
+                nodePackages.typescript
                 mongosh
                 openssl
                 pkg-config
