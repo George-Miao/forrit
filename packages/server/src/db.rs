@@ -25,6 +25,7 @@ use crate::{
 pub type MongoResult<T> = mongodb::error::Result<T>;
 pub type KVCollection<K, V> = Collection<Record<K, V>>;
 
+/// All collections in the database that we need
 pub struct Collections {
     pub meta: MetaStorage,
     pub entry: EntryStorage,

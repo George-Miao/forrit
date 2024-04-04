@@ -134,7 +134,6 @@ impl<'a, R: Resource> ResourceClient<'a, R> {
 
 #[cfg(test)]
 mod test {
-
     use crate::ForritClient;
 
     #[tokio::test]

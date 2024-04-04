@@ -35,10 +35,13 @@ static REQ: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 #[tokio::main]
 async fn main() {
-    let log = std::env::var("FORRIT_LOG").unwrap_or_else(|_| "info".to_owned());
+    let level = std::env::var("FORRIT_LOG")
+        .ok()
+        .map(|s| LevelFilter::from_str(&s).boom("Invalid log level"))
+        .unwrap_or_else(|| LevelFilter::INFO);
 
     let target_filter = Targets::new()
-        .with_default(LevelFilter::from_str(&log).boom("Invalid log level"))
+        .with_default(level)
         .with_target("forrit_server::resolver::index", LevelFilter::INFO)
         .with_target("forrit_server::db", LevelFilter::DEBUG)
         .with_target("hyper", LevelFilter::INFO)
