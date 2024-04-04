@@ -1,5 +1,5 @@
 [workspace]
-members  = ["packages/*"]
+members  = ["packages/*", "clients/rust"]
 resolver = "2"
 
 [workspace.dependencies]
