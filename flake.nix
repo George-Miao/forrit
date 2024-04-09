@@ -7,7 +7,6 @@
   };
 
   outputs = {
-    self,
     rust-overlay,
     nixpkgs,
     ...
@@ -26,19 +25,23 @@
   in {
     devShells = forAllSystems (
       pkgs:
-        with pkgs; {
-          default = mkShell {
-            buildInputs =
+        with pkgs; let
+          llvm = pkgs.llvmPackages_latest;
+        in {
+          default = mkShell.override {stdenv = stdenvNoLibs;} {
+            packages =
               [
+                (rust-bin.selectLatestNightlyWith (toolchain:
+                  toolchain.default.override {
+                    extensions = ["rust-src"];
+                  }))
+                llvm.bintools
+                llvm.libstdcxxClang
                 just
+                openssl
                 nodePackages.typescript
                 mongosh
-                openssl
                 pkg-config
-                ((rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override
-                  {
-                    extensions = ["rust-src"];
-                  })
               ]
               ++ (
                 if pkgs.system == "aarch64-darwin" || pkgs.system == "x86_64-darwin"
