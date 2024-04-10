@@ -1,0 +1,14 @@
+[resolver]
+tmdb_api_key = "AAAAABBBBBCCCCCDDDDDEEEEEFFFFF"
+
+[database]
+url = "mongodb://localhost:27017"
+
+[sourcer.acg_rip]
+type            = "rss"
+url             = "https://acg.rip/.xml"
+update_interval = "1m"
+
+[downloader]
+type = "qbittorrent"
+url  = "http://localhost:8080"
