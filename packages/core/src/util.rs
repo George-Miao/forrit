@@ -1,7 +1,7 @@
-pub fn iso8601_to_bson(datetime: iso8601::DateTime) -> bson::DateTime {
-    let chrono = datetime.into_fixed_offset().expect("Invalid ISO8601 datetime");
-    bson::DateTime::from_chrono(chrono)
-}
+// pub fn iso8601_to_bson(datetime: iso8601::DateTime) -> bson::DateTime {
+//     let chrono = datetime.into_fixed_offset().expect("Invalid ISO8601
+// datetime");     bson::DateTime::from_chrono(chrono)
+// }
 
 pub fn iso8601_to_chrono(datetime: iso8601::DateTime) -> crate::model::DateTime {
     datetime.into_fixed_offset().expect("Invalid ISO8601 datetime")
