@@ -31,10 +31,10 @@
           default = mkShell.override {stdenv = stdenvNoLibs;} {
             packages =
               [
-                (rust-bin.selectLatestNightlyWith (toolchain:
-                  toolchain.default.override {
+                ((rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override
+                  {
                     extensions = ["rust-src"];
-                  }))
+                  })
                 llvm.bintools
                 llvm.libstdcxxClang
                 just
