@@ -1,13 +1,16 @@
 {
   "name": "forrit-client",
   "version": "0.1.0",
+  "author": "George Miao <gm@miao.dev>",
+  "license": "MIT",
   "description": "Client library for forrit API's",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "/dist"
   ],
-  "scripts": {},
-  "author": "George Miao <gm@miao.dev>",
-  "license": "MIT"
+  "scripts": {
+    "build": "npm run gen && tsc",
+    "gen": "just gen_ts"
+  }
 }
