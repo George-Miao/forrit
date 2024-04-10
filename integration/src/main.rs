@@ -1,9 +1,10 @@
 use forrit_client::ForritClient;
+use futures::StreamExt;
 use tokio::io::AsyncWriteExt;
 
 const CONF: &str = r#"
 [resolver.index]
-enable = false
+enable = true
 
 [downloader]
 type = "qbittorrent"
@@ -34,10 +35,19 @@ async fn main() -> std::io::Result<()> {
 
     let client = ForritClient::new("http://127.0.0.1:11451").unwrap();
 
+    let mut index_upd = client.index().subscribe().await.unwrap();
+    let job = tokio::spawn(async move {
+        while let Some(upd) = index_upd.next().await {
+            println!("{:?}", upd);
+        }
+    });
+
     let entries = client.entry().list().await.unwrap();
     let first = entries.first().unwrap();
     let entry = client.entry().get(first.id).await.unwrap();
     assert_eq!(&entry, first);
+
+    job.await.unwrap();
 
     server.kill().await?;
 

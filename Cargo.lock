@@ -1530,6 +1530,7 @@ version = "0.1.0"
 dependencies = [
  "dotenvy",
  "forrit-client",
+ "futures",
  "tempfile",
  "tokio",
 ]

@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+futures       = { workspace = true }
+forrit-client = { workspace = true }
+
+tokio = { version = "1", features = ["full"] }
+
 dotenvy  = "0.15.7"
-forrit-client.workspace = true
 tempfile = "3.10.1"
-tokio    = { version = "1", features = ["full"] }
