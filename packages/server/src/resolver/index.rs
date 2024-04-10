@@ -1,76 +1,14 @@
 use bangumi_data::{Item, ItemType};
 use chrono::Utc;
 use forrit_core::{
+    model::{IndexArg, IndexStat, Meta},
     DateExt, IntoStream,
 };
 use futures::StreamExt;
-use salvo::oapi::ToSchema;
-use serde::{Deserialize, Serialize};
 use tokio::sync::watch::{self, error::RecvError, Receiver, Sender};
 use tracing::{debug, info, instrument, trace};
 
-use crate::{
-    resolver::Resolver,
-    util::{DateExt, YearMonth},
-};
-
-#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct IndexArg {
-    /// Force re-indexing even if the item already exists
-    #[serde(default)]
-    pub force: bool,
-
-    /// Maximum number of items to index
-    #[serde(default)]
-    pub max: Option<usize>,
-
-    /// Only index items after this date
-    #[serde(default)]
-    pub after: Option<YearMonth>,
-
-    /// Only index items before this date
-    #[serde(default)]
-    pub before: Option<YearMonth>,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct IndexStat {
-    /// Indexing argument
-    pub arg: IndexArg,
-
-    /// Number of items from bangumi data
-    pub num_items: u32,
-
-    /// Number of non-TV items
-    pub num_non_tv: u32,
-
-    /// Number of items filtered out
-    pub num_filtered: u32,
-
-    /// Number of new items added
-    pub num_new: u32,
-
-    /// Number of updated items. Only update when force is set to true.
-    pub num_updated: u32,
-
-    /// Number of items unchanged.
-    pub num_unchanged: u32,
-
-    /// Time when the indexing started
-    pub start_at: DateTime<Local>,
-
-    /// Time when the indexing ended
-    pub end_at: Option<DateTime<Local>>,
-}
-
-impl IndexStat {
-    pub fn new(arg: IndexArg) -> Self {
-        Self {
-            arg,
-            ..Default::default()
-        }
-    }
-}
+use crate::resolver::Resolver;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum IndexResult {
@@ -210,7 +148,8 @@ impl Resolver {
 #[cfg(test)]
 mod test {
     use forrit_core::model::YearMonth;
-    use crate::{resolver::index::IndexArg, test::run, util::YearMonth};
+
+    use crate::{resolver::index::IndexArg, test::run};
 
     #[test]
     fn test_index() {

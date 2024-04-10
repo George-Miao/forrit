@@ -1,10 +1,5 @@
-use salvo::{
-    oapi::extract::JsonBody,
-    prelude::*,
-    websocket::{Message, WebSocketUpgrade},
-};
-
-use crate::resolver::index::{IndexArg, IndexStat};
+use forrit_core::model::{IndexArg, IndexStat};
+use salvo::{oapi::extract::JsonBody, prelude::*, websocket::Message};
 
 /// Subscribe to index status updates
 #[endpoint(tags("index"))]

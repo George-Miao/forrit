@@ -273,3 +273,12 @@ impl Subscription {
         true
     }
 }
+
+impl IndexStat {
+    pub fn new(arg: IndexArg) -> Self {
+        Self {
+            arg,
+            ..Default::default()
+        }
+    }
+}
