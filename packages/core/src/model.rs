@@ -3,13 +3,16 @@ use std::collections::BTreeMap;
 use bangumi_data::{Broadcast, ItemType, Language, Site};
 use bson::oid::ObjectId;
 use camino::Utf8PathBuf;
+use chrono::Utc;
 use salvo_oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use tmdb_api::tvshow::{SeasonShort, TVShowShort};
 use ts_rs::TS;
 use url::Url;
 
-pub type Alias = Record<String, ObjectId>;
+pub use crate::date::YearMonth;
+
+pub type DateTime<Tz = chrono::FixedOffset> = chrono::DateTime<Tz>;
 pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]

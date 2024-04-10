@@ -1,6 +1,8 @@
 use bangumi_data::{Item, ItemType};
-use chrono::{DateTime, Local};
-use forrit_core::{model::Meta, IntoStream};
+use chrono::Utc;
+use forrit_core::{
+    DateExt, IntoStream,
+};
 use futures::StreamExt;
 use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
@@ -145,7 +147,7 @@ impl Resolver {
     async fn index(&self, stat: Sender<IndexStat>, arg: IndexArg) {
         info!(?arg, "Indexing");
 
-        stat.send_modify(|x| x.start_at = Local::now());
+        stat.send_modify(|x| x.start_at = Utc::now());
         let data = bangumi_data::get_all().await.expect("Failed to get bangumi data").items;
         stat.send_modify(|x| x.num_items = data.len() as u32);
 
@@ -183,7 +185,7 @@ impl Resolver {
             })
             .await;
 
-        stat.send_modify(|x| x.end_at = Some(Local::now()));
+        stat.send_modify(|x| x.end_at = Some(Utc::now()));
         info!(stat = ?*stat.borrow(), "Indexing finished");
     }
 
@@ -207,6 +209,7 @@ impl Resolver {
 
 #[cfg(test)]
 mod test {
+    use forrit_core::model::YearMonth;
     use crate::{resolver::index::IndexArg, test::run, util::YearMonth};
 
     #[test]
