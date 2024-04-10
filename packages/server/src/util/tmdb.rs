@@ -1,16 +1,13 @@
-use std::sync::Arc;
-
 use governor::DefaultDirectRateLimiter;
 use tmdb_api::prelude::Command;
 
-#[derive(Clone)]
 pub struct GovernedClient {
     tmdb: tmdb_api::Client,
-    governor: Arc<DefaultDirectRateLimiter>,
+    governor: DefaultDirectRateLimiter,
 }
 
 impl GovernedClient {
-    pub fn new(tmdb: tmdb_api::Client, governor: Arc<DefaultDirectRateLimiter>) -> Self {
+    pub fn new(tmdb: tmdb_api::Client, governor: DefaultDirectRateLimiter) -> Self {
         Self { tmdb, governor }
     }
 

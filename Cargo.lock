@@ -157,6 +157,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-tungstenite"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cca750b12e02c389c1694d35c16539f88b8bbaa5945934fdc1b41a776688589"
+dependencies = [
+ "futures-io",
+ "futures-util",
+ "log",
+ "pin-project-lite",
+ "tungstenite",
+]
+
+[[package]]
 name = "atom_syndication"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -431,19 +444,6 @@ checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
 dependencies = [
  "crypto-common",
  "inout",
-]
-
-[[package]]
-name = "client"
-version = "0.1.0"
-dependencies = [
- "bson",
- "forrit-core",
- "reqwest",
- "serde",
- "thiserror",
- "tokio",
- "url",
 ]
 
 [[package]]
@@ -915,6 +915,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "forrit-client"
+version = "0.1.0"
+dependencies = [
+ "bson",
+ "forrit-core",
+ "futures",
+ "reqwest",
+ "reqwest-websocket",
+ "serde",
+ "serde_json",
+ "tap",
+ "thiserror",
+ "tokio",
+ "url",
 ]
 
 [[package]]
@@ -2406,6 +2423,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "reqwest-websocket"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d05525e589f6f6547a6eda3634c7ddfd15f3a1a817abee4b0b9adc0d3a1c46ed"
+dependencies = [
+ "async-tungstenite",
+ "futures-util",
+ "reqwest",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tungstenite",
+ "web-sys",
+]
+
+[[package]]
 name = "resolv-conf"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3630,9 +3664,14 @@ checksum = "9ef1a641ea34f399a848dea702823bbecfb4c486f911735368f1f137cb8257e1"
 dependencies = [
  "byteorder",
  "bytes",
+ "data-encoding",
+ "http 1.1.0",
+ "httparse",
  "log",
  "rand",
+ "sha1",
  "thiserror",
+ "url",
  "utf-8",
 ]
 

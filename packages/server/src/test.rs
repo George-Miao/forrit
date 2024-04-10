@@ -1,8 +1,10 @@
-use std::{num::NonZeroU32, sync::Arc};
+#![cfg(test)]
+
+use std::num::NonZeroU32;
 
 use figment::Jail;
 use futures::Future;
-use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
+use governor::{Quota, RateLimiter};
 use mongodb::{Client, Database};
 use tokio::sync::OnceCell;
 use tracing::level_filters::LevelFilter;
@@ -78,8 +80,6 @@ async fn prepare(jail: &mut Jail) -> Env {
 
     let mongo = Client::with_uri_str(&config.database.url).await.unwrap();
     let db = mongo.database("test");
-    let governor: Arc<DefaultDirectRateLimiter> =
-        RateLimiter::direct(Quota::per_second(NonZeroU32::new(20).unwrap())).into();
     let client = GovernedClient::new(
         tmdb_api::Client::builder()
             .with_api_key(config.resolver.tmdb_api_key.to_owned())
@@ -87,7 +87,7 @@ async fn prepare(jail: &mut Jail) -> Env {
             .with_reqwest_client(REQ.clone())
             .build()
             .unwrap(),
-        governor,
+        RateLimiter::direct(Quota::per_second(NonZeroU32::new(20).unwrap())),
     );
     let col = Collections::new(&db).await.unwrap();
     let resolver = Resolver::new(client, col.meta.clone(), col.alias.clone(), &config.resolver).await;

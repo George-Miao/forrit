@@ -2,12 +2,12 @@
 //!
 //! Extract and match episode info from given torrent and filename
 
-use std::{cell::RefCell, sync::Arc};
+use std::{cell::RefCell, ops::Deref, sync::Arc};
 
 use anitomy::{Anitomy, ElementCategory, Elements};
 use bangumi_data::Item;
-use forrit_core::model::{Alias, Meta, WithId};
-use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
+use forrit_core::model::{Alias, IndexArg, Meta, WithId};
+use governor::{Quota, RateLimiter};
 // use color_eyre::eyre::Result;
 use mongodb::bson::oid::ObjectId;
 use ractor::{concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
@@ -19,8 +19,8 @@ use crate::{
     config::{get_config, ResolverConfig},
     db::{Collections, CrudCall, CrudMessage, FromCrud, KV},
     resolver::{
-        index::{IndexArg, IndexJob, IndexStatRecv},
-        util::{is_mostly_ascii, match_title_in_filename},
+        index::{IndexJob, IndexStatRecv},
+        util::StrExt,
     },
     util::{Boom, CommandExt, GovernedClient},
     ACTOR_ERR, RECV_ERR, REQ, RPC_TIMEOUT, SEND_ERR,
@@ -44,7 +44,6 @@ const ANIME_GENRE: u64 = 16;
 
 pub async fn start(db: &Collections) {
     let config = &get_config().resolver;
-    let governor: Arc<DefaultDirectRateLimiter> = RateLimiter::direct(Quota::per_second(config.tmdb_rate_limit)).into();
     let client = GovernedClient::new(
         tmdb_api::Client::builder()
             .with_api_key(config.tmdb_api_key.clone())
@@ -52,7 +51,7 @@ pub async fn start(db: &Collections) {
             .with_reqwest_client(REQ.clone())
             .build()
             .boom("Failed to init TMDB client"),
-        governor.clone(),
+        RateLimiter::direct(Quota::per_second(config.tmdb_rate_limit)),
     );
 
     let resolver = Resolver::new(client, db.meta.clone(), db.alias.clone(), config).await;
@@ -131,6 +130,7 @@ pub struct ExtractResult {
     pub elements: Elements,
 }
 
+#[derive(Debug)]
 pub enum Message {
     /// Resolve file name and match it to a meta entry.
     Resolve {
@@ -190,26 +190,38 @@ enum SearchRes {
     Undecided,
 }
 
-#[derive(Clone)]
-pub struct Resolver {
+pub struct ResolverInner {
     tmdb: GovernedClient,
     alias: AliasKV,
     meta: MetaStorage,
     config: &'static ResolverConfig,
 }
 
+#[derive(Clone)]
+pub struct Resolver(Arc<ResolverInner>);
+
+impl Deref for Resolver {
+    type Target = ResolverInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl Resolver {
     pub const NAME: &'static str = "resolve";
 
     pub async fn new(tmdb: GovernedClient, meta: MetaStorage, alias: AliasKV, config: &'static ResolverConfig) -> Self {
-        Self {
+        Self(Arc::new(ResolverInner {
             tmdb,
             meta,
             alias,
             config,
-        }
+        }))
     }
+}
 
+impl ResolverInner {
     /// Parse filename into elements with anitomy
     fn parse_filename(&self, file_name: &str) -> Elements {
         thread_local! {
@@ -285,8 +297,8 @@ impl Resolver {
 
     #[instrument(skip(self, arg), fields(title = arg.title))]
     async fn try_search(&self, arg: &SearchArg<'_>, cut: usize) -> SearchRes {
-        let t = match util::cut_title(arg.title, cut) {
-            Some(t) => util::remove_postfix(t),
+        let t = match arg.title.cut(cut) {
+            Some(t) => t.remove_postfix(),
             None => {
                 debug!("not found");
                 return SearchRes::Decided(None);
@@ -327,9 +339,7 @@ impl Resolver {
 
     #[instrument(skip(self))]
     async fn resolve(&self, filename: &str) -> ExtractResult {
-        let mut titles = match_title_in_filename(filename)
-            .map(|(l, r)| vec![l, r])
-            .unwrap_or_default();
+        let mut titles = filename.match_title().map(|(l, r)| vec![l, r]).unwrap_or_default();
         let elements = self.parse_filename(filename);
         if let Some(title) = elements.get(ElementCategory::AnimeTitle) {
             titles.push(title)
@@ -350,7 +360,7 @@ impl Resolver {
                     return ExtractResult { group, meta, elements };
                 }
             }
-            if !is_mostly_ascii(&title) {
+            if !title.is_mostly_ascii() {
                 // If it's not mostly ascii, search database
                 if let Some(meta) = self.meta.text_search(&title).await.expect("db error") {
                     debug!(title, "Mongo text search found");
@@ -361,7 +371,7 @@ impl Resolver {
                         elements,
                     };
                 }
-            } else if let Some(m) = async {
+            } else if let Some(m) = try {
                 // Search tmdb
                 let arg = SearchArg {
                     title: &title,
@@ -372,10 +382,8 @@ impl Resolver {
                 let meta = self.locate_meta(found.inner.id).await?;
                 self.alias.upsert(&title, &meta.id).await.expect("db error");
                 debug!(title, "TMDB search found");
-                Some(meta)
-            }
-            .await
-            {
+                meta
+            } {
                 return ExtractResult {
                     group,
                     meta: Some(m),
@@ -414,9 +422,11 @@ impl Actor for Resolver {
         let index_timer = if self.config.index.enable {
             let arg = IndexArg::default();
             let interval = humantime::format_duration(self.config.index.interval);
+            if self.config.index.start_at_begin {
+                this.send_message(Message::StartIndexJob { arg, port: None })
+                    .expect("Failed to start index job");
+            };
             info!(?arg, %interval, "Index timer set");
-            this.send_message(Message::StartIndexJob { arg, port: None })
-                .expect("Failed to start index job");
             ractor::time::send_interval(self.config.index.interval, this.get_cell(), move || {
                 Message::StartIndexJob { arg, port: None }
             })
@@ -447,9 +457,16 @@ impl Actor for Resolver {
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
+        info!(?msg, "Resolver received message");
         match msg {
             Message::Resolve { file_name, port } => {
-                port.send(self.resolve(&file_name).await).ok();
+                // So that resolve won't block other messages
+                tokio::spawn({
+                    let this = self.clone();
+                    async move {
+                        port.send(this.resolve(&file_name).await).ok();
+                    }
+                });
             }
             Message::StartIndexJob { arg, port } => {
                 let job = match state.index_job.take() {
@@ -497,12 +514,13 @@ mod test {
         time::{Duration, Instant},
     };
 
+    use forrit_core::model::IndexArg;
     use ractor::Actor;
     use tap::Pipe;
     use tracing::{info, warn};
 
     use crate::{
-        resolver::{crud_meta, index::IndexArg, Resolver},
+        resolver::{crud_meta, Resolver},
         test::run,
     };
 

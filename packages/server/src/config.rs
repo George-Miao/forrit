@@ -14,7 +14,7 @@ use crate::util::MapOrVec;
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
 const MINUTE: Duration = Duration::from_secs(60);
-const ENV_PREFIX: &str = "FORRIT_";
+const ENV_PREFIX: &str = "FORRIT.";
 
 pub fn init_config(dir: Option<impl AsRef<Utf8Path>>) -> Result<&'static Config, figment::Error> {
     CONFIG.get_or_try_init(|| {
@@ -38,7 +38,7 @@ pub fn init_config(dir: Option<impl AsRef<Utf8Path>>) -> Result<&'static Config,
                 .merge(Yaml::file(conf_dir.join("config.yaml")))
                 .merge(Json::file(conf_dir.join("config.json")))
         }
-        .merge(Env::prefixed(ENV_PREFIX).split('_'))
+        .merge(Env::prefixed(ENV_PREFIX).split('.'))
         .extract()
     })
 }
@@ -85,6 +85,10 @@ pub struct IndexConfig {
     /// Enable the index, default to true
     #[serde(default = "default::enable")]
     pub enable: bool,
+
+    /// Start indexing from the beginning, default to true
+    #[serde(default = "default::resolver::index::start_at_begin")]
+    pub start_at_begin: bool,
 
     /// Interval to update the index, default to 7 days
     #[serde(with = "humantime_serde", default = "default::resolver::index::interval")]
@@ -247,9 +251,14 @@ mod default {
                 fn default() -> Self {
                     Self {
                         enable: enable(),
+                        start_at_begin: start_at_begin(),
                         interval: interval(),
                     }
                 }
+            }
+
+            pub fn start_at_begin() -> bool {
+                true
             }
 
             pub fn interval() -> Duration {

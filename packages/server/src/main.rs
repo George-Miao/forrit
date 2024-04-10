@@ -19,13 +19,14 @@ mod notifier;
 mod resolver;
 mod sourcer;
 mod subscription;
+mod test;
 mod util;
 
-//
-#[cfg(test)]
-mod test;
-
+#[cfg(not(debug_assertions))]
 const RPC_TIMEOUT: Duration = Duration::from_secs(3);
+
+#[cfg(debug_assertions)]
+const RPC_TIMEOUT: Duration = Duration::from_secs(100);
 
 const ACTOR_ERR: &str = "Actor is not running or registered";
 const SEND_ERR: &str = "Failed to send message to actor";

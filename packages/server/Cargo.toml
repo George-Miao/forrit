@@ -18,6 +18,8 @@ tmdb-api     = { workspace = true }
 tokio        = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tracing      = { workspace = true }
 url          = { workspace = true }
+tap          = { workspace = true }
+serde_json   = { workspace = true }
 
 figment            = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
 governor           = { version = "0.6.0", default-features = false, features = ["futures", "std", "quanta"] }
@@ -34,8 +36,6 @@ humantime-serde = "1.1.1"
 mod_use         = "0.2.1"
 qbit-rs         = "0.4.1"
 rss             = "2.0.6"
-serde_json      = "1.0.114"
-tap             = "1.0.1"
 thiserror       = "1.0.58"
 
 [dev-dependencies]

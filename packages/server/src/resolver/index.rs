@@ -131,7 +131,7 @@ impl Resolver {
     #[instrument(fields(title = item.title), skip(self, item))]
     async fn index_one(&self, force: bool, item: Item) -> IndexResult {
         trace!(?item);
-        let exist = self.meta.get(&item.title).await.expect("db error").is_some();
+        let exist = self.meta.get_by_title(&item.title).await.expect("db error").is_some();
         debug!(?exist);
         // Skip if already indexed
         if exist && !force {
