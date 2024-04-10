@@ -1,5 +1,5 @@
 [package]
-name    = "client"
+name    = "forrit-client"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,8 +11,12 @@ reqwest     = { workspace = true }
 serde       = { workspace = true }
 bson        = { workspace = true }
 url         = { workspace = true }
+tap         = { workspace = true }
+futures     = { workspace = true }
+serde_json  = { workspace = true }
 
-thiserror = "1.0.58"
+thiserror         = "1.0.58"
+reqwest-websocket = "0.2.0"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

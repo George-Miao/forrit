@@ -9,8 +9,12 @@ use crate::resource::*;
 pub mod error;
 mod resource;
 
+mod index;
+
+pub use crate::error::Error;
 use crate::error::Result;
 
+#[derive(Debug, Clone)]
 pub struct ForritClient {
     client: Client,
     endpoint: Url,
@@ -21,6 +25,9 @@ impl ForritClient {
         let endpoint = endpoint.try_into()?;
         if endpoint.cannot_be_a_base() {
             return Err(error::Error::UrlCannotBeABase);
+        }
+        if endpoint.scheme() != "http" && endpoint.scheme() != "https" {
+            return Err(error::Error::UrlUnsupportedSchema);
         }
         Ok(Self {
             client: Client::new(),
