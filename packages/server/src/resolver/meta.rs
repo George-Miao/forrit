@@ -1,23 +1,23 @@
-use forrit_core::model::{Meta, WithId};
-use futures::TryStreamExt;
+use forrit_core::model::{BsonMeta, Meta, WithId};
+use futures::{StreamExt, TryStreamExt};
 use mongodb::{
     bson::{doc, oid::ObjectId},
-    options::{FindOneOptions, FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
-    ClientSession, Collection, IndexModel,
+    options::{FindOneOptions, IndexOptions, UpdateModifications, UpdateOptions},
+    Collection, IndexModel,
 };
 use tap::Pipe;
 
 use crate::db::{CrudMessage, GetSet, MongoResult};
 
 #[derive(Clone, Debug)]
-pub struct MetaStorage(GetSet<Meta>);
+pub struct MetaStorage(GetSet<BsonMeta>);
 
 impl MetaStorage {
-    pub const BEGIN_INDEX: &'static str = "bson_begin";
+    pub const BEGIN_INDEX: &'static str = "begin";
     pub const TITLE_INDEX: &'static str = "title";
     pub const TMDB_ID_INDEX: &'static str = "tv.id";
 
-    pub async fn new(col: Collection<Meta>) -> MongoResult<Self> {
+    pub async fn new(col: Collection<BsonMeta>) -> MongoResult<Self> {
         let this = Self(GetSet::new(col));
         this.create_indexes().await?;
         Ok(this)
@@ -64,7 +64,12 @@ impl MetaStorage {
     }
 
     pub async fn text_search(&self, query: &str) -> MongoResult<Option<WithId<Meta>>> {
-        self.0.get.find_one(doc! { "$text": { "$search": query } }, None).await
+        self.0
+            .get
+            .find_one(doc! { "$text": { "$search": query } }, None)
+            .await?
+            .map(WithId::into)
+            .pipe(Ok)
     }
 
     pub async fn get_latest(&self, tmdb_id: u64) -> MongoResult<Option<WithId<Meta>>> {
@@ -74,19 +79,27 @@ impl MetaStorage {
                 doc! { Self::TMDB_ID_INDEX: tmdb_id as u32 },
                 FindOneOptions::builder().sort(doc! { Self::BEGIN_INDEX: -1 }).build(),
             )
-            .await
+            .await?
+            .map(WithId::into)
+            .pipe(Ok)
     }
 
-    pub async fn get(&self, title: &str) -> MongoResult<Option<WithId<Meta>>> {
+    pub async fn get_by_title(&self, title: &str) -> MongoResult<Option<WithId<Meta>>> {
         self.0
             .get
             .find_one(doc! { Self::TITLE_INDEX: title }, None)
             .await?
+            .map(WithId::into)
             .pipe(Ok)
     }
 
     pub async fn get_by_oid(&self, oid: ObjectId) -> MongoResult<Option<WithId<Meta>>> {
-        self.0.get.find_one(doc! { "_id": oid }, None).await
+        self.0
+            .get
+            .find_one(doc! { "_id": oid }, None)
+            .await?
+            .map(WithId::into)
+            .pipe(Ok)
     }
 
     pub async fn get_by_tmdb_id(&self, id: u64) -> MongoResult<Vec<WithId<Meta>>> {
@@ -94,27 +107,9 @@ impl MetaStorage {
             .get
             .find(doc! { Self::TMDB_ID_INDEX: id as u32 }, None)
             .await?
+            .map(|x| x.map(WithId::into))
             .try_collect::<Vec<_>>()
             .await
-    }
-
-    pub async fn get_with_session(
-        &self,
-        title: &str,
-        session: &mut ClientSession,
-    ) -> MongoResult<Option<WithId<Meta>>> {
-        self.0
-            .get
-            .find_with_session(
-                doc! { Self::TITLE_INDEX: title },
-                FindOptions::builder().limit(1).build(),
-                session,
-            )
-            .await?
-            .next(session)
-            .await
-            .transpose()?
-            .pipe(Ok)
     }
 
     pub async fn upsert(&self, meta: &Meta) -> MongoResult<()> {
@@ -129,4 +124,13 @@ impl MetaStorage {
             .await?;
         Ok(())
     }
+}
+
+#[test]
+fn test_meta() {
+    crate::test::run(|env| async move {
+        let m = env.col.meta.get_by_title("異種族レビュアーズ").await.unwrap().unwrap();
+        println!("{:?}", m);
+        env.col.meta.upsert(&m).await.unwrap();
+    })
 }

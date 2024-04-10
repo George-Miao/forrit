@@ -12,8 +12,8 @@ use url::Url;
 
 pub use crate::date::YearMonth;
 
+pub type Alias = Record<String, ObjectId>;
 pub type DateTime<Tz = chrono::FixedOffset> = chrono::DateTime<Tz>;
-pub type DateTime = chrono::DateTime<chrono::FixedOffset>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -74,12 +74,6 @@ pub struct Meta {
 
     pub comment: Option<String>,
 
-    #[ts(skip)]
-    pub bson_begin: Option<bson::DateTime>,
-
-    #[ts(skip)]
-    pub bson_end: Option<bson::DateTime>,
-
     pub begin: Option<DateTime>,
 
     pub end: Option<DateTime>,
@@ -92,6 +86,16 @@ pub struct Meta {
 
     #[salvo(schema(value_type = Option<Object>))]
     pub season_override: Option<SeasonOverride>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct BsonMeta {
+    pub begin: Option<bson::DateTime>,
+
+    pub end: Option<bson::DateTime>,
+
+    #[serde(flatten)]
+    pub inner: Meta,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]

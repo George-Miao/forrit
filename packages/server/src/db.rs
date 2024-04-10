@@ -66,19 +66,29 @@ impl<T> GetSet<T> {
         }
     }
 
-    pub async fn handle_crud(&self, msg: CrudMessage<T>)
+    pub async fn handle_crud<P>(&self, msg: CrudMessage<P>)
     where
         T: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync,
+        P: From<T> + Into<T>, // True for P = T
     {
         match msg {
             CrudMessage::List { callback } => {
                 debug!("handling list request");
-                async { self.get.find(None, None).await?.try_collect::<Vec<_>>().await?.pipe(Ok) }
-                    .maybe_timeout(callback.get_timeout())
-                    .await
-                    .reply(callback);
+                async {
+                    self.get
+                        .find(None, None)
+                        .await?
+                        .map(|x| x.map(WithId::into))
+                        .try_collect::<Vec<_>>()
+                        .await?
+                        .pipe(Ok)
+                }
+                .maybe_timeout(callback.get_timeout())
+                .await
+                .reply(callback);
             }
             CrudMessage::Create { data, callback } => {
+                let data = data.into();
                 debug!(?data, "handling create request");
                 async {
                     self.set
@@ -98,9 +108,11 @@ impl<T> GetSet<T> {
                 async { self.get.find_one(doc! { "_id": id }, None).await?.pipe(Ok) }
                     .maybe_timeout(callback.get_timeout())
                     .await
+                    .map(|x| x.map(|x| x.map(WithId::into)))
                     .reply(callback);
             }
             CrudMessage::Update { id, data, callback } => {
+                let data = data.into();
                 debug!(?data, %id, "handling update request");
                 async {
                     let res = self.set.replace_one(doc! { "_id": id }, data, None).await?;
@@ -115,6 +127,7 @@ impl<T> GetSet<T> {
                 async { self.get.find_one_and_delete(doc! { "_id": id }, None).await?.pipe(Ok) }
                     .maybe_timeout(callback.get_timeout())
                     .await
+                    .map(|x| x.map(|x| x.map(WithId::into)))
                     .reply(callback);
             }
         }

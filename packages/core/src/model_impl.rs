@@ -25,6 +25,17 @@ impl<K, V> ToSchema for Record<K, V> {
         ret
     }
 }
+impl<T> WithId<T> {
+    pub fn into<P>(self) -> WithId<P>
+    where
+        P: From<T>,
+    {
+        WithId {
+            id: self.id,
+            inner: self.inner.into(),
+        }
+    }
+}
 impl<T> Deref for WithId<T> {
     type Target = T;
 
@@ -185,8 +196,8 @@ impl Meta {
             sites: item.sites,
             broadcast: item.broadcast,
             comment: item.comment,
-            bson_begin: item.begin.map(crate::util::iso8601_to_bson),
-            bson_end: item.end.map(crate::util::iso8601_to_bson),
+            // bson_begin: item.begin.map(crate::util::iso8601_to_bson),
+            // bson_end: item.end.map(crate::util::iso8601_to_bson),
             begin: item.begin.map(crate::util::iso8601_to_chrono),
             end: item.end.map(crate::util::iso8601_to_chrono),
             tv,
@@ -207,6 +218,22 @@ impl Meta {
             .as_ref()
             .map(|x| x.number)
             .or_else(|| self.season.as_ref().map(|s| s.inner.season_number))
+    }
+}
+
+impl From<Meta> for BsonMeta {
+    fn from(meta: Meta) -> Self {
+        Self {
+            begin: meta.begin.map(bson::DateTime::from_chrono),
+            end: meta.end.map(bson::DateTime::from_chrono),
+            inner: meta,
+        }
+    }
+}
+
+impl From<BsonMeta> for Meta {
+    fn from(meta: BsonMeta) -> Self {
+        meta.inner
     }
 }
 
