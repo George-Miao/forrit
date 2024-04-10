@@ -56,6 +56,7 @@ pub struct Config {
     pub database: DatabaseConfig,
 
     /// Sourcer related configuration
+    #[serde(default)]
     pub sourcer: MapOrVec<SourcerConfig>,
 
     /// Downloader related configuration

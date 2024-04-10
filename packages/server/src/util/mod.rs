@@ -54,6 +54,12 @@ impl<T> MapOrVec<T> {
     }
 }
 
+impl<T> Default for MapOrVec<T> {
+    fn default() -> Self {
+        MapOrVec::Vec(Vec::new())
+    }
+}
+
 pub trait Boom {
     type Output;
     fn boom(self, msg: &str) -> Self::Output;
