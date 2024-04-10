@@ -171,7 +171,8 @@ pub struct UpdateResult {
     pub updated: bool,
 }
 
-#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
 pub struct IndexArg {
     /// Force re-indexing even if the item already exists
     #[serde(default)]
@@ -190,7 +191,8 @@ pub struct IndexArg {
     pub before: Option<YearMonth>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
 pub struct IndexStat {
     /// Indexing argument
     pub arg: IndexArg,

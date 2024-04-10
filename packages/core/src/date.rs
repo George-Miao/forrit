@@ -1,6 +1,7 @@
 use chrono::{Datelike, NaiveDate, Weekday};
 use salvo_oapi::ToSchema;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 pub trait DateExt {
     fn year(&self) -> i32 {
@@ -28,7 +29,7 @@ impl DateExt for iso8601::Date {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
 pub struct YearMonth {
     pub year: i32,
 
