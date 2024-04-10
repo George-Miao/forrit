@@ -40,6 +40,7 @@
                 just
                 openssl
                 nodePackages.typescript
+                nodePackages.pnpm
                 mongosh
                 pkg-config
               ]
