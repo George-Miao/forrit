@@ -1,5 +1,5 @@
 [workspace]
-members  = ["packages/*", "clients/rust"]
+members  = ["packages/*", "clients/rust", "integration"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -14,7 +14,7 @@ tokio        = "1.35.1"
 serde_json   = "1.0.114"
 
 forrit-core   = { version = "0.1.0", path = "packages/core" }
-forrit-client = { version = "0.1.0", path = "packages/core" }
+forrit-client = { version = "0.1.0", path = "clients/rust" }
 
 ts-rs      = { version = "8.0.0", features = ["no-serde-warnings"] }
 futures    = { version = "0.3.30", default-features = false, features = ["async-await", "std"] }

@@ -58,7 +58,7 @@ async fn main() {
         let exe = args.next()?;
         let path = args.next()?.conv::<Utf8PathBuf>();
         if !path.exists() {
-            error!("Config file does not exist. ");
+            error!(?path, "Config file does not exist. ");
             info!("Usage: {exe} <config file path>");
             exit(1)
         }
