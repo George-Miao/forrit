@@ -39,6 +39,7 @@
                 llvm.libstdcxxClang
                 just
                 openssl
+                biome
                 nodePackages.typescript
                 nodePackages.pnpm
                 mongosh
