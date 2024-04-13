@@ -1,21 +1,39 @@
-import { Alias } from './bindings/Alias'
-import { Job } from './bindings/Job'
-import { Meta } from './bindings/Meta'
-import { ObjectId } from './bindings/ObjectId'
-import { PartialEntry } from './bindings/PartialEntry'
-import { Subscription } from './bindings/Subscription'
-import { UpdateResult } from './bindings/UpdateResult'
-import { WithId } from './bindings/WithId'
+import type { Alias } from './bindings/Alias'
+import type { Job } from './bindings/Job'
+import type { Meta } from './bindings/Meta'
+import type { PartialEntry } from './bindings/PartialEntry'
+import type { Subscription } from './bindings/Subscription'
+import type { UpdateResult } from './bindings/UpdateResult'
+import type { WithId } from './bindings/WithId'
+import type { YearSeason } from './bindings/YearSeason'
 
-function impl_resource(resource: string, derivedCtor: any, baseCtors: any[]) {
-  baseCtors.forEach(baseCtor => {
-    Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
-      if (name !== 'constructor') {
-        derivedCtor.prototype[name] = baseCtor.prototype[name]
-      }
-    })
-  })
-  derivedCtor.prototype.resource = () => resource
+export type { Alias } from './bindings/Alias'
+export type { Broadcast } from './bindings/Broadcast'
+export type { Entry } from './bindings/Entry'
+export type { EntryBase } from './bindings/EntryBase'
+export type { IndexArg } from './bindings/IndexArg'
+export type { IndexStat } from './bindings/IndexStat'
+export type { ItemType } from './bindings/ItemType'
+export type { Job } from './bindings/Job'
+export type { Language } from './bindings/Language'
+export type { Meta } from './bindings/Meta'
+export type { ObjectId } from './bindings/ObjectId'
+export type { PartialEntry } from './bindings/PartialEntry'
+export type { Record } from './bindings/Record'
+export type { SeasonOverride } from './bindings/SeasonOverride'
+export type { SeasonShort } from './bindings/SeasonShort'
+export type { Site } from './bindings/Site'
+export type { Subscription } from './bindings/Subscription'
+export type { TVShowShort } from './bindings/TVShowShort'
+export type { UpdateResult } from './bindings/UpdateResult'
+export type { WithId } from './bindings/WithId'
+export type { YearMonth } from './bindings/YearMonth'
+export type { YearSeason } from './bindings/YearSeason'
+
+interface ReqArg<B = undefined> {
+  id?: string
+  body?: B
+  param?: { [key: string]: string }
 }
 
 abstract class Client {
@@ -26,102 +44,98 @@ abstract class Client {
     this.endpoint = endpoint
   }
 
-  private get_req(method: string, id?: string, body?: any): Request {
-    const url = new URL(`${this.resource()}/${id ?? ''}`, this.endpoint)
+  private get_req<T>(method: string, arg: ReqArg<T>): Request {
+    const url = new URL(`${this.resource()}/${arg.id ?? ''}`, this.endpoint)
+    if (arg.param) {
+      for (const val in Object.entries(arg.param)) {
+        url.searchParams.append(val[0], val[1])
+      }
+    }
     return new Request(url, {
       method,
-      body: JSON.stringify(body),
+      body: arg.body ? JSON.stringify(arg.body) : undefined,
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
+        Accept: 'application/json',
+      },
     })
   }
 
-  protected async request<T>(
+  protected async request<T, B = undefined>(
     method: string,
-    id?: string,
-    body?: any
+    arg?: ReqArg<B> | undefined,
   ): Promise<T> {
-    const req = this.get_req(method, id, body)
-    console.log(req)
+    const req = this.get_req(method, arg ?? {})
     return await fetch(req).then(r => r.json())
   }
 }
 
-abstract class List<T> extends Client {
-  async list(): Promise<T[]> {
-    return this.request('GET')
-  }
+function list<T>(this: Client): Promise<WithId<T>[]> {
+  return this.request('GET')
 }
 
-abstract class Create<T> extends Client {
-  async create(body: T): Promise<ObjectId> {
-    return this.request('POST', null, body)
-  }
+function create<T>(this: Client, body: T): Promise<string> {
+  return this.request('POST', { body })
 }
 
-abstract class Read<T> extends Client {
-  async get(id: string): Promise<WithId<T>> {
-    return this.request('GET', id)
-  }
+function get<T>(this: Client, id: string): Promise<WithId<T>> {
+  return this.request('GET', { id })
 }
 
-abstract class Update<T> extends Client {
-  async update(id: string, data: T): Promise<UpdateResult> {
-    return this.request('PUT', id, data)
-  }
+function update<T>(this: Client, id: string, body: T): Promise<UpdateResult> {
+  return this.request<UpdateResult, T>('PUT', { id, body })
 }
 
-abstract class Delete<T> extends Client {
-  async delete(id: string): Promise<WithId<T>> {
-    return await this.request('DELETE', id)
-  }
-}
-
-export class EntryClient extends Client {
-  list: () => Promise<PartialEntry[]>
-  get: (id: string) => Promise<WithId<PartialEntry>>
-  update: (id: string, data: PartialEntry) => Promise<UpdateResult>
-  delete: (id: string) => Promise<WithId<PartialEntry>>
-}
-
-export class MetaClient extends Client {
-  list: () => Promise<Meta[]>
-  get: (id: string) => Promise<WithId<Meta>>
-  update: (id: string, data: Meta) => Promise<UpdateResult>
-}
-
-export class AliasClient extends Client {
-  list: () => Promise<Alias[]>
-  create: (body: Alias) => Promise<ObjectId>
-  get: (id: string) => Promise<WithId<Alias>>
-  update: (id: string, data: Alias) => Promise<UpdateResult>
-  delete: (id: string) => Promise<WithId<Alias>>
-}
-
-export class SubscriptionClient extends Client {
-  list: () => Promise<Subscription[]>
-  create: (body: Subscription) => Promise<ObjectId>
-  get: (id: string) => Promise<WithId<Subscription>>
-  update: (id: string, data: Subscription) => Promise<UpdateResult>
-  delete: (id: string) => Promise<WithId<Subscription>>
-}
-
-export class JobClient extends Client {
-  list: () => Promise<Job[]>
-  get: (id: string) => Promise<WithId<Job>>
+function del<T>(this: Client, id: string): Promise<WithId<T>> {
+  return this.request('DELETE', { id })
 }
 
 // These should correspond to api declared in forrit_server::api::run
-impl_resource('entry', EntryClient, [List, Read, Update, Delete])
-impl_resource('meta', MetaClient, [List, Read, Update])
-impl_resource('alias', AliasClient, [List, Create, Read, Update, Delete])
-impl_resource('subscription', SubscriptionClient, [
-  List,
-  Create,
-  Read,
-  Update,
-  Delete
-])
-impl_resource('job', JobClient, [List, Read])
+export class EntryClient extends Client {
+  resource = () => 'entry'
+  list = list<PartialEntry>
+  get = get<PartialEntry>
+  update = update<PartialEntry>
+  delete = del<PartialEntry>
+}
+
+export class MetaClient extends Client {
+  resource = () => 'meta'
+  list = list<Meta>
+  get = get<Meta>
+  update = update<Meta>
+  get_by_season = (season?: YearSeason) =>
+    this.request<WithId<Meta>[]>('GET', {
+      id: 'season',
+      param: season
+        ? {
+            year: `${season.year}`,
+            season: season.season,
+          }
+        : undefined,
+    })
+}
+
+export class AliasClient extends Client {
+  resource = () => 'alias'
+  list = list<Alias>
+  create = create<Alias>
+  get = get<Alias>
+  update = update<Alias>
+  delete = del<Alias>
+}
+
+export class SubscriptionClient extends Client {
+  resource = () => 'subscription'
+  list = list<Subscription>
+  create = create<Subscription>
+  get = get<Subscription>
+  update = update<Subscription>
+  delete = del<Subscription>
+}
+
+export class JobClient extends Client {
+  resource = () => 'job'
+  list = list<Job>
+  get = get<Job>
+}
