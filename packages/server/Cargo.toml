@@ -25,7 +25,7 @@ figment            = { version = "0.10.15", features = ["env", "json", "toml", "
 governor           = { version = "0.6.0", default-features = false, features = ["futures", "std", "quanta"] }
 mongodb            = { version = "2.8.0", features = ["bson-chrono-0_4"] }
 ractor             = { version = "0.9.6", default-features = false, features = ["tokio_runtime"] }
-salvo              = { version = "0.66.2", features = ["oapi", "websocket"] }
+salvo              = { version = "0.66.2", features = ["oapi", "websocket", "cors", "logging"] }
 tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
 
 anitomy         = "0.2.0"

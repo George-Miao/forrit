@@ -72,7 +72,7 @@ async fn prepare(jail: &mut Jail) -> Env {
     let fmt_layer = tracing_subscriber::fmt::layer().without_time().with_filter(
         Targets::new()
             .with_default(LevelFilter::INFO)
-            // .with_target("forrit_server::resolver", LevelFilter::DEBUG)
+            .with_target("forrit_server::resolver", LevelFilter::DEBUG)
             .with_target("rustls", LevelFilter::OFF),
     );
 

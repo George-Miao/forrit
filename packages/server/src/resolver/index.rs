@@ -1,7 +1,7 @@
 use bangumi_data::{Item, ItemType};
 use chrono::Utc;
 use forrit_core::{
-    model::{IndexArg, IndexStat, Meta},
+    model::{BsonMeta, IndexArg, IndexStat, Meta},
     DateExt, IntoStream,
 };
 use futures::StreamExt;
@@ -140,14 +140,14 @@ impl Resolver {
         let result = self.match_item(&item).await;
         debug!(?result, "Item matched");
         let meta = Meta::new(item, result.tv, result.season);
-        self.meta.upsert(&meta).await.expect("db error");
+        self.meta.upsert(&meta.into()).await.expect("db error");
         if exist { IndexResult::Updated } else { IndexResult::New }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use forrit_core::model::YearMonth;
+    use forrit_core::date::YearMonth;
 
     use crate::{resolver::index::IndexArg, test::run};
 

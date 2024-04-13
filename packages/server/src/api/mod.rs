@@ -1,12 +1,15 @@
 use forrit_core::model::{Alias, Job, Meta, PartialEntry, Subscription};
 use mongodb::bson::oid::ObjectId;
-use salvo::prelude::*;
+use salvo::{
+    cors::{Any, Cors},
+    prelude::*,
+};
 use tracing::info;
 
 use crate::{
     config::get_config,
     db::FromCrud,
-    resolver::{self, index_api},
+    resolver::{self, resolver_api},
     sourcer, subscription, RPC_TIMEOUT,
 };
 
@@ -21,6 +24,12 @@ pub async fn run() {
     if config.debug {
         info!("Debug mode enabled, this may leak sensitive information and should be disabled in production.");
     }
+
+    let cors = Cors::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .into_handler();
 
     // TODO: Server log
 
@@ -38,20 +47,21 @@ pub async fn run() {
         .build();
 
     let router = Router::new()
+        .push(resolver_api())
         .push(entry_api)
         .push(meta_api)
         .push(alias_api)
         .push(sub_api)
-        .push(job_api)
-        .push(index_api());
+        .push(job_api);
 
     let doc = OpenApi::new("Forrit api", "0.1.0").merge_router(&router);
     let router = router
         .push(doc.into_router("/api-doc/openapi.json"))
         .push(Scalar::new("/api-doc/openapi.json").into_router("scalar"));
 
+    let service = Service::new(router).hoop(cors).hoop(Logger::new());
     let acceptor = TcpListener::new(config.bind).bind().await;
-    Server::new(acceptor).serve(router).await;
+    Server::new(acceptor).serve(service).await;
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, ToParameters)]
@@ -76,6 +86,7 @@ macro_rules! build_crud {
         const ACTOR_NAME: &str = <$msg as FromCrud<T>>::ACTOR_NAME;
 
         #[endpoint(operation_id = concat!("list_", $tag), tags($tag))]
+        #[doc = concat!("List ", $tag)]
         async fn list() -> ApiResult<Json<Vec<WithId<T>>>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
@@ -86,6 +97,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("create_", $tag), tags($tag))]
+        #[doc = concat!("Create a new ", $tag)]
         async fn post(obj: JsonBody<T>) -> ApiResult<String> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
@@ -96,6 +108,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("get_", $tag, "_by_id"), tags($tag))]
+        #[doc = concat!("Create ", $tag, " by id")]
         async fn get(id: OidParam) -> ApiResult<Json<WithId<T>>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
@@ -107,6 +120,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("update_", $tag, "_by_id"), tags($tag))]
+        #[doc = concat!("Update ", $tag, " by id")]
         async fn put(id: OidParam, obj: JsonBody<T>) -> ApiResult<Json<UpdateResult>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
@@ -117,6 +131,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("delete_", $tag, "_by_id"), tags($tag))]
+        #[doc = concat!("Delete ", $tag, " by id")]
         async fn delete(id: OidParam) -> ApiResult<Json<WithId<T>>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?

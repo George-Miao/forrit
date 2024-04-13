@@ -74,9 +74,16 @@ impl RssActor {
             elements,
         };
 
+        let (meta_title, meta_id) = if let Some(meta) = resolved.meta {
+            (Some(meta.inner.title), Some(meta.id))
+        } else {
+            (None, None)
+        };
+
         Some(PartialEntry {
             base,
-            meta_id: resolved.meta.map(|x| x.id),
+            meta_title,
+            meta_id,
         })
     }
 }

@@ -6,7 +6,12 @@ use std::{cell::RefCell, ops::Deref, sync::Arc};
 
 use anitomy::{Anitomy, ElementCategory, Elements};
 use bangumi_data::Item;
-use forrit_core::model::{Alias, IndexArg, Meta, WithId};
+use chrono::Days;
+use forrit_core::{
+    date::YearSeason,
+    model::{Alias, IndexArg, Meta, WithId},
+};
+use futures::Future;
 use governor::{Quota, RateLimiter};
 // use color_eyre::eyre::Result;
 use mongodb::bson::oid::ObjectId;
@@ -31,7 +36,7 @@ mod index;
 mod meta;
 mod util;
 
-pub use api::index_api;
+pub use api::resolver_api;
 pub use meta::MetaStorage;
 
 pub type Datetime = chrono::DateTime<chrono::FixedOffset>;
@@ -97,6 +102,15 @@ pub async fn start_index(arg: IndexArg) -> IndexStatRecv {
         .expect(RECV_ERR)
 }
 
+pub async fn get_by_season(season: Option<YearSeason>) -> Vec<WithId<Meta>> {
+    ractor::registry::where_is(Resolver::NAME.to_owned())
+        .as_ref()
+        .expect(ACTOR_ERR)
+        .pipe(|res| ractor::rpc::call(res, |port| Message::GetBySeason { season, port }, Some(RPC_TIMEOUT)))
+        .await
+        .expect(SEND_ERR)
+        .expect(RECV_ERR)
+}
 pub fn stop_index() {
     ractor::registry::where_is(Resolver::NAME.to_owned())
         .as_ref()
@@ -152,6 +166,12 @@ pub enum Message {
 
     /// Index job finished, used for internal communication
     IndexJobFinished,
+
+    /// Get bangumi's of current season
+    GetBySeason {
+        season: Option<YearSeason>,
+        port: RpcReplyPort<Vec<WithId<Meta>>>,
+    },
 
     /// CRUD operations on meta
     CrudMeta(CrudMessage<Meta>),
@@ -219,6 +239,15 @@ impl Resolver {
             config,
         }))
     }
+
+    fn dispatch<F, Fut>(&self, f: F)
+    where
+        F: FnOnce(Resolver) -> Fut,
+        Fut: Future + Send + 'static,
+        Fut::Output: Send + 'static,
+    {
+        tokio::spawn(f(self.clone()));
+    }
 }
 
 impl ResolverInner {
@@ -255,21 +284,27 @@ impl ResolverInner {
             .seasons
             .into_iter()
             .find_map(|season| {
+                info!(?season);
                 let air_date = season.inner.air_date?;
 
                 // IMDB adds a "Specials" season to shows for things like SPs and OVAs. It
                 // starts at the same time as the show. We don't want it to
                 // mock the actual first season.
                 if season.inner.name == "Specials" {
+                    debug!("Specials season, ignore");
                     return None;
                 }
                 if let Some(begin) = arg.begin {
-                    if (begin.naive_utc().date() - air_date).num_days() > 14 {
+                    // Before or after 14 days of begin date
+                    if 14 < begin.date_naive().signed_duration_since(air_date).num_days().abs() {
+                        debug!(bangumi_data = %begin.date_naive(), tmdb = %air_date, "Too far from begin date, ignore");
                         return None;
                     }
                 }
                 if let Some(end) = arg.end {
-                    if (air_date - end.naive_utc().date()).num_days().abs() > 14 {
+                    // Air after 14 days after end date
+                    if air_date > end.date_naive().checked_add_days(Days::new(14)).unwrap() {
+                        debug!("After end date, ignore");
                         return None;
                     }
                 }
@@ -362,8 +397,14 @@ impl ResolverInner {
             }
             if !title.is_mostly_ascii() {
                 // If it's not mostly ascii, search database
-                if let Some(meta) = self.meta.text_search(&title).await.expect("db error") {
+                if let Some(meta) = self.meta.text_search(title.remove_postfix()).await.expect("db error") {
                     debug!(title, "Mongo text search found");
+                    if let Some(end) = meta.end
+                        && end < chrono::Utc::now()
+                    {
+                        debug!(title, "Found meta is outdated");
+                        continue;
+                    }
                     self.alias.upsert(&title, &meta.id).await.expect("db error");
                     return ExtractResult {
                         group,
@@ -457,7 +498,6 @@ impl Actor for Resolver {
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        info!(?msg, "Resolver received message");
         match msg {
             Message::Resolve { file_name, port } => {
                 // So that resolve won't block other messages
@@ -499,8 +539,16 @@ impl Actor for Resolver {
                     j.stop()
                 }
             }
-            Message::CrudMeta(msg) => self.meta.handle_crud(msg).await,
-            Message::CrudAlias(msg) => self.alias.handle_crud(msg).await,
+            Message::GetBySeason { season, port } => self.dispatch(|this| async move {
+                let meta = this
+                    .meta
+                    .get_by_season(season.unwrap_or_default())
+                    .await
+                    .expect("db error");
+                port.send(meta).ok();
+            }),
+            Message::CrudMeta(msg) => self.dispatch(|this| async move { this.meta.handle_crud(msg).await }),
+            Message::CrudAlias(msg) => self.dispatch(|this| async move { this.alias.handle_crud(msg).await }),
         };
 
         Ok(())
@@ -509,15 +557,15 @@ impl Actor for Resolver {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        str::FromStr,
-        time::{Duration, Instant},
-    };
+    use std::time::{Duration, Instant};
 
-    use forrit_core::model::IndexArg;
+    use bangumi_data::get_by_month;
+    use forrit_core::{
+        date::{Season, YearSeason},
+        model::IndexArg,
+    };
     use ractor::Actor;
-    use tap::Pipe;
-    use tracing::{info, warn};
+    use tracing::info;
 
     use crate::{
         resolver::{crud_meta, Resolver},
@@ -534,7 +582,13 @@ mod test {
     #[test]
     fn test_match() {
         run(|env| async move {
-            let a = env.resolver.resolve(PROBLEM[1]).await;
+            let a = env
+                .resolver
+                .resolve(
+                    "[LoliHouse] 为美好的世界献上祝福！3 / Kono Subarashii Sekai ni Shukufuku wo! S3 - 01 [WebRip \
+                     1080p HEVC-10bit AAC][简繁内封字幕]",
+                )
+                .await;
             info!(?a);
         })
     }
@@ -569,28 +623,14 @@ mod test {
     #[test]
     fn test_one() {
         run(|env| async move {
-            let url = "https://acg.rip/1.xml";
-            let t = reqwest::get(url)
+            let item = get_by_month(2022, 7)
                 .await
                 .unwrap()
-                .text()
-                .await
-                .unwrap()
-                .pipe(|b| rss::Channel::from_str(&b))
-                .unwrap()
-                .items
                 .into_iter()
-                .filter_map(|x| x.title);
-            for title in t {
-                let res = env.resolver.resolve(&title).await;
-                if let Some(meta) = res.meta {
-                    let id = meta.id.to_hex();
-                    let matched = &meta.title;
-                    info!(title, id, matched);
-                } else {
-                    warn!(title, "No meta found");
-                }
-            }
+                .find(|x| x.title == "iiiあいすくりん2")
+                .unwrap();
+            let a = env.resolver.match_item(&item).await;
+            info!("{:#?}", a);
         })
     }
 }

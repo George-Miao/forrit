@@ -2,6 +2,12 @@
 
 Bangumi tracker and downloader. Split into two parts: a server and a client.
 
+## TODO
+
+- [ ] (API) Search
+- [ ] (API) Meta list by season
+- [ ] (API) Meta list by year
+
 ## Server
 
 Constantly running, fetching updates from source sites and send it to configured downloaders.

@@ -1,4 +1,4 @@
-use chrono::{Datelike, NaiveDate, Weekday};
+use chrono::{DateTime, Datelike, NaiveDate, TimeZone, Utc, Weekday};
 use salvo_oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -30,6 +30,7 @@ impl DateExt for iso8601::Date {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
 pub struct YearMonth {
     pub year: i32,
 
@@ -61,5 +62,92 @@ impl PartialOrd for YearMonth {
 impl Ord for YearMonth {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.year.cmp(&other.year).then_with(|| self.month.cmp(&other.month))
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
+pub struct YearSeason {
+    year: i32,
+    season: Season,
+}
+
+impl Default for YearSeason {
+    fn default() -> Self {
+        Self::current()
+    }
+}
+
+impl YearSeason {
+    pub fn new(year: i32, season: Season) -> Self {
+        Self { year, season }
+    }
+
+    pub fn current() -> Self {
+        let now = Utc::now();
+        let year = now.year();
+        let month = now.month();
+        let season = Season::from_month(month as _).expect("Invalid month");
+        Self { year, season }
+    }
+
+    pub fn next(&self) -> Self {
+        let (season, next_year) = self.season.next();
+        let year = if next_year { self.year + 1 } else { self.year };
+        Self { year, season }
+    }
+
+    pub fn season_num(&self) -> u8 {
+        self.season as _
+    }
+
+    /// Inclusive begin date time
+    pub fn begin(&self) -> DateTime<Utc> {
+        Utc.from_utc_datetime(&self.season.begin(self.year).and_hms_opt(0, 0, 0).expect("Invalid date"))
+    }
+
+    /// Exclusive end date time
+    pub fn end(&self) -> DateTime<Utc> {
+        self.next().begin()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[serde(rename_all = "lowercase")]
+pub enum Season {
+    Winter = 1,
+    Spring = 2,
+    Summer = 3,
+    Fall   = 4,
+}
+
+impl Season {
+    fn next(&self) -> (Self, bool) {
+        match self {
+            Self::Winter => (Self::Spring, false),
+            Self::Spring => (Self::Summer, false),
+            Self::Summer => (Self::Fall, false),
+            Self::Fall => (Self::Winter, true),
+        }
+    }
+
+    fn from_month(month0: u8) -> Option<Self> {
+        match month0 {
+            0..=2 => Some(Self::Winter),
+            3..=5 => Some(Self::Spring),
+            6..=8 => Some(Self::Summer),
+            9..=11 => Some(Self::Fall),
+            _ => None,
+        }
+    }
+
+    /// Inclusive begin date
+    pub fn begin(&self, year: i32) -> NaiveDate {
+        match self {
+            Self::Winter => NaiveDate::from_ymd_opt(year, 1, 1),
+            Self::Spring => NaiveDate::from_ymd_opt(year, 4, 1),
+            Self::Summer => NaiveDate::from_ymd_opt(year, 7, 1),
+            Self::Fall => NaiveDate::from_ymd_opt(year, 12, 1),
+        }
+        .expect("Invalid year")
     }
 }

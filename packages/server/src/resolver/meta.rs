@@ -1,7 +1,10 @@
-use forrit_core::model::{BsonMeta, Meta, WithId};
+use forrit_core::{
+    date::YearSeason,
+    model::{BsonMeta, Meta, WithId},
+};
 use futures::{StreamExt, TryStreamExt};
 use mongodb::{
-    bson::{doc, oid::ObjectId},
+    bson::{self, doc, oid::ObjectId},
     options::{FindOneOptions, IndexOptions, UpdateModifications, UpdateOptions},
     Collection, IndexModel,
 };
@@ -13,7 +16,8 @@ use crate::db::{CrudMessage, GetSet, MongoResult};
 pub struct MetaStorage(GetSet<BsonMeta>);
 
 impl MetaStorage {
-    pub const BEGIN_INDEX: &'static str = "begin";
+    pub const BEGIN_INDEX: &'static str = "bson_begin";
+    pub const END_INDEX: &'static str = "bson_end";
     pub const TITLE_INDEX: &'static str = "title";
     pub const TMDB_ID_INDEX: &'static str = "tv.id";
 
@@ -72,6 +76,30 @@ impl MetaStorage {
             .pipe(Ok)
     }
 
+    pub async fn get_by_season(&self, season: YearSeason) -> MongoResult<Vec<WithId<Meta>>> {
+        let season_begin = bson::DateTime::from(season.begin());
+        let season_end = bson::DateTime::from(season.end());
+        let before_season = doc! { "$lt": season_begin };
+        let after_season = doc! { "$gte": season_begin };
+        let within_season = doc! { "$gte": &season_begin,"$lt": &season_end,};
+
+        self.0
+            .get
+            .find(
+                doc! {
+                  "$or": [
+                    { Self::BEGIN_INDEX: &within_season },
+                    { Self::BEGIN_INDEX: &before_season, Self::END_INDEX: &after_season },
+                  ],
+                },
+                None,
+            )
+            .await?
+            .map(|x| Ok(x?.into()))
+            .try_collect::<Vec<_>>()
+            .await
+    }
+
     pub async fn get_latest(&self, tmdb_id: u64) -> MongoResult<Option<WithId<Meta>>> {
         self.0
             .get
@@ -112,7 +140,7 @@ impl MetaStorage {
             .await
     }
 
-    pub async fn upsert(&self, meta: &Meta) -> MongoResult<()> {
+    pub async fn upsert(&self, meta: &BsonMeta) -> MongoResult<()> {
         let doc = mongodb::bson::to_document(&meta).expect("Failed to convert Meta to bson Document");
         self.0
             .set
@@ -124,13 +152,4 @@ impl MetaStorage {
             .await?;
         Ok(())
     }
-}
-
-#[test]
-fn test_meta() {
-    crate::test::run(|env| async move {
-        let m = env.col.meta.get_by_title("異種族レビュアーズ").await.unwrap().unwrap();
-        println!("{:?}", m);
-        env.col.meta.upsert(&m).await.unwrap();
-    })
 }

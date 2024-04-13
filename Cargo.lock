@@ -214,9 +214,9 @@ dependencies = [
 
 [[package]]
 name = "bangumi-data"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8484390f6e55b8a48df50c840e255275bbe5582e9fef0cf213beef7f8be6fc1"
+checksum = "ffa343d09068206c5462db17129898d58c1c4c6a10c6dfc78ee88d9aeb9da4de"
 dependencies = [
  "iso8601",
  "nom",
@@ -2656,9 +2656,21 @@ version = "0.66.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88ac338861e5cd07e9bbcbe8504b11eaaeab543130c80bd972489fa0b6756af9"
 dependencies = [
+ "salvo-cors",
  "salvo-oapi",
  "salvo_core",
  "salvo_extra",
+]
+
+[[package]]
+name = "salvo-cors"
+version = "0.66.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f459a54e31b0e0db627a705519caca5bf7515e59050e3190802128394e10d548"
+dependencies = [
+ "bytes",
+ "salvo_core",
+ "tracing",
 ]
 
 [[package]]

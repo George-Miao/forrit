@@ -1,5 +1,13 @@
-use forrit_core::model::{IndexArg, IndexStat};
-use salvo::{oapi::extract::JsonBody, prelude::*, websocket::Message};
+use forrit_core::{
+    date::{Season, YearSeason},
+    model::{IndexArg, IndexStat, Meta, WithId},
+};
+use salvo::{
+    oapi::extract::{JsonBody, QueryParam},
+    prelude::*,
+    websocket::Message,
+};
+use tap::Pipe;
 
 /// Subscribe to index status updates
 #[endpoint(tags("index"))]
@@ -47,10 +55,20 @@ async fn stop_index() -> StatusCode {
     StatusCode::NO_CONTENT
 }
 
-pub fn index_api() -> Router {
-    Router::with_path("index")
-        .get(get_index)
-        .post(start_index)
-        .delete(stop_index)
-        .push(Router::with_path("subscribe").goal(subscribe))
+#[endpoint(tags("meta"))]
+async fn by_season(year: QueryParam<i32, false>, season: QueryParam<Season, false>) -> Json<Vec<WithId<Meta>>> {
+    let param = try { YearSeason::new(year.into_inner()?, season.into_inner()?) };
+    super::get_by_season(param).await.pipe(Json)
+}
+
+pub fn resolver_api() -> Router {
+    Router::new()
+        .push(Router::with_path("meta/season").get(by_season))
+        .push(
+            Router::with_path("index")
+                .get(get_index)
+                .post(start_index)
+                .delete(stop_index)
+                .push(Router::with_path("subscribe").goal(subscribe)),
+        )
 }

@@ -10,7 +10,7 @@ use tmdb_api::tvshow::{SeasonShort, TVShowShort};
 use ts_rs::TS;
 use url::Url;
 
-pub use crate::date::YearMonth;
+use crate::date::YearMonth;
 
 pub type Alias = Record<String, ObjectId>;
 pub type DateTime<Tz = chrono::FixedOffset> = chrono::DateTime<Tz>;
@@ -69,7 +69,8 @@ pub struct Meta {
     #[salvo(schema(value_type = Vec<Object>))]
     pub sites: Vec<Site>,
 
-    #[salvo(schema(value_type = Option<Object>))]
+    #[salvo(schema(value_type = Option<String>))]
+    #[ts(as = "Option<String>")]
     pub broadcast: Option<Broadcast>,
 
     pub comment: Option<String>,
@@ -90,9 +91,9 @@ pub struct Meta {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct BsonMeta {
-    pub begin: Option<bson::DateTime>,
+    pub bson_begin: Option<bson::DateTime>,
 
-    pub end: Option<bson::DateTime>,
+    pub bson_end: Option<bson::DateTime>,
 
     #[serde(flatten)]
     pub inner: Meta,
@@ -124,7 +125,9 @@ pub struct PartialEntry {
     #[serde(flatten)]
     pub base: EntryBase,
 
-    #[salvo(schema(value_type = Option<String>))]
+    pub meta_title: Option<String>,
+
+    #[salvo(schema(value_type = Option<ObjectIdSchema>))]
     #[ts(as = "Option<OidExtJson>")]
     pub meta_id: Option<ObjectId>,
 }

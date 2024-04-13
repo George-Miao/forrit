@@ -1,4 +1,4 @@
-mod date;
+pub mod date;
 pub mod model;
 mod model_impl;
 mod util;

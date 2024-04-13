@@ -196,8 +196,6 @@ impl Meta {
             sites: item.sites,
             broadcast: item.broadcast,
             comment: item.comment,
-            // bson_begin: item.begin.map(crate::util::iso8601_to_bson),
-            // bson_end: item.end.map(crate::util::iso8601_to_bson),
             begin: item.begin.map(crate::util::iso8601_to_chrono),
             end: item.end.map(crate::util::iso8601_to_chrono),
             tv,
@@ -221,11 +219,25 @@ impl Meta {
     }
 }
 
+impl Deref for BsonMeta {
+    type Target = Meta;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for BsonMeta {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
 impl From<Meta> for BsonMeta {
     fn from(meta: Meta) -> Self {
         Self {
-            begin: meta.begin.map(bson::DateTime::from_chrono),
-            end: meta.end.map(bson::DateTime::from_chrono),
+            bson_begin: meta.begin.map(bson::DateTime::from_chrono),
+            bson_end: meta.end.map(bson::DateTime::from_chrono),
             inner: meta,
         }
     }
