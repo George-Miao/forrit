@@ -1,5 +1,6 @@
 import type { Alias } from './bindings/Alias'
 import type { Job } from './bindings/Job'
+import type { ListResult } from './bindings/ListResult'
 import type { Meta } from './bindings/Meta'
 import type { PartialEntry } from './bindings/PartialEntry'
 import type { Subscription } from './bindings/Subscription'
@@ -9,6 +10,7 @@ import type { YearSeason } from './bindings/YearSeason'
 
 export type { Alias } from './bindings/Alias'
 export type { Broadcast } from './bindings/Broadcast'
+export type { DirectedCursor } from './bindings/DirectedCursor'
 export type { Entry } from './bindings/Entry'
 export type { EntryBase } from './bindings/EntryBase'
 export type { IndexArg } from './bindings/IndexArg'
@@ -16,10 +18,13 @@ export type { IndexStat } from './bindings/IndexStat'
 export type { ItemType } from './bindings/ItemType'
 export type { Job } from './bindings/Job'
 export type { Language } from './bindings/Language'
+export type { ListResult } from './bindings/ListResult'
 export type { Meta } from './bindings/Meta'
 export type { ObjectId } from './bindings/ObjectId'
+export type { PageInfo } from './bindings/PageInfo'
 export type { PartialEntry } from './bindings/PartialEntry'
 export type { Record } from './bindings/Record'
+export type { Season } from './bindings/Season'
 export type { SeasonOverride } from './bindings/SeasonOverride'
 export type { SeasonShort } from './bindings/SeasonShort'
 export type { Site } from './bindings/Site'
@@ -36,7 +41,7 @@ interface ReqArg<B = undefined> {
   param?: { [key: string]: string }
 }
 
-abstract class Client {
+export abstract class Client {
   protected endpoint: string
   protected resource: () => string
 
@@ -70,7 +75,7 @@ abstract class Client {
   }
 }
 
-function list<T>(this: Client): Promise<WithId<T>[]> {
+function list<T>(this: Client): Promise<ListResult<WithId<T>>> {
   return this.request('GET')
 }
 

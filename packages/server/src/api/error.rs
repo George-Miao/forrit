@@ -1,11 +1,13 @@
 use std::borrow::Cow;
 
 use humantime::Duration;
+use mongodb_cursor_pagination::CursorError;
 use salvo::{
     oapi::{self},
     prelude::*,
 };
 use thiserror::Error;
+use tracing::warn;
 
 use crate::db::{CrudError, CrudResult};
 
@@ -16,6 +18,12 @@ pub enum ApiError {
 
     #[error("Database error: {0}")]
     DatabaseError(#[from] mongodb::error::Error),
+
+    #[error("Invalid cursor")]
+    InvalidCursor,
+
+    #[error("Internal service error: {0}")]
+    InternalError(String),
 
     #[error("Internal service time out (limit: {limit})")]
     Timeout { limit: Duration },
@@ -52,16 +60,18 @@ impl ApiError {
         match self {
             ApiError::DoesNotExist { .. } => StatusCode::NOT_FOUND,
             ApiError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
+            ApiError::InvalidCursor => StatusCode::BAD_REQUEST,
         }
     }
 
     pub fn is_internal(&self) -> bool {
-        matches!(self, ApiError::DatabaseError(_))
+        matches!(self, ApiError::DatabaseError(_) | ApiError::InternalError(_))
     }
 
-    pub fn brief(&self) -> Cow<'static, str> {
-        if self.is_internal() {
+    pub fn brief(&self, debug: bool) -> Cow<'static, str> {
+        if !debug && self.is_internal() {
             "API internal error".into()
         } else {
             self.to_string().into()
@@ -71,10 +81,14 @@ impl ApiError {
 
 #[async_trait]
 impl Writer for ApiError {
-    async fn write(self, _: &mut Request, _: &mut Depot, res: &mut Response) {
+    async fn write(self, _: &mut Request, depot: &mut Depot, res: &mut Response) {
+        let debug = depot.get::<bool>("debug").copied().unwrap_or_else(|_| {
+            warn!("Debug hoop not working");
+            false
+        });
         StatusError::from_code(self.status())
             .expect("this is an error")
-            .brief(self.brief())
+            .brief(self.brief(debug))
             .cause(self)
             .render(res)
     }
@@ -84,6 +98,14 @@ impl From<CrudError> for ApiError {
     fn from(crud: CrudError) -> Self {
         match crud {
             CrudError::DatabaseError(db) => ApiError::DatabaseError(db),
+            CrudError::CursorError(e) => match e {
+                CursorError::BsonDeError(e) => ApiError::InternalError(e.to_string()),
+                CursorError::BsonSerError(e) => ApiError::InternalError(e.to_string()),
+                CursorError::BsonValueAccessError(e) => ApiError::InternalError(e.to_string()),
+                CursorError::ParseError(e) => ApiError::InternalError(e.to_string()),
+                CursorError::MongoDBError(e) => ApiError::DatabaseError(e),
+                CursorError::InvalidCursor => ApiError::InvalidCursor,
+            },
             CrudError::Timeout { limit } => ApiError::Timeout { limit: limit.into() },
         }
     }

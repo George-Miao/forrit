@@ -608,7 +608,7 @@ mod test {
 
             let l_start = Instant::now();
             info!("List started");
-            let l = crud_meta().list().await.unwrap();
+            let l = crud_meta().list(None).await.unwrap();
 
             info!(
                 "List finished: {}, used {:.2}s",

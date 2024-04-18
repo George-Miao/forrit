@@ -1,9 +1,10 @@
 use std::{
     any::{type_name, TypeId},
+    mem::ManuallyDrop,
     ops::{Deref, DerefMut},
 };
 
-use bangumi_data::Item;
+use bangumi_data::{Item, Language};
 use camino::{Utf8Path, Utf8PathBuf};
 use regex::Regex;
 use salvo_oapi::{schema, Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema};
@@ -23,6 +24,60 @@ impl<K, V> ToSchema for Record<K, V> {
         let ret = RefOr::Ref(Ref::new(format!("#/components/schemas/{}", typename)));
         components.schemas.insert(typename, schema.into());
         ret
+    }
+}
+
+impl<T> ListResult<T> {
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn convert<P>(self, conv: impl Fn(T) -> P) -> ListResult<P>
+    where
+        T: 'static,
+        P: 'static,
+    {
+        if TypeId::of::<P>() == TypeId::of::<T>() {
+            let mut old = ManuallyDrop::new(self.items);
+            // Safety: P and T are the same type, and the old Vec is leaked
+            let items = unsafe { Vec::from_raw_parts(old.as_mut_ptr().cast(), old.len(), old.capacity()) };
+            ListResult {
+                total_count: self.total_count,
+                page_info: self.page_info,
+                items,
+            }
+        } else {
+            ListResult {
+                total_count: self.total_count,
+                page_info: self.page_info,
+                items: self.items.into_iter().map(conv).collect(),
+            }
+        }
+    }
+}
+impl<T: ToSchema> ToSchema for ListResult<T> {
+    fn to_schema(components: &mut salvo_oapi::oapi::Components) -> RefOr<schema::Schema> {
+        let schema = Object::new()
+            .property("total_count", Object::new().schema_type(SchemaType::Number))
+            .required("total_count")
+            .property(
+                "page_info",
+                schema::AllOf::new().item(<PageInfo as ToSchema>::to_schema(components)),
+            )
+            .required("page_info")
+            .property("items", schema::Array::new(T::to_schema(components)))
+            .required("items");
+        components
+            .schemas
+            .insert(std::any::type_name::<ListResult<T>>().replace("::", "."), schema.into());
+        RefOr::Ref(Ref::new(format!(
+            "#/components/schemas/{}",
+            std::any::type_name::<ListResult<T>>().replace("::", ".")
+        )))
     }
 }
 impl<T> WithId<T> {
@@ -211,6 +266,31 @@ impl Meta {
             .map(String::as_str)
     }
 
+    pub fn proper_title(&self) -> &str {
+        self.title_translate
+            .get(&Language::ZhHans)
+            .or_else(|| self.title_translate.get(&Language::ZhHant))
+            .or_else(|| self.title_translate.get(&Language::Ja))
+            .and_then(|titles| titles.first())
+            .unwrap_or(&self.title)
+            .as_str()
+    }
+
+    pub fn into_proper_title(mut self) -> String {
+        self.title_translate
+            .remove(&Language::ZhHans)
+            .or_else(|| self.title_translate.remove(&Language::ZhHant))
+            .or_else(|| self.title_translate.remove(&Language::Ja))
+            .and_then(|mut titles| {
+                if titles.is_empty() {
+                    None
+                } else {
+                    Some(titles.swap_remove(0))
+                }
+            })
+            .unwrap_or(self.title)
+    }
+
     pub fn season_number(&self) -> Option<u64> {
         self.season_override
             .as_ref()
@@ -269,6 +349,7 @@ impl PartialEntry {
     pub fn into_entry(self) -> Option<Entry> {
         Some(Entry {
             base: self.base,
+            meta_title: self.meta_title?,
             meta_id: self.meta_id?,
         })
     }

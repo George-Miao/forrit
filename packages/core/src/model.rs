@@ -23,6 +23,38 @@ pub struct Record<K, V> {
     pub value: V,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
+pub enum DirectedCursor {
+    /// Use to invert the search e.g. go back a page
+    Backwards(String),
+    /// Normal direction to search
+    Forward(String),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Default, ToSchema, TS)]
+#[ts(export)]
+pub struct PageInfo {
+    /// True if there is a previous page which contains items
+    pub has_previous_page: bool,
+    /// True if there is a next page which contains items
+    pub has_next_page: bool,
+    /// Cursor to the first item of the page. Is set even when there is no
+    /// previous page.
+    pub start_cursor: Option<DirectedCursor>,
+    /// Cursor to the last item of the page. Is set even when there is no next
+    /// page.
+    pub end_cursor: Option<DirectedCursor>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Default, TS)]
+#[ts(export)]
+pub struct ListResult<T> {
+    pub total_count: u64,
+    pub page_info: PageInfo,
+    pub items: Vec<T>,
+}
+
 #[derive(TS)]
 #[ts(export)]
 #[ts(rename = "Alias")]
@@ -109,10 +141,13 @@ pub struct SeasonOverride {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
 pub struct EntryBase {
+    pub sourcer: String,
     pub guid: String,
     pub title: String,
     pub description: Option<String>,
     pub torrent: Url,
+    pub size: u64,
+    pub mime_type: String,
     pub pub_date: Option<DateTime>,
     pub link: Option<Url>,
     pub group: Option<String>,
@@ -137,6 +172,9 @@ pub struct PartialEntry {
 pub struct Entry {
     #[serde(flatten)]
     pub base: EntryBase,
+
+    pub meta_title: String,
+
     #[salvo(schema(value_type = ObjectIdSchema))]
     #[ts(as = "OidExtJson")]
     pub meta_id: ObjectId,
@@ -166,6 +204,8 @@ pub struct Subscription {
     #[ts(as = "Option<String>")]
     pub directory: Option<Utf8PathBuf>,
     pub team: Option<String>,
+    pub min_size: Option<u64>, // TODO: Implement size filter
+    pub max_size: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize, ToSchema, TS)]

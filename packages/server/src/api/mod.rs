@@ -1,3 +1,4 @@
+use forrit_config::get_config;
 use forrit_core::model::{Alias, Job, Meta, PartialEntry, Subscription};
 use mongodb::bson::oid::ObjectId;
 use salvo::{
@@ -7,7 +8,6 @@ use salvo::{
 use tracing::info;
 
 use crate::{
-    config::get_config,
     db::FromCrud,
     resolver::{self, resolver_api},
     sourcer, subscription, RPC_TIMEOUT,
@@ -16,6 +16,17 @@ use crate::{
 mod error;
 pub use error::*;
 
+struct DebugHoop {
+    debug: bool,
+}
+
+#[async_trait]
+impl Handler for DebugHoop {
+    async fn handle(&self, _: &mut Request, depot: &mut Depot, _: &mut Response, _: &mut FlowCtrl) {
+        depot.insert("debug", self.debug);
+    }
+}
+
 pub async fn run() {
     let config = &get_config().api;
     if !config.enable {
@@ -23,7 +34,7 @@ pub async fn run() {
     }
     if config.debug {
         info!("Debug mode enabled, this may leak sensitive information and should be disabled in production.");
-    }
+    };
 
     let cors = Cors::new()
         .allow_origin(Any)
@@ -59,7 +70,10 @@ pub async fn run() {
         .push(doc.into_router("/api-doc/openapi.json"))
         .push(Scalar::new("/api-doc/openapi.json").into_router("scalar"));
 
-    let service = Service::new(router).hoop(cors).hoop(Logger::new());
+    let service = Service::new(router)
+        .hoop(cors)
+        .hoop(Logger::new())
+        .hoop(DebugHoop { debug: config.debug });
     let acceptor = TcpListener::new(config.bind).bind().await;
     Server::new(acceptor).serve(service).await;
 }
@@ -71,11 +85,18 @@ pub struct OidParam {
     pub id: ObjectId,
 }
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, ToParameters)]
+#[salvo(extract(default_source(from = "param")))]
+pub struct CursorParam {
+    #[salvo(parameter(parameter_in = Path, nullable, value_type = forrit_core::model::DirectedCursor))]
+    pub cursor: Option<mongodb_cursor_pagination::DirectedCursor>,
+}
+
 macro_rules! build_crud {
     ($msg:ty, $tag:literal, $resource:ty $(,$timeout:expr)?) => {{
         use salvo::{oapi::extract::*, prelude::*};
         use tap::Pipe;
-        use forrit_core::model::{WithId, UpdateResult};
+        use forrit_core::model::{WithId, UpdateResult, ListResult};
 
         use crate::{
             api::{ApiResult, CrudResultExt, OidParam},
@@ -85,12 +106,12 @@ macro_rules! build_crud {
         type T = $resource;
         const ACTOR_NAME: &str = <$msg as FromCrud<T>>::ACTOR_NAME;
 
-        #[endpoint(operation_id = concat!("list_", $tag), tags($tag))]
+        #[endpoint(operation_id = concat!("list_", $tag),tags($tag))]
         #[doc = concat!("List ", $tag)]
-        async fn list() -> ApiResult<Json<Vec<WithId<T>>>> {
+        async fn list(param: CursorParam) -> ApiResult<Json<ListResult<WithId<T>>>> {
             CrudCall::<T, $msg>::new(ACTOR_NAME)
                 $(.timeout(Some($timeout)))?
-                .list()
+                .list(param.cursor)
                 .await?
                 .pipe(Json)
                 .pipe(Ok)

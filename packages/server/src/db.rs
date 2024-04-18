@@ -1,12 +1,12 @@
 use std::{borrow::Borrow, fmt::Debug, marker::PhantomData, time::Duration};
 
-use forrit_core::model::{Job, Record, Subscription, WithId};
-use futures::{stream::StreamExt, TryStreamExt};
+use forrit_core::model::{Job, ListResult, Record, Subscription, WithId};
 use mongodb::{
     bson::{self, doc, oid::ObjectId, Bson},
-    options::{IndexOptions, UpdateModifications, UpdateOptions},
+    options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
     Collection, IndexModel,
 };
+use mongodb_cursor_pagination::{CursorError, DirectedCursor, Pagination};
 use ractor::{rpc::CallResult, RpcReplyPort};
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
@@ -18,7 +18,7 @@ use crate::test::run;
 use crate::{
     resolver::{AliasKV, MetaStorage},
     sourcer::EntryStorage,
-    util::{MaybeReply, WithTimeout},
+    util::{MaybeReply, ToCore, WithTimeout},
     ACTOR_ERR, RECV_ERR, SEND_ERR,
 };
 
@@ -66,26 +66,31 @@ impl<T> GetSet<T> {
         }
     }
 
-    pub async fn handle_crud<P>(&self, msg: CrudMessage<P>)
+    pub async fn list(&self, cursor: Option<DirectedCursor>) -> Result<ListResult<WithId<T>>, CursorError>
     where
         T: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync,
-        P: From<T> + Into<T>, // True for P = T
+    {
+        self.get
+            .find_paginated::<WithId<T>>(None, FindOptions::builder().limit(20).build().pipe(Some), cursor)
+            .await
+            .map(|x| x.to_core())
+    }
+
+    pub async fn handle_crud<P>(&self, msg: CrudMessage<P>)
+    where
+        T: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync + 'static,
+        P: From<T> + Into<T> + 'static, // True for P = T
     {
         match msg {
-            CrudMessage::List { callback } => {
-                debug!("handling list request");
-                async {
-                    self.get
-                        .find(None, None)
+            CrudMessage::List { cursor, callback } => {
+                debug!(?cursor, "handling list request");
+                let val = try {
+                    self.list(cursor)
+                        .maybe_timeout(callback.get_timeout())
                         .await?
-                        .map(|x| x.map(WithId::into))
-                        .try_collect::<Vec<_>>()
-                        .await?
-                        .pipe(Ok)
-                }
-                .maybe_timeout(callback.get_timeout())
-                .await
-                .reply(callback);
+                        .map(|x| x.convert(|x| x.into()))?
+                };
+                let _ = callback.send(val);
             }
             CrudMessage::Create { data, callback } => {
                 let data = data.into();
@@ -138,9 +143,8 @@ impl<T> GetSet<T> {
 pub enum CrudMessage<T> {
     // TODO: pagination
     List {
-        // cursor: Option<String>,
-        // direction: Option<CursorDirections>,
-        callback: RpcReplyPort<CrudResult<Vec<WithId<T>>>>,
+        cursor: Option<DirectedCursor>,
+        callback: RpcReplyPort<CrudResult<ListResult<WithId<T>>>>,
     },
     Create {
         data: T,
@@ -172,6 +176,9 @@ pub trait FromCrud<T>: Sized {
 pub enum CrudError {
     #[error("Database error: {0}")]
     DatabaseError(#[from] mongodb::error::Error),
+
+    #[error("Pagination error: {0}")]
+    CursorError(#[from] mongodb_cursor_pagination::CursorError),
 
     #[error("Internal service time out (limit: {limit:?})")]
     Timeout { limit: Duration },
@@ -218,9 +225,12 @@ impl<R, M> CrudCall<R, M>
 where
     M: FromCrud<R> + ractor::Message,
 {
-    pub async fn list(self) -> CrudResult<Vec<WithId<R>>> {
+    pub async fn list(self, cursor: Option<DirectedCursor>) -> CrudResult<ListResult<WithId<R>>> {
         self.find_actor()
-            .call(|callback| M::from_crud(CrudMessage::List { callback }), self.timeout)
+            .call(
+                |callback| M::from_crud(CrudMessage::List { callback, cursor }),
+                self.timeout,
+            )
             .await
             .expect(SEND_ERR)
             .pipe(|res| self.handle_result(res))
@@ -306,6 +316,7 @@ impl<K, V> KV<K, V> {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn col(&self) -> &KVCollection<K, V> {
         &self.0.set
     }
@@ -314,7 +325,7 @@ impl<K, V> KV<K, V> {
 impl<K, V> KV<K, V> {
     pub async fn handle_crud(&self, msg: CrudMessage<Record<K, V>>)
     where
-        Record<K, V>: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync,
+        Record<K, V>: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync + 'static,
     {
         self.0.handle_crud(msg).await
     }
@@ -351,11 +362,14 @@ impl<K, V> KV<K, V> {
             .pipe(Ok)
     }
 
+    #[cfg(test)]
     pub async fn find_keys_by_value(&self, val: &V) -> MongoResult<Vec<K>>
     where
         K: DeserializeOwned,
         V: Serialize + DeserializeOwned,
     {
+        use futures::{stream::StreamExt, TryStreamExt};
+
         self.col()
             .find(doc! { "value": bson::to_bson(val)? }, None)
             .await?
@@ -388,4 +402,19 @@ fn test_kv() {
         let found = kv.find_keys_by_value(&1).await.unwrap();
         assert_eq!(found, vec!["test".to_owned(), "test2".to_owned()]);
     });
+}
+
+#[test]
+fn same_type() {
+    struct A {}
+
+    fn same_type<T>(_: T)
+    where
+        T: From<A> + Into<A> + 'static,
+    {
+        println!("{:?}", std::any::TypeId::of::<T>());
+        println!("{:?}", std::any::TypeId::of::<A>());
+    }
+
+    same_type(A {})
 }
