@@ -1,7 +1,7 @@
 use bangumi_data::{Item, ItemType};
 use chrono::Utc;
 use forrit_core::{
-    model::{BsonMeta, IndexArg, IndexStat, Meta},
+    model::{IndexArg, IndexStat, Meta},
     DateExt, IntoStream,
 };
 use futures::StreamExt;

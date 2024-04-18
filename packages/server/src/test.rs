@@ -3,6 +3,7 @@
 use std::num::NonZeroU32;
 
 use figment::Jail;
+use forrit_config::init_config;
 use futures::Future;
 use governor::{Quota, RateLimiter};
 use mongodb::{Client, Database};
@@ -10,7 +11,7 @@ use tokio::sync::OnceCell;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
-use crate::{config::init_config, db::Collections, resolver::Resolver, util::GovernedClient, REQ};
+use crate::{db::Collections, resolver::Resolver, util::GovernedClient, REQ};
 
 pub struct Env {
     pub db: Database,

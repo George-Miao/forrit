@@ -1,8 +1,7 @@
 use std::{borrow::Cow, sync::LazyLock};
 
+use forrit_config::RenameFormat;
 use regex::Regex;
-
-use crate::config::RenameFormat;
 
 pub fn normalize_title<'a>(title: &'a str, format: &RenameFormat) -> Cow<'a, str> {
     macro_rules! rule {
@@ -33,6 +32,7 @@ pub fn normalize_title<'a>(title: &'a str, format: &RenameFormat) -> Cow<'a, str
             let ret = match format {
                 RenameFormat::Full => format!("{pre} E{episode} {suf}").into(),
                 RenameFormat::Short => format!("E{episode}").into(),
+                _ => todo!(),
             };
             Some(ret)
         })

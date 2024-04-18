@@ -1,8 +1,6 @@
-use std::{collections::BTreeMap, fmt::Display, process::exit};
+use std::{fmt::Display, process::exit};
 
-use either::Either;
 use ractor::RpcReplyPort;
-use tap::Pipe;
 use tracing::{debug, error};
 
 mod_use::mod_use![string, tmdb, time];
@@ -69,39 +67,6 @@ impl<T, E: Display> MaybeReply for Result<T, E> {
                 debug!(%error, "Cancel reply");
             }
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde:: Deserialize)]
-#[serde(untagged)]
-pub enum MapOrVec<T> {
-    Map(BTreeMap<String, T>),
-    Vec(Vec<T>),
-}
-
-impl<T> MapOrVec<T> {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            MapOrVec::Map(map) => map.is_empty(),
-            MapOrVec::Vec(vec) => vec.is_empty(),
-        }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (String, &T)> {
-        match self {
-            MapOrVec::Map(map) => map.iter().map(|(k, v)| (k.to_owned(), v)).pipe(Either::Left),
-            MapOrVec::Vec(vec) => vec
-                .iter()
-                .enumerate()
-                .map(|(i, v)| (i.to_string(), v))
-                .pipe(Either::Right),
-        }
-    }
-}
-
-impl<T> Default for MapOrVec<T> {
-    fn default() -> Self {
-        MapOrVec::Vec(Vec::new())
     }
 }
 

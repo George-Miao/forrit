@@ -7,6 +7,7 @@ use std::{cell::RefCell, ops::Deref, sync::Arc};
 use anitomy::{Anitomy, ElementCategory, Elements};
 use bangumi_data::Item;
 use chrono::Days;
+use forrit_config::{get_config, ResolverConfig};
 use forrit_core::{
     date::YearSeason,
     model::{Alias, IndexArg, Meta, WithId},
@@ -21,7 +22,6 @@ use tmdb_api::tvshow::{search::TVShowSearch, SeasonShort, TVShowShort};
 use tracing::{debug, info, instrument, trace};
 
 use crate::{
-    config::{get_config, ResolverConfig},
     db::{Collections, CrudCall, CrudMessage, FromCrud, KV},
     resolver::{
         index::{IndexJob, IndexStatRecv},
@@ -348,6 +348,7 @@ impl ResolverInner {
 
         let res = TVShowSearch::new(t.to_owned())
             .with_include_adult(true)
+            .with_language(Some("zh".to_owned()))
             .execute_with_governor(&self.tmdb)
             .await
             .expect("Failed to search on TMDB")
@@ -560,10 +561,7 @@ mod test {
     use std::time::{Duration, Instant};
 
     use bangumi_data::get_by_month;
-    use forrit_core::{
-        date::{Season, YearSeason},
-        model::IndexArg,
-    };
+    use forrit_core::model::IndexArg;
     use ractor::Actor;
     use tracing::info;
 

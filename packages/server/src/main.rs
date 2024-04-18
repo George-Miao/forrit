@@ -4,15 +4,15 @@
 use std::{process::exit, str::FromStr, sync::LazyLock, time::Duration};
 
 use camino::Utf8PathBuf;
+use forrit_config::init_config;
 use mongodb::Client;
 use tap::Conv;
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
-use crate::{config::init_config, db::Collections, util::Boom};
+use crate::{db::Collections, util::Boom};
 
 mod api;
-mod config;
 mod db;
 mod downloader;
 mod notifier;

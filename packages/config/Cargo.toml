@@ -1,0 +1,17 @@
+[package]
+name    = "forrit-config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde   = { workspace = true }
+camino  = { workspace = true }
+tracing = { workspace = true }
+url     = { workspace = true }
+tap     = { workspace = true }
+either  = { workspace = true }
+
+dirs            = "5.0.1"
+humantime-serde = "1.1.1"
+
+figment = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }

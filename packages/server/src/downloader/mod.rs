@@ -2,16 +2,11 @@
 //!
 //! Download torrents
 
+use forrit_config::{get_config, DownloaderType};
 use forrit_core::model::Job;
 use ractor::Actor;
 
-use crate::{
-    config::{get_config, DownloaderType},
-    db::Collections,
-    downloader::qbit::QbitActor,
-    util::Boom,
-    REQ,
-};
+use crate::{db::Collections, downloader::qbit::QbitActor, util::Boom, REQ};
 pub const NAME: &str = "downloader";
 
 mod qbit;

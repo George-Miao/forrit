@@ -1,6 +1,7 @@
 use std::{borrow::Cow, time::Duration};
 
 use camino::Utf8PathBuf;
+use forrit_config::{get_config, QbittorrentConfig, RenameConfig};
 use forrit_core::IntoStream;
 use futures::{future::try_join_all, StreamExt};
 use qbit_rs::{
@@ -13,7 +14,6 @@ use tap::Pipe;
 use tracing::{debug, info, warn};
 
 use crate::{
-    config::{get_config, QbittorrentConfig, RenameConfig},
     downloader::{Job, Message},
     resolver,
     util::{normalize_title, timestamp},

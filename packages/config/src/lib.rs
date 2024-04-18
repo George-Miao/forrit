@@ -1,3 +1,5 @@
+#![feature(once_cell_try)]
+
 use std::{net::SocketAddr, num::NonZeroU32, sync::OnceLock, time::Duration};
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -9,7 +11,13 @@ use serde::{Deserialize, Serialize};
 use tracing::info;
 use url::Url;
 
-use crate::util::MapOrVec;
+mod util;
+
+/// Default values for the configuration
+mod default;
+
+use default::*;
+use util::MapOrVec;
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
@@ -73,7 +81,7 @@ pub struct ResolverConfig {
     pub tmdb_api_key: String,
 
     /// Number of requests per second
-    #[serde(default = "default::resolver::tmdb_rate_limit")]
+    #[serde(default = "resolver::tmdb_rate_limit")]
     pub tmdb_rate_limit: NonZeroU32,
 
     /// Index configuration
@@ -84,33 +92,33 @@ pub struct ResolverConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexConfig {
     /// Enable the index, default to true
-    #[serde(default = "default::enable")]
+    #[serde(default = "enable")]
     pub enable: bool,
 
     /// Start indexing from the beginning, default to true
-    #[serde(default = "default::resolver::index::start_at_begin")]
+    #[serde(default = "resolver::index::start_at_begin")]
     pub start_at_begin: bool,
 
     /// Interval to update the index, default to 7 days
-    #[serde(with = "humantime_serde", default = "default::resolver::index::interval")]
+    #[serde(with = "humantime_serde", default = "resolver::index::interval")]
     pub interval: Duration,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DatabaseConfig {
     /// URL of the mongo database, default to `mongodb://localhost:27017`
-    #[serde(default = "default::database::url")]
+    #[serde(default = "database::url")]
     pub url: String,
 
     /// Name of the database, default to `forrit`
-    #[serde(default = "default::database::database")]
+    #[serde(default = "database::database")]
     pub database: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourcerConfig {
     /// Enable the sourcer, default to true
-    #[serde(default = "default::enable")]
+    #[serde(default = "enable")]
     pub enable: bool,
 
     #[serde(flatten)]
@@ -129,12 +137,12 @@ pub struct RssConfig {
     pub url: Url,
 
     /// Interval to fetch the RSS, default to 5 minutes
-    #[serde(with = "humantime_serde", default = "default::sourcer::rss::update_interval")]
+    #[serde(with = "humantime_serde", default = "sourcer::rss::update_interval")]
     pub update_interval: Duration,
 
     /// Deny items with mime type other than `application/x-bittorrent`, default
     /// to false
-    #[serde(default = "default::sourcer::rss::deny_non_torrent")]
+    #[serde(default = "sourcer::rss::deny_non_torrent")]
     pub deny_non_torrent: bool,
 }
 
@@ -151,12 +159,12 @@ pub struct DownloaderConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenameConfig {
     /// Enable renaming, default to true
-    #[serde(default = "default::enable")]
+    #[serde(default = "enable")]
     pub enable: bool,
 
     /// Interval to check and rename the downloaded torrent, default to 5
     /// minutes
-    #[serde(with = "humantime_serde", default = "default::downloader::rename::interval")]
+    #[serde(with = "humantime_serde", default = "downloader::rename::interval")]
     pub interval: Duration,
 
     /// Rename format
@@ -194,7 +202,7 @@ pub struct TransmissionConfig {
     pub savepath: Option<Utf8PathBuf>,
 
     /// URL of the transmission API
-    #[serde(default = "default::downloader::transmission::url")]
+    #[serde(default = "downloader::transmission::url")]
     pub url: url::Url,
 
     #[serde(default, flatten)]
@@ -208,7 +216,7 @@ pub struct QbittorrentConfig {
     pub savepath: Option<Utf8PathBuf>,
 
     /// URL of the qBittorrent API
-    #[serde(default = "default::downloader::qbittorrent::url")]
+    #[serde(default = "downloader::qbittorrent::url")]
     pub url: url::Url,
 
     #[serde(flatten)]
@@ -218,139 +226,15 @@ pub struct QbittorrentConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ApiConfig {
     /// Enable the API, default to true
-    #[serde(default = "default::enable")]
+    #[serde(default = "enable")]
     pub enable: bool,
 
     /// Socket address to bind the API, default to 0.0.0.0:8080
-    #[serde(default = "default::api::bind")]
+    #[serde(default = "api::bind")]
     pub bind: SocketAddr,
 
     /// Enable debug mode, default to true in debug build, false in release
     /// build
-    #[serde(default = "default::api::debug")]
+    #[serde(default = "api::debug")]
     pub debug: bool,
-}
-
-/// Default values for the configuration
-mod default {
-    pub fn enable() -> bool {
-        true
-    }
-    pub mod resolver {
-        use std::num::NonZeroU32;
-
-        pub fn tmdb_rate_limit() -> NonZeroU32 {
-            NonZeroU32::new(40).unwrap()
-        }
-
-        pub mod index {
-            use std::time::Duration;
-
-            use crate::config::{default::enable, IndexConfig};
-
-            impl Default for IndexConfig {
-                fn default() -> Self {
-                    Self {
-                        enable: enable(),
-                        start_at_begin: start_at_begin(),
-                        interval: interval(),
-                    }
-                }
-            }
-
-            pub fn start_at_begin() -> bool {
-                true
-            }
-
-            pub fn interval() -> Duration {
-                Duration::from_secs(7 * 24 * 60 * 60)
-            }
-        }
-    }
-
-    pub mod database {
-        pub fn url() -> String {
-            "mongodb://localhost:27017".to_owned()
-        }
-
-        pub fn database() -> String {
-            "forrit".to_owned()
-        }
-    }
-
-    pub mod sourcer {
-        pub mod rss {
-            use std::time::Duration;
-
-            use crate::config::MINUTE;
-
-            pub fn update_interval() -> Duration {
-                5 * MINUTE
-            }
-
-            pub fn deny_non_torrent() -> bool {
-                false
-            }
-        }
-    }
-
-    pub mod downloader {
-        use crate::config::RenameConfig;
-
-        pub mod rename {
-            use std::time::Duration;
-
-            use crate::config::MINUTE;
-
-            pub fn interval() -> Duration {
-                5 * MINUTE
-            }
-        }
-
-        impl Default for RenameConfig {
-            fn default() -> Self {
-                RenameConfig {
-                    enable: true,
-                    interval: rename::interval(),
-                    format: Default::default(),
-                }
-            }
-        }
-
-        pub mod transmission {
-            pub fn url() -> url::Url {
-                "http://localhost:9091/transmission/rpc".parse().expect("invalid url")
-            }
-        }
-
-        pub mod qbittorrent {
-            pub fn url() -> url::Url {
-                "http://localhost:8080/".parse().expect("invalid url")
-            }
-        }
-    }
-
-    pub mod api {
-        use std::net::SocketAddr;
-
-        use crate::config::ApiConfig;
-
-        impl Default for ApiConfig {
-            fn default() -> Self {
-                Self {
-                    enable: super::enable(),
-                    bind: bind(),
-                    debug: debug(),
-                }
-            }
-        }
-
-        pub fn bind() -> SocketAddr {
-            "0.0.0.0:8080".parse().expect("invalid address")
-        }
-
-        pub fn debug() -> bool {
-            cfg!(debug_assertions)
-        }
-    }
 }

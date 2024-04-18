@@ -2,6 +2,7 @@
 //!
 //! Used to fetch updates of subtitle groups from source websites/feeds.
 
+use forrit_config::{get_config, SourcerType};
 use forrit_core::model::{PartialEntry, WithId};
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -13,7 +14,6 @@ use tap::Pipe;
 use tracing::{info, warn};
 
 use crate::{
-    config::{get_config, SourcerType},
     db::{Collections, CrudMessage, FromCrud, GetSet, MongoResult},
     util::Boom,
     REQ,
@@ -32,14 +32,14 @@ pub async fn start(db: &Collections) {
         .await
         .boom("Failed to spawn entry actor");
 
-    for (id, conf) in config.iter() {
+    for (id, conf) in config.iter("rss-") {
         if !conf.enable {
             continue;
         }
 
         match &conf.ty {
             SourcerType::Rss(rss_conf) => {
-                let actor = rss::RssActor::new(rss_conf, REQ.clone(), db.entry.clone());
+                let actor = rss::RssActor::new(rss_conf, REQ.clone(), db.entry.clone(), id.clone());
                 Actor::spawn(format!("sourcer-{id}").pipe(Some), actor, ())
                     .await
                     .boom("Failed to spawn rss actor");

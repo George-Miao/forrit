@@ -3,7 +3,6 @@ members  = ["packages/*", "clients/rust", "integration"]
 resolver = "2"
 
 [workspace.dependencies]
-
 serde        = "1.0.195"
 bangumi-data = "0.1.4"
 chrono       = "0.4.35"
@@ -12,8 +11,10 @@ tracing      = "0.1.40"
 tap          = "1.0.1"
 tokio        = "1.35.1"
 serde_json   = "1.0.114"
+either       = "1.10.0"
 
 forrit-core   = { version = "0.1.0", path = "packages/core" }
+forrit-config = { version = "0.1.0", path = "packages/config" }
 forrit-client = { version = "0.1.0", path = "clients/rust" }
 
 ts-rs      = { version = "8.0.0", features = ["no-serde-warnings"] }

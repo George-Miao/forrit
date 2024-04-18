@@ -1,4 +1,5 @@
 use chrono::DateTime;
+use forrit_config::RssConfig;
 use forrit_core::{model::EntryBase, IntoStream};
 use futures::StreamExt;
 use ractor::{concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef};
@@ -7,7 +8,6 @@ use tap::Pipe;
 use tracing::{debug, info, instrument};
 
 use crate::{
-    config::RssConfig,
     sourcer::{EntryStorage, PartialEntry, SourcerMessage},
     subscription::new_entry,
 };
@@ -16,6 +16,7 @@ pub struct RssActor {
     client: Client,
     config: &'static RssConfig,
     entry: EntryStorage,
+    name: String,
 }
 
 pub struct State {
@@ -23,8 +24,13 @@ pub struct State {
 }
 
 impl RssActor {
-    pub fn new(config: &'static RssConfig, client: Client, entry: EntryStorage) -> Self {
-        Self { client, config, entry }
+    pub fn new(config: &'static RssConfig, client: Client, entry: EntryStorage, name: String) -> Self {
+        Self {
+            client,
+            config,
+            entry,
+            name,
+        }
     }
 
     #[instrument(skip_all, fields(title = &item.title, guid = item.guid.as_ref().map(|x| &x.value)))]
@@ -43,7 +49,17 @@ impl RssActor {
         };
         let title = item.title?.to_owned();
         let closure = item.enclosure?;
-        let torrent = closure.url.parse().ok()?;
+        let Ok(torrent) = closure.url.parse() else {
+            debug!("Failed to parse torrent URL");
+            return None;
+        };
+
+        // This size is *NOT* reliable.
+        // TODO: decode the torrent file and get the size from there
+        let Ok(size) = closure.length.parse() else {
+            debug!("Failed to parse size");
+            return None;
+        };
         if closure.mime_type.as_str() != "application/x-bittorrent" {
             info!(
                 guid = guid.value,
@@ -64,18 +80,21 @@ impl RssActor {
             .collect();
 
         let base = EntryBase {
+            sourcer: self.name.clone(),
             guid: guid.value,
             link,
             description: item.description,
             title,
             pub_date,
             torrent,
+            size,
+            mime_type: closure.mime_type,
             group: resolved.group,
             elements,
         };
 
         let (meta_title, meta_id) = if let Some(meta) = resolved.meta {
-            (Some(meta.inner.title), Some(meta.id))
+            (Some(meta.inner.into_proper_title()), Some(meta.id))
         } else {
             (None, None)
         };
