@@ -1,5 +1,8 @@
 import type { Alias } from './bindings/Alias'
+import type { DirectedCursor } from './bindings/DirectedCursor'
+import type { Entry } from './bindings/Entry'
 import type { Job } from './bindings/Job'
+import type { ListParam } from './bindings/ListParam'
 import type { ListResult } from './bindings/ListResult'
 import type { Meta } from './bindings/Meta'
 import type { PartialEntry } from './bindings/PartialEntry'
@@ -9,8 +12,8 @@ import type { WithId } from './bindings/WithId'
 import type { YearSeason } from './bindings/YearSeason'
 
 export type { Alias } from './bindings/Alias'
-export type { Broadcast } from './bindings/Broadcast'
 export type { DirectedCursor } from './bindings/DirectedCursor'
+export type { Direction } from './bindings/Direction'
 export type { Entry } from './bindings/Entry'
 export type { EntryBase } from './bindings/EntryBase'
 export type { IndexArg } from './bindings/IndexArg'
@@ -18,6 +21,7 @@ export type { IndexStat } from './bindings/IndexStat'
 export type { ItemType } from './bindings/ItemType'
 export type { Job } from './bindings/Job'
 export type { Language } from './bindings/Language'
+export type { ListParam } from './bindings/ListParam'
 export type { ListResult } from './bindings/ListResult'
 export type { Meta } from './bindings/Meta'
 export type { ObjectId } from './bindings/ObjectId'
@@ -35,10 +39,14 @@ export type { WithId } from './bindings/WithId'
 export type { YearMonth } from './bindings/YearMonth'
 export type { YearSeason } from './bindings/YearSeason'
 
+export const get_cursor = (cursor?: DirectedCursor) =>
+  cursor ? ('Forward' in cursor ? cursor.Forward : cursor.Backwards) : null
+
 interface ReqArg<B = undefined> {
   id?: string
   body?: B
-  param?: { [key: string]: string }
+  sub_resource?: string
+  param?: { [key: string]: unknown }
 }
 
 export abstract class Client {
@@ -50,10 +58,16 @@ export abstract class Client {
   }
 
   private get_req<T>(method: string, arg: ReqArg<T>): Request {
-    const url = new URL(`${this.resource()}/${arg.id ?? ''}`, this.endpoint)
+    const url = new URL(this.resource(), this.endpoint)
+    if (arg.id) {
+      url.pathname += `/${arg.id}`
+    }
+    if (arg.sub_resource) {
+      url.pathname += `/${arg.sub_resource}`
+    }
     if (arg.param) {
       for (const val in Object.entries(arg.param)) {
-        url.searchParams.append(val[0], val[1])
+        url.searchParams.append(val[0], val[1].toString())
       }
     }
     return new Request(url, {
@@ -75,8 +89,20 @@ export abstract class Client {
   }
 }
 
-function list<T>(this: Client): Promise<ListResult<WithId<T>>> {
-  return this.request('GET')
+const list_subresource = <T>(sub_resource: string) =>
+  function (
+    this: Client,
+    id: string,
+    param?: ListParam,
+  ): Promise<ListResult<WithId<T>>> {
+    return this.request('GET', { id, param, sub_resource })
+  }
+
+function list<T>(
+  this: Client,
+  param?: ListParam,
+): Promise<ListResult<WithId<T>>> {
+  return this.request('GET', { param })
 }
 
 function create<T>(this: Client, body: T): Promise<string> {
@@ -112,13 +138,10 @@ export class MetaClient extends Client {
   get_by_season = (season?: YearSeason) =>
     this.request<WithId<Meta>[]>('GET', {
       id: 'season',
-      param: season
-        ? {
-            year: `${season.year}`,
-            season: season.season,
-          }
-        : undefined,
+      param: season,
     })
+  list_entry = list_subresource<Entry>('entry')
+  list_alias = list_subresource<Alias>('alias')
 }
 
 export class AliasClient extends Client {
