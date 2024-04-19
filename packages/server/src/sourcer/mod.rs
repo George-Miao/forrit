@@ -3,7 +3,7 @@
 //! Used to fetch updates of subtitle groups from source websites/feeds.
 
 use forrit_config::{get_config, SourcerType};
-use forrit_core::model::{BsonEntry, CursorParam, ListResult, PartialEntry, WithId};
+use forrit_core::model::{BsonEntry, ListParam, ListResult, PartialEntry, WithId};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::{IndexOptions, UpdateModifications, UpdateOptions},
@@ -103,7 +103,7 @@ impl EntryStorage {
     pub async fn list_by_meta_id(
         &self,
         meta_id: ObjectId,
-        param: CursorParam,
+        param: ListParam,
     ) -> CrudResult<ListResult<WithId<PartialEntry>>> {
         self.0
             .list_by(

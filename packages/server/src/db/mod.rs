@@ -1,18 +1,16 @@
 use std::{borrow::Borrow, fmt::Debug};
 
-use forrit_core::model::{BsonMeta, CursorParam, Job, ListResult, Meta, Record, Subscription, WithId};
+use forrit_core::model::{BsonMeta, Job, ListParam, ListResult, Meta, Record, Subscription, WithId};
 use mongodb::{
     bson::{self, doc, oid::ObjectId, Bson, Document},
     options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
     Collection, IndexModel,
 };
-use mongodb_cursor_pagination::Pagination;
+use mongodb_cursor_pagination::{CursorError, Pagination};
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
 use thiserror::Error;
 
-#[cfg(test)]
-use crate::test::run;
 use crate::{
     resolver::{AliasKV, MetaStorage},
     sourcer::EntryStorage,
@@ -94,7 +92,7 @@ where
         &self,
         filter: impl Into<Option<Document>>,
         sort: impl Into<Option<Document>>,
-        param: CursorParam,
+        param: ListParam,
     ) -> CrudResult<ListResult<WithId<R>>>
     where
         R: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync,
@@ -160,19 +158,12 @@ impl<K, V> KV<K, V> {
         Ok(())
     }
 
-    #[cfg(test)]
     pub fn col(&self) -> &KVCollection<K, V> {
         &self.0.set
     }
 }
 
 impl<K, V> KV<K, V> {
-    // pub async fn handle_crud(&self, msg: CrudMessage<Record<K, V>>)
-    // where
-    //     Record<K, V>: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync
-    // + 'static, { self.0.handle_crud(msg).await
-    // }
-
     pub async fn upsert(&self, key: &K, value: &V) -> MongoResult<Option<ObjectId>>
     where
         K: Serialize,
@@ -205,20 +196,13 @@ impl<K, V> KV<K, V> {
             .pipe(Ok)
     }
 
-    #[cfg(test)]
-    pub async fn find_keys_by_value(&self, val: &V) -> MongoResult<Vec<K>>
+    pub async fn list_keys_by_value(&self, val: &V, param: ListParam) -> CrudResult<ListResult<WithId<Record<K, V>>>>
     where
-        K: DeserializeOwned,
-        V: Serialize + DeserializeOwned,
+        K: Serialize + DeserializeOwned + Debug + Unpin + Send + Sync + 'static,
+        V: Serialize + DeserializeOwned + Debug + Unpin + Send + Sync + 'static,
     {
-        use futures::{stream::StreamExt, TryStreamExt};
-
-        self.col()
-            .find(doc! { "value": bson::to_bson(val)? }, None)
-            .await?
-            .map(|res| res.map(|rec| rec.key))
-            .try_collect()
-            .await
+        let value = bson::to_bson(val).map_err(|e| CrudError::CursorError(CursorError::BsonSerError(e)))?;
+        self.0.list_by(doc! { "value": value }, None, param).await
     }
 
     pub async fn delete(&self, key: &K) -> MongoResult<bool>
@@ -231,33 +215,4 @@ impl<K, V> KV<K, V> {
             .await
             .map(|res| res.deleted_count != 0)
     }
-}
-
-#[test]
-fn test_kv() {
-    run(|env| async move {
-        let kv = KV::new(env.db.collection("alias")).await.unwrap();
-
-        kv.upsert(&"test".to_owned(), &1).await.unwrap();
-        kv.upsert(&"test".to_owned(), &1).await.unwrap();
-        kv.upsert(&"test2".to_owned(), &1).await.unwrap();
-
-        let found = kv.find_keys_by_value(&1).await.unwrap();
-        assert_eq!(found, vec!["test".to_owned(), "test2".to_owned()]);
-    });
-}
-
-#[test]
-fn same_type() {
-    struct A {}
-
-    fn same_type<T>(_: T)
-    where
-        T: From<A> + Into<A> + 'static,
-    {
-        println!("{:?}", std::any::TypeId::of::<T>());
-        println!("{:?}", std::any::TypeId::of::<A>());
-    }
-
-    same_type(A {})
 }

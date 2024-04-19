@@ -11,7 +11,7 @@ macro_rules! impl_delegate_crud {
     ($($index:expr)?) => {
         async fn list(
             &self,
-            param: forrit_core::model::CursorParam,
+            param: forrit_core::model::ListParam,
         ) -> crate::db::CrudResult<forrit_core::model::ListResult<WithId<Self::Resource>>> {
             #[allow(unused_mut, unused_assignments)]
             let mut sort = None;
@@ -58,7 +58,7 @@ pub(crate) trait CrudHandler {
     type Resource;
     type Shim: Wrapping<Self::Resource>;
 
-    async fn list(&self, param: CursorParam) -> CrudResult<ListResult<WithId<Self::Resource>>>;
+    async fn list(&self, param: ListParam) -> CrudResult<ListResult<WithId<Self::Resource>>>;
     async fn create(&self, data: Self::Resource) -> CrudResult<ObjectId>;
     async fn get(&self, id: ObjectId) -> CrudResult<Option<WithId<Self::Resource>>>;
     async fn update(&self, id: ObjectId, data: Self::Resource) -> CrudResult<UpdateResult>;
@@ -74,7 +74,7 @@ where
     type Resource = G;
     type Shim = S;
 
-    async fn list(&self, param: CursorParam) -> CrudResult<ListResult<WithId<Self::Resource>>> {
+    async fn list(&self, param: ListParam) -> CrudResult<ListResult<WithId<Self::Resource>>> {
         self.list_by(None, None, param).await
     }
 

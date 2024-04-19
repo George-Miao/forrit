@@ -12,17 +12,19 @@ tap          = "1.0.1"
 tokio        = "1.35.1"
 serde_json   = "1.0.114"
 either       = "1.10.0"
+salvo_core   = "0.67.0"
 
 forrit-core   = { version = "0.1.0", path = "packages/core" }
 forrit-config = { version = "0.1.0", path = "packages/config" }
 forrit-client = { version = "0.1.0", path = "clients/rust" }
 
-ts-rs      = { version = "8.0.0", features = ["no-serde-warnings"] }
-futures    = { version = "0.3.30", default-features = false, features = ["async-await", "std"] }
-bson       = { version = "2.9.0", features = ["chrono"] }
-salvo-oapi = { version = "0.66.2", features = ["chrono"] }
-tmdb-api   = { version = "0.7", git = "https://github.com/George-Miao/tmdb-api.git", rev = "af274c0" }
-iso8601    = { version = "0.6.1", features = ["chrono"] }
-camino     = { version = "1.1.6", features = ["serde", "serde1"] }
-url        = { version = "2.5.0", features = ["serde"] }
-reqwest    = { version = "0.11.23", features = ["json"] }
+ts-rs                     = { version = "8.0.0", features = ["no-serde-warnings"] }
+futures                   = { version = "0.3.30", default-features = false, features = ["async-await", "std"] }
+bson                      = { version = "2.9.0", features = ["chrono"] }
+salvo-oapi                = { version = "0.67.0", features = ["chrono"] }
+tmdb-api                  = { version = "0.7", git = "https://github.com/George-Miao/tmdb-api.git", rev = "af274c0" }
+iso8601                   = { version = "0.6.1", features = ["chrono"] }
+camino                    = { version = "1.1.6", features = ["serde", "serde1"] }
+url                       = { version = "2.5.0", features = ["serde"] }
+reqwest                   = { version = "0.11.23", features = ["json"] }
+mongodb-cursor-pagination = { version = "1.0.0-rc.1", git = "https://github.com/George-Miao/mongodb-cursor-pagination.git" }

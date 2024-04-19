@@ -14,7 +14,7 @@ use ts_rs::TS;
 
 use crate::model::*;
 
-impl CursorParam {
+impl ListParam {
     pub fn into_cursor(self) -> Option<mongodb_cursor_pagination::DirectedCursor> {
         Some(match self.direction {
             Direction::Forward => mongodb_cursor_pagination::DirectedCursor::Forward(self.cursor?),

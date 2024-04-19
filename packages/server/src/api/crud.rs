@@ -4,7 +4,7 @@ macro_rules! build_crud {
     ($handler:ty, $tag:literal $(,)?) => {{
         use std::{fmt::Debug, marker::PhantomData};
 
-        use forrit_core::model::{CursorParam, ListResult, UpdateResult, WithId};
+        use forrit_core::model::{ListParam, ListResult, UpdateResult, WithId};
         use mongodb::bson::doc;
         use salvo::{
             oapi::{endpoint, extract::JsonBody},
@@ -27,7 +27,7 @@ macro_rules! build_crud {
 
         #[endpoint(operation_id = concat!("list_", $tag),tags($tag))]
         #[doc = "List with pagination"]
-        async fn list(depot: &mut Depot, param: CursorParam) -> ApiResult<Json<ListResult<WithId<R>>>> {
+        async fn list(depot: &mut Depot, param: ListParam) -> ApiResult<Json<ListResult<WithId<R>>>> {
             <$handler as CrudHandler>::list(obtain(depot), param)
                 .await
                 .map(Json)

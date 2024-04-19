@@ -1,6 +1,6 @@
 use forrit_core::{
     date::{Season, YearSeason},
-    model::{IndexArg, IndexStat, Meta, WithId},
+    model::{Alias, IndexArg, IndexStat, ListParam, ListResult, Meta, PartialEntry, WithId},
 };
 use salvo::{
     oapi::extract::{JsonBody, QueryParam},
@@ -8,6 +8,12 @@ use salvo::{
     websocket::Message,
 };
 use tap::Pipe;
+
+use crate::{
+    api::{ApiResult, OidParam},
+    resolver::AliasKV,
+    sourcer::EntryStorage,
+};
 
 /// Subscribe to index status updates
 #[endpoint(tags("index"))]
@@ -35,7 +41,9 @@ async fn subscribe(req: &mut Request, res: &mut Response) -> Result<(), StatusEr
         .await
 }
 
-/// Get current index status, returns `null` if no index job is running
+/// Get current index status
+///
+/// This API returns `null` if no index job is running
 #[endpoint(tags("index"))]
 async fn get_index() -> Json<Option<IndexStat>> {
     Json(try { super::get_index().await?.snapshot() })
@@ -55,15 +63,44 @@ async fn stop_index() -> StatusCode {
     StatusCode::NO_CONTENT
 }
 
+/// Get all meta by season
 #[endpoint(tags("meta"))]
 async fn by_season(year: QueryParam<i32, false>, season: QueryParam<Season, false>) -> Json<Vec<WithId<Meta>>> {
     let param = try { YearSeason::new(year.into_inner()?, season.into_inner()?) };
     super::get_by_season(param).await.pipe(Json)
 }
 
+/// Get all entries of a meta
+#[endpoint(tags("meta"))]
+async fn get_entry(
+    pod: &mut Depot,
+    id: OidParam,
+    param: ListParam,
+) -> ApiResult<Json<ListResult<WithId<PartialEntry>>>> {
+    pod.obtain::<EntryStorage>()
+        .expect("missing EntryStorage")
+        .list_by_meta_id(id.id, param)
+        .await?
+        .pipe(Json)
+        .pipe(Ok)
+}
+
+/// Get all aliases of a meta
+#[endpoint(tags("meta"))]
+async fn get_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Alias>>>> {
+    pod.obtain::<AliasKV>()
+        .expect("missing AliasKV")
+        .list_keys_by_value(&id.id, param)
+        .await?
+        .pipe(Json)
+        .pipe(Ok)
+}
+
 pub fn resolver_api() -> Router {
     Router::new()
         .push(Router::with_path("meta/season").get(by_season))
+        .push(Router::with_path("meta/<id>/entry").get(get_entry))
+        .push(Router::with_path("meta/<id>/alias").get(get_alias))
         .push(
             Router::with_path("index")
                 .get(get_index)

@@ -283,7 +283,7 @@ mod mongodb_pagination {
 
     #[derive(Debug, Clone, serde::Deserialize, ToSchema, ToParameters)]
     #[salvo(parameters(default_parameter_in = Query))]
-    pub struct CursorParam {
+    pub struct ListParam {
         /// Number of items in a page
         #[salvo(parameter(default = "20"))]
         #[serde(default = "default_per_page")]

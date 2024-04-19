@@ -138,6 +138,7 @@ impl Actor for RssActor {
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             SourcerMessage::Update => {
+                debug!(actor = self.name, "Updating RSS");
                 let bytes = self.client.get(self.config.url.clone()).send().await?.bytes().await?;
 
                 rss::Channel::read_from(&bytes[..])?
