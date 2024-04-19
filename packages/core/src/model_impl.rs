@@ -355,7 +355,7 @@ impl PartialEntry {
     }
 }
 impl Job {
-    pub fn path(&self, meta: &WithId<Meta>, savepath: impl AsRef<Utf8Path>) -> Utf8PathBuf {
+    pub fn get_path(&self, meta: &WithId<Meta>, savepath: impl AsRef<Utf8Path>) -> Utf8PathBuf {
         let name = self
             .directory_override
             .as_ref()

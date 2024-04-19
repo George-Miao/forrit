@@ -1,9 +1,8 @@
 use std::{fmt::Display, process::exit};
 
-use ractor::RpcReplyPort;
-use tracing::{debug, error};
+use tracing::error;
 
-mod_use::mod_use![string, tmdb, time];
+mod_use::mod_use![string, tmdb, time, actor];
 
 pub trait ToCore {
     type Core;
@@ -46,26 +45,6 @@ impl<T> ToCore for mongodb_cursor_pagination::FindResult<T> {
             total_count: self.total_count,
             page_info: self.page_info.to_core(),
             items: self.items,
-        }
-    }
-}
-
-pub trait MaybeReply {
-    type Item;
-    fn reply(self, callback: RpcReplyPort<Self::Item>);
-}
-
-impl<T, E: Display> MaybeReply for Result<T, E> {
-    type Item = T;
-
-    fn reply(self, callback: RpcReplyPort<Self::Item>) {
-        match self {
-            Ok(t) => {
-                callback.send(t).ok();
-            }
-            Err(error) => {
-                debug!(%error, "Cancel reply");
-            }
         }
     }
 }

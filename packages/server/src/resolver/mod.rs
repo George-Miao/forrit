@@ -10,7 +10,7 @@ use chrono::Days;
 use forrit_config::{get_config, ResolverConfig};
 use forrit_core::{
     date::YearSeason,
-    model::{Alias, IndexArg, Meta, WithId},
+    model::{IndexArg, Meta, WithId},
 };
 use futures::Future;
 use governor::{Quota, RateLimiter};
@@ -22,21 +22,23 @@ use tmdb_api::tvshow::{search::TVShowSearch, SeasonShort, TVShowShort};
 use tracing::{debug, info, instrument, trace};
 
 use crate::{
-    db::{Collections, CrudCall, CrudMessage, FromCrud, KV},
+    db::{Collections, KV},
     resolver::{
         index::{IndexJob, IndexStatRecv},
         util::StrExt,
     },
     util::{Boom, CommandExt, GovernedClient},
-    ACTOR_ERR, RECV_ERR, REQ, RPC_TIMEOUT, SEND_ERR,
+    REQ,
 };
 
 mod api;
+mod call;
 mod index;
 mod meta;
 mod util;
 
 pub use api::resolver_api;
+pub use call::*;
 pub use meta::MetaStorage;
 
 pub type Datetime = chrono::DateTime<chrono::FixedOffset>;
@@ -63,72 +65,6 @@ pub async fn start(db: &Collections) {
     Actor::spawn(Some(Resolver::NAME.to_owned()), resolver, ())
         .await
         .boom("Failed to spawn resolver actor");
-}
-
-/// Resolve file name and match it to a meta entry.
-pub async fn resolve(file_name: String) -> ExtractResult {
-    ractor::registry::where_is(Resolver::NAME.to_owned())
-        .as_ref()
-        .expect(ACTOR_ERR)
-        .pipe(|res| ractor::rpc::call(res, |port| Message::Resolve { file_name, port }, None))
-        .await
-        .expect(SEND_ERR)
-        .expect(RECV_ERR)
-}
-
-pub async fn get_index() -> Option<IndexStatRecv> {
-    ractor::registry::where_is(Resolver::NAME.to_owned())
-        .as_ref()
-        .expect(ACTOR_ERR)
-        .pipe(|res| ractor::rpc::call(res, Message::GetIndexJob, Some(RPC_TIMEOUT)))
-        .await
-        .expect(SEND_ERR)
-        .expect(RECV_ERR)
-}
-
-pub async fn start_index(arg: IndexArg) -> IndexStatRecv {
-    ractor::registry::where_is(Resolver::NAME.to_owned())
-        .as_ref()
-        .expect(ACTOR_ERR)
-        .pipe(|res| {
-            ractor::rpc::call(
-                res,
-                |port| Message::StartIndexJob { arg, port: Some(port) },
-                Some(RPC_TIMEOUT),
-            )
-        })
-        .await
-        .expect(SEND_ERR)
-        .expect(RECV_ERR)
-}
-
-pub async fn get_by_season(season: Option<YearSeason>) -> Vec<WithId<Meta>> {
-    ractor::registry::where_is(Resolver::NAME.to_owned())
-        .as_ref()
-        .expect(ACTOR_ERR)
-        .pipe(|res| ractor::rpc::call(res, |port| Message::GetBySeason { season, port }, Some(RPC_TIMEOUT)))
-        .await
-        .expect(SEND_ERR)
-        .expect(RECV_ERR)
-}
-pub fn stop_index() {
-    ractor::registry::where_is(Resolver::NAME.to_owned())
-        .as_ref()
-        .expect(ACTOR_ERR)
-        .send_message(Message::StopIndexJob)
-        .expect(SEND_ERR)
-}
-
-fn index_finished() {
-    ractor::registry::where_is(Resolver::NAME.to_owned())
-        .as_ref()
-        .expect(ACTOR_ERR)
-        .send_message(Message::IndexJobFinished)
-        .expect(SEND_ERR)
-}
-
-pub fn crud_meta() -> CrudCall<Meta, Message> {
-    CrudCall::new(Resolver::NAME)
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -173,29 +109,11 @@ pub enum Message {
         port: RpcReplyPort<Vec<WithId<Meta>>>,
     },
 
-    /// CRUD operations on meta
-    CrudMeta(CrudMessage<Meta>),
-
-    /// CRUD operations on alias
-    CrudAlias(CrudMessage<Alias>),
-}
-
-impl FromCrud<Meta> for Message {
-    const ACTOR_NAME: &'static str = Resolver::NAME;
-    const RESOURCE_NAME: &'static str = "meta";
-
-    fn from_crud(msg: CrudMessage<Meta>) -> Self {
-        Self::CrudMeta(msg)
-    }
-}
-
-impl FromCrud<Alias> for Message {
-    const ACTOR_NAME: &'static str = Resolver::NAME;
-    const RESOURCE_NAME: &'static str = "alias";
-
-    fn from_crud(msg: CrudMessage<Alias>) -> Self {
-        Self::CrudAlias(msg)
-    }
+    /// Get meta by id
+    GetOne {
+        id: ObjectId,
+        port: RpcReplyPort<Option<WithId<Meta>>>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -548,8 +466,10 @@ impl Actor for Resolver {
                     .expect("db error");
                 port.send(meta).ok();
             }),
-            Message::CrudMeta(msg) => self.dispatch(|this| async move { this.meta.handle_crud(msg).await }),
-            Message::CrudAlias(msg) => self.dispatch(|this| async move { this.alias.handle_crud(msg).await }),
+            Message::GetOne { id, port } => self.dispatch(|this| async move {
+                let meta = this.meta.get_by_oid(id).await.expect("db error");
+                port.send(meta).ok();
+            }),
         };
 
         Ok(())
@@ -558,17 +478,11 @@ impl Actor for Resolver {
 
 #[cfg(test)]
 mod test {
-    use std::time::{Duration, Instant};
 
     use bangumi_data::get_by_month;
-    use forrit_core::model::IndexArg;
-    use ractor::Actor;
     use tracing::info;
 
-    use crate::{
-        resolver::{crud_meta, Resolver},
-        test::run,
-    };
+    use crate::test::run;
 
     // File names with no meta
     #[rustfmt::skip]
@@ -588,33 +502,6 @@ mod test {
                 )
                 .await;
             info!(?a);
-        })
-    }
-
-    #[test]
-    fn test_list_meta_while_index() {
-        run(|env| async move {
-            let resolver = env.resolver.clone();
-            let j_start = Instant::now();
-            let _j1 = resolver.index_job(IndexArg::default());
-            info!("Index started");
-            let (_, _j2) = Actor::spawn(Some(Resolver::NAME.to_owned()), env.resolver.clone(), ())
-                .await
-                .unwrap();
-
-            tokio::time::sleep(Duration::from_secs(1)).await;
-
-            let l_start = Instant::now();
-            info!("List started");
-            let l = crud_meta().list(None).await.unwrap();
-
-            info!(
-                "List finished: {}, used {:.2}s",
-                l.len(),
-                l_start.elapsed().as_secs_f32()
-            );
-            _j1.wait().await;
-            info!("Index finished, used {:.2}s", j_start.elapsed().as_secs_f32());
         })
     }
 

@@ -109,11 +109,11 @@ impl Actor for QbitActor {
 
 impl QbitActor {
     async fn download(&self, job: Job, state: &State) -> Result<(), ActorProcessingErr> {
-        let meta = resolver::crud_meta()
-            .get(job.entry.meta_id)
-            .await?
-            .expect("non-exist meta id");
-        let path = job.path(&meta, &state.savepath);
+        let Some(meta) = resolver::get_one(job.entry.meta_id).await else {
+            warn!("Failed to get meta for job");
+            return Ok(());
+        };
+        let path = job.get_path(&meta, &state.savepath);
         let url = job.entry.base.torrent;
 
         // if get_config().dry_run {

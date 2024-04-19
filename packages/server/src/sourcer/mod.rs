@@ -9,12 +9,12 @@ use mongodb::{
     options::{IndexOptions, UpdateModifications, UpdateOptions},
     Collection, IndexModel,
 };
-use ractor::{Actor, ActorProcessingErr, ActorRef};
+use ractor::Actor;
 use tap::Pipe;
-use tracing::{info, warn};
+use tracing::warn;
 
 use crate::{
-    db::{Collections, CrudMessage, FromCrud, GetSet, MongoResult},
+    db::{impl_delegate_crud, Collections, CrudHandler, GetSet, MongoResult},
     util::Boom,
     REQ,
 };
@@ -27,10 +27,6 @@ pub async fn start(db: &Collections) {
     if config.is_empty() {
         warn!("No sourcer enabled, nothing will be fetched nor downloaded.");
     }
-
-    Actor::spawn(Some(EntryActor::NAME.to_owned()), EntryActor(db.entry.clone()), ())
-        .await
-        .boom("Failed to spawn entry actor");
 
     for (id, conf) in config.iter("rss-") {
         if !conf.enable {
@@ -53,51 +49,15 @@ pub enum SourcerMessage {
     Update,
 }
 
-pub struct EntryMessage(CrudMessage<PartialEntry>);
-
-impl FromCrud<PartialEntry> for EntryMessage {
-    const ACTOR_NAME: &'static str = EntryActor::NAME;
-    const RESOURCE_NAME: &'static str = "entry";
-
-    fn from_crud(crud: CrudMessage<PartialEntry>) -> Self {
-        Self(crud)
-    }
-}
-
-pub struct EntryActor(EntryStorage);
-
-impl EntryActor {
-    const NAME: &'static str = "entry";
-
-    async fn create_indexes(&self) -> MongoResult<()> {
-        self.0.create_indexes().await
-    }
-}
-
-impl Actor for EntryActor {
-    type Arguments = ();
-    type Msg = EntryMessage;
-    type State = ();
-
-    async fn pre_start(&self, _: ActorRef<Self::Msg>, _: Self::Arguments) -> Result<Self::State, ActorProcessingErr> {
-        info!("Entry actor starting");
-        self.create_indexes().await?;
-        Ok(())
-    }
-
-    async fn handle(
-        &self,
-        _: ActorRef<Self::Msg>,
-        msg: Self::Msg,
-        _: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        self.0.handle_crud(msg.0).await;
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct EntryStorage(GetSet<PartialEntry>);
+
+impl CrudHandler for EntryStorage {
+    type Resource = PartialEntry;
+    type Shim = PartialEntry;
+
+    impl_delegate_crud!();
+}
 
 impl EntryStorage {
     const GUID_INDEX: &'static str = "guid";
@@ -122,11 +82,7 @@ impl EntryStorage {
         Ok(())
     }
 
-    pub async fn handle_crud(&self, msg: CrudMessage<PartialEntry>) {
-        self.0.handle_crud(msg).await
-    }
-
-    pub async fn get(&self, guid: &str) -> MongoResult<Option<WithId<PartialEntry>>> {
+    pub async fn get_by_guid(&self, guid: &str) -> MongoResult<Option<WithId<PartialEntry>>> {
         self.0.get.find_one(doc! { "guid": guid }, None).await
     }
 

@@ -10,10 +10,17 @@ use mongodb::{
 };
 use tap::Pipe;
 
-use crate::db::{CrudMessage, GetSet, MongoResult};
+use crate::db::{impl_delegate_crud, CrudHandler, GetSet, MongoResult};
 
-#[derive(Clone, Debug)]
-pub struct MetaStorage(GetSet<BsonMeta>);
+#[derive(Debug, Clone)]
+pub struct MetaStorage(GetSet<Meta, BsonMeta>);
+
+impl CrudHandler for MetaStorage {
+    type Resource = Meta;
+    type Shim = BsonMeta;
+
+    impl_delegate_crud!();
+}
 
 impl MetaStorage {
     pub const BEGIN_INDEX: &'static str = "bson_begin";
@@ -61,10 +68,6 @@ impl MetaStorage {
             )
             .await?;
         Ok(())
-    }
-
-    pub async fn handle_crud(&self, msg: CrudMessage<Meta>) {
-        self.0.handle_crud(msg).await
     }
 
     pub async fn text_search(&self, query: &str) -> MongoResult<Option<WithId<Meta>>> {
@@ -130,15 +133,15 @@ impl MetaStorage {
             .pipe(Ok)
     }
 
-    pub async fn get_by_tmdb_id(&self, id: u64) -> MongoResult<Vec<WithId<Meta>>> {
-        self.0
-            .get
-            .find(doc! { Self::TMDB_ID_INDEX: id as u32 }, None)
-            .await?
-            .map(|x| x.map(WithId::into))
-            .try_collect::<Vec<_>>()
-            .await
-    }
+    // pub async fn get_by_tmdb_id(&self, id: u64) -> MongoResult<Vec<WithId<Meta>>>
+    // {     self.0
+    //         .get
+    //         .find(doc! { Self::TMDB_ID_INDEX: id as u32 }, None)
+    //         .await?
+    //         .map(|x| x.map(WithId::into))
+    //         .try_collect::<Vec<_>>()
+    //         .await
+    // }
 
     pub async fn upsert(&self, meta: &BsonMeta) -> MongoResult<()> {
         let doc = mongodb::bson::to_document(&meta).expect("Failed to convert Meta to bson Document");

@@ -5,7 +5,7 @@ use ractor::Actor;
 use tracing::{debug, info};
 
 use crate::{
-    db::{Collections, CrudMessage, FromCrud, GetSet},
+    db::{Collections, GetSet},
     downloader,
     util::Boom,
 };
@@ -27,27 +27,7 @@ pub async fn start(db: &Collections) {
 
 #[derive(Debug)]
 pub enum Message {
-    CrudSub(CrudMessage<Subscription>),
-    CrudJob(CrudMessage<Job>),
     NewEntry { entry: Entry },
-}
-
-impl FromCrud<Subscription> for Message {
-    const ACTOR_NAME: &'static str = SubscriptionActor::NAME;
-    const RESOURCE_NAME: &'static str = "subscription";
-
-    fn from_crud(crud: CrudMessage<Subscription>) -> Self {
-        Self::CrudSub(crud)
-    }
-}
-
-impl FromCrud<Job> for Message {
-    const ACTOR_NAME: &'static str = SubscriptionActor::NAME;
-    const RESOURCE_NAME: &'static str = "job";
-
-    fn from_crud(crud: CrudMessage<Job>) -> Self {
-        Self::CrudJob(crud)
-    }
 }
 
 struct SubscriptionActor {
@@ -84,8 +64,6 @@ impl Actor for SubscriptionActor {
         _: &mut Self::State,
     ) -> Result<(), ractor::ActorProcessingErr> {
         match message {
-            Message::CrudSub(crud) => self.sub.handle_crud(crud).await,
-            Message::CrudJob(crud) => self.job.handle_crud(crud).await,
             Message::NewEntry { entry } => {
                 debug!(?entry, "New entry");
                 let Some(sub) = self
@@ -107,6 +85,8 @@ impl Actor for SubscriptionActor {
                     entry,
                     directory_override: sub.inner.directory,
                 };
+
+                self.job.set.insert_one(&job, None).await.expect("db error");
 
                 downloader::new_job(job);
             }

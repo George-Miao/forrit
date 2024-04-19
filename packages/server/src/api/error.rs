@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use humantime::Duration;
 use mongodb_cursor_pagination::CursorError;
 use salvo::{
     oapi::{self},
@@ -24,9 +23,6 @@ pub enum ApiError {
 
     #[error("Internal service error: {0}")]
     InternalError(String),
-
-    #[error("Internal service time out (limit: {limit})")]
-    Timeout { limit: Duration },
 }
 
 impl EndpointOutRegister for ApiError {
@@ -61,7 +57,6 @@ impl ApiError {
             ApiError::DoesNotExist { .. } => StatusCode::NOT_FOUND,
             ApiError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApiError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
             ApiError::InvalidCursor => StatusCode::BAD_REQUEST,
         }
     }
@@ -94,19 +89,24 @@ impl Writer for ApiError {
     }
 }
 
+impl From<CursorError> for ApiError {
+    fn from(e: CursorError) -> Self {
+        match e {
+            CursorError::BsonDeError(e) => ApiError::InternalError(e.to_string()),
+            CursorError::BsonSerError(e) => ApiError::InternalError(e.to_string()),
+            CursorError::BsonValueAccessError(e) => ApiError::InternalError(e.to_string()),
+            CursorError::ParseError(e) => ApiError::InternalError(e.to_string()),
+            CursorError::MongoDBError(e) => ApiError::DatabaseError(e),
+            CursorError::InvalidCursor => ApiError::InvalidCursor,
+        }
+    }
+}
+
 impl From<CrudError> for ApiError {
     fn from(crud: CrudError) -> Self {
         match crud {
             CrudError::DatabaseError(db) => ApiError::DatabaseError(db),
-            CrudError::CursorError(e) => match e {
-                CursorError::BsonDeError(e) => ApiError::InternalError(e.to_string()),
-                CursorError::BsonSerError(e) => ApiError::InternalError(e.to_string()),
-                CursorError::BsonValueAccessError(e) => ApiError::InternalError(e.to_string()),
-                CursorError::ParseError(e) => ApiError::InternalError(e.to_string()),
-                CursorError::MongoDBError(e) => ApiError::DatabaseError(e),
-                CursorError::InvalidCursor => ApiError::InvalidCursor,
-            },
-            CrudError::Timeout { limit } => ApiError::Timeout { limit: limit.into() },
+            CrudError::CursorError(e) => e.into(),
         }
     }
 }

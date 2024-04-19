@@ -5,6 +5,7 @@ use std::{process::exit, str::FromStr, sync::LazyLock, time::Duration};
 
 use camino::Utf8PathBuf;
 use forrit_config::init_config;
+use futures::future::join4;
 use mongodb::Client;
 use tap::Conv;
 use tracing::{error, info, level_filters::LevelFilter};
@@ -73,10 +74,13 @@ async fn main() {
     let db = mongo.database(&config.database.database);
     let col = Collections::new(&db).await.boom("Database error");
 
-    resolver::start(&col).await;
-    downloader::start(&col).await;
-    sourcer::start(&col).await;
-    subscription::start(&col).await;
+    join4(
+        resolver::start(&col),
+        downloader::start(&col),
+        sourcer::start(&col),
+        subscription::start(&col),
+    )
+    .await;
 
-    api::run().await;
+    api::run(col).await;
 }
