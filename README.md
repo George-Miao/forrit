@@ -1,12 +1,18 @@
 # Forrit
 
-Bangumi tracker and downloader. Split into two parts: a server and a client.
+Bangumi tracker and downloader with an elegant web UI and robust backend server.
 
 ## TODO
 
-- [ ] (API) Search
-- [ ] (API) Meta list by season
-- [ ] (API) Meta list by year
+- [ ] (Frontend) Download job page
+- [ ] (Frontend) Entry detail page
+- [ ] (Server) RSS html Sanitization (w/ [ammonia](https://github.com/rust-ammonia/ammonia))
+- [ ] (Server) Read torrent info for better resolution and file size
+- [ ] (Server) Transmission API
+- [ ] (Server) Notifier (w/ [pling](https://github.com/EdJoPaTo/pling))
+- [ ] (Server) Search
+- [ ] (Server) Events
+- [ ] (Server) Backoff for failed API request
 
 ## Server
 
@@ -14,19 +20,14 @@ Constantly running, fetching updates from source sites and send it to configured
 
 ### Source
 
-- [x] Bangumi.moe
+- [x] Any RSS feed that contains Bangumi updates (e.g. [Bangumi](https://bangumi.moe), [ACG.RIP](https://acg.rip) or [Mikan Project](https://mikanani.me))
 
 ### Downloader
 
-- [x] Transmission
 - [x] QbitTorrent
-- [ ] Deluge
-- [ ] uTorrent
+- [ ] Transmission
 - [ ] aria2
-
-## Client
-
-Used to manage subscriptions and search from source sites.
+- [ ] rqbit (?)
 
 ## Installation
 
