@@ -67,6 +67,7 @@ impl CrudHandler for EntryStorage {
 
 impl EntryStorage {
     const GUID_INDEX: &'static str = "guid";
+    const META_ID_INDEX: &'static str = "meta_id_index";
     const PUB_DATE_INDEX: &'static str = "bson_pub_date";
 
     pub async fn new(col: Collection<BsonEntry>) -> MongoResult<Self> {
@@ -88,6 +89,10 @@ impl EntryStorage {
                         .keys(doc! { Self::PUB_DATE_INDEX: 1 })
                         .options(IndexOptions::builder().name("pub_date_index".to_owned()).build())
                         .build(),
+                    IndexModel::builder()
+                        .keys(doc! { Self::META_ID_INDEX: 1 })
+                        .options(IndexOptions::builder().name("meta_id_index".to_owned()).build())
+                        .build(),
                 ],
                 None,
             )
@@ -101,19 +106,23 @@ impl EntryStorage {
         param: CursorParam,
     ) -> CrudResult<ListResult<WithId<PartialEntry>>> {
         self.0
-            .list_by(doc! { "meta_id": meta_id }, doc! { Self::PUB_DATE_INDEX: -1 }, param)
+            .list_by(
+                doc! { Self::META_ID_INDEX: meta_id },
+                doc! { Self::PUB_DATE_INDEX: -1 },
+                param,
+            )
             .await?
             .pipe(Ok)
     }
 
     pub async fn get_by_guid(&self, guid: &str) -> MongoResult<Option<WithId<PartialEntry>>> {
-        self.0.get.find_one(doc! { "guid": guid }, None).await
+        self.0.get.find_one(doc! { Self::GUID_INDEX: guid }, None).await
     }
 
     pub async fn exist(&self, guid: &str, only_resolved: bool) -> MongoResult<bool> {
-        let mut query = doc! { "guid": guid };
+        let mut query = doc! { Self::GUID_INDEX: guid };
         if only_resolved {
-            query.insert("meta_id", doc! { "$ne": null });
+            query.insert(Self::META_ID_INDEX, doc! { "$ne": null });
         };
         self.0.get.find_one(query, None).await?.is_some().pipe(Ok)
     }
@@ -124,7 +133,7 @@ impl EntryStorage {
         self.0
             .set
             .update_one(
-                doc! { "guid": &entry.guid },
+                doc! { Self::GUID_INDEX: &entry.guid },
                 UpdateModifications::Document(doc! { "$set": doc }),
                 UpdateOptions::builder().upsert(true).build(),
             )
