@@ -2,19 +2,21 @@ use std::fmt::Debug;
 
 use forrit_core::model::{ListResult, UpdateResult, WithId};
 use mongodb::bson::{doc, oid::ObjectId};
-use mongodb_cursor_pagination::DirectedCursor;
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
 
 use crate::db::*;
 
 macro_rules! impl_delegate_crud {
-    () => {
+    ($($index:expr)?) => {
         async fn list(
             &self,
-            cursor: Option<mongodb_cursor_pagination::DirectedCursor>,
+            param: forrit_core::model::CursorParam,
         ) -> crate::db::CrudResult<forrit_core::model::ListResult<WithId<Self::Resource>>> {
-            <GetSet<_, _> as CrudHandler>::list(&self.0, cursor).await
+            #[allow(unused_mut, unused_assignments)]
+            let mut sort = None;
+            $(sort = Some(mongodb::bson::doc! { $index: -1 });)?
+            self.0.list_by(None, sort, param).await
         }
 
         async fn create(&self, data: Self::Resource) -> crate::db::CrudResult<ObjectId> {
@@ -56,7 +58,7 @@ pub(crate) trait CrudHandler {
     type Resource;
     type Shim: Wrapping<Self::Resource>;
 
-    async fn list(&self, cursor: Option<DirectedCursor>) -> CrudResult<ListResult<WithId<Self::Resource>>>;
+    async fn list(&self, param: CursorParam) -> CrudResult<ListResult<WithId<Self::Resource>>>;
     async fn create(&self, data: Self::Resource) -> CrudResult<ObjectId>;
     async fn get(&self, id: ObjectId) -> CrudResult<Option<WithId<Self::Resource>>>;
     async fn update(&self, id: ObjectId, data: Self::Resource) -> CrudResult<UpdateResult>;
@@ -72,8 +74,8 @@ where
     type Resource = G;
     type Shim = S;
 
-    async fn list(&self, cursor: Option<DirectedCursor>) -> CrudResult<ListResult<WithId<Self::Resource>>> {
-        self.list(cursor).await.map_err(Into::into)
+    async fn list(&self, param: CursorParam) -> CrudResult<ListResult<WithId<Self::Resource>>> {
+        self.list_by(None, None, param).await
     }
 
     async fn create(&self, data: Self::Resource) -> CrudResult<ObjectId> {

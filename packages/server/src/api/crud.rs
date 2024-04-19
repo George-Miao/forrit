@@ -4,9 +4,8 @@ macro_rules! build_crud {
     ($handler:ty, $tag:literal $(,)?) => {{
         use std::{fmt::Debug, marker::PhantomData};
 
-        use forrit_core::model::{ListResult, UpdateResult, WithId};
+        use forrit_core::model::{CursorParam, ListResult, UpdateResult, WithId};
         use mongodb::bson::doc;
-        use mongodb_cursor_pagination::DirectedCursor;
         use salvo::{
             oapi::{endpoint, extract::JsonBody},
             prelude::*,
@@ -14,7 +13,7 @@ macro_rules! build_crud {
         use tap::Pipe;
 
         use crate::{
-            api::{ApiResult, CrudResultExt, CursorParam, OidParam},
+            api::{ApiResult, CrudResultExt, OidParam},
             db::CrudHandler,
         };
 
@@ -23,20 +22,12 @@ macro_rules! build_crud {
         fn obtain(depot: &mut Depot) -> &$handler {
             depot
                 .obtain::<$handler>()
-                .expect(concat!("missing ", stringify!($handler)))
+                .expect(concat!("missing ", stringify!($handler), " in depot"))
         }
 
         #[endpoint(operation_id = concat!("list_", $tag),tags($tag))]
-        #[doc = concat!("List ", $tag)]
+        #[doc = "List with pagination"]
         async fn list(depot: &mut Depot, param: CursorParam) -> ApiResult<Json<ListResult<WithId<R>>>> {
-            let param = if let Some(forward) = param.forward {
-                Some(DirectedCursor::Forward(forward))
-            } else if let Some(backwards) = param.backwards {
-                Some(DirectedCursor::Backwards(backwards))
-            } else {
-                None
-            };
-
             <$handler as CrudHandler>::list(obtain(depot), param)
                 .await
                 .map(Json)
@@ -44,7 +35,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("create_", $tag), tags($tag))]
-        #[doc = concat!("Create a new ", $tag)]
+        #[doc = "Create a new item"]
         async fn post(depot: &mut Depot, obj: JsonBody<R>) -> ApiResult<String> {
             <$handler as CrudHandler>::create(obtain(depot), obj.0)
                 .await?
@@ -53,7 +44,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("get_", $tag, "_by_id"), tags($tag))]
-        #[doc = concat!("Create ", $tag, " by id")]
+        #[doc = "Get by id"]
         async fn get(depot: &mut Depot, id: OidParam) -> ApiResult<Json<WithId<R>>> {
             <$handler as CrudHandler>::get(obtain(depot), id.id)
                 .await
@@ -63,7 +54,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("update_", $tag, "_by_id"), tags($tag))]
-        #[doc = concat!("Update ", $tag, " by id")]
+        #[doc = "Update by id"]
         async fn put(depot: &mut Depot, id: OidParam, obj: JsonBody<R>) -> ApiResult<Json<UpdateResult>> {
             <$handler as CrudHandler>::update(obtain(depot), id.id, obj.0)
                 .await?
@@ -72,7 +63,7 @@ macro_rules! build_crud {
         }
 
         #[endpoint(operation_id = concat!("delete_", $tag, "_by_id"), tags($tag))]
-        #[doc = concat!("Delete ", $tag, " by id")]
+        #[doc = "Delete by id"]
         async fn delete(depot: &mut Depot, id: OidParam) -> ApiResult<Json<WithId<R>>> {
             <$handler as CrudHandler>::delete(obtain(depot), id.id)
                 .await
@@ -181,21 +172,18 @@ impl<H, L, C, R, U, D> CrudRouterBuilder<H, L, C, R, U, D> {
     }
 }
 
-impl<H, L, C, R, U, D> CrudRouterBuilder<H, L, C, R, U, D>
-where
-    H: Send + Sync + Clone + 'static,
-{
-    pub fn without_create(self, handler: H) -> Router
+impl<H, L, C, R, U, D> CrudRouterBuilder<H, L, C, R, U, D> {
+    pub fn without_create(self) -> Router
     where
         L: Handler,
         R: Handler,
         U: Handler,
         D: Handler,
     {
-        self.list().read().update().delete().build(handler)
+        self.list().read().update().delete().build()
     }
 
-    pub fn all(self, handler: H) -> Router
+    pub fn all(self) -> Router
     where
         L: Handler,
         C: Handler,
@@ -203,25 +191,10 @@ where
         U: Handler,
         D: Handler,
     {
-        self.list().create().read().update().delete().build(handler)
+        self.list().create().read().update().delete().build()
     }
 
-    pub fn build(self, handler: H) -> Router
-    where
-        H: Send + Sync,
-    {
-        struct HandlerHoop<H>(H);
-
-        #[async_trait]
-        impl<H> Handler for HandlerHoop<H>
-        where
-            H: Send + Sync + Clone + 'static,
-        {
-            async fn handle(&self, _: &mut Request, depot: &mut Depot, _: &mut Response, _: &mut FlowCtrl) {
-                depot.inject(self.0.clone());
-            }
-        }
-
-        self.router.push(self.id_router).hoop(HandlerHoop(handler))
+    pub fn build(self) -> Router {
+        self.router.push(self.id_router)
     }
 }

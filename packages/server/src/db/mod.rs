@@ -1,17 +1,15 @@
 use std::{borrow::Borrow, fmt::Debug};
 
-use forrit_core::model::{BsonMeta, Job, ListResult, Meta, Record, Subscription, WithId};
+use forrit_core::model::{BsonMeta, CursorParam, Job, ListResult, Meta, Record, Subscription, WithId};
 use mongodb::{
-    bson::{self, doc, oid::ObjectId, Bson},
+    bson::{self, doc, oid::ObjectId, Bson, Document},
     options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
     Collection, IndexModel,
 };
-use mongodb_cursor_pagination::{CursorError, DirectedCursor, Pagination};
+use mongodb_cursor_pagination::Pagination;
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
 use thiserror::Error;
-
-mod_use::mod_use![crud];
 
 #[cfg(test)]
 use crate::test::run;
@@ -20,6 +18,8 @@ use crate::{
     sourcer::EntryStorage,
     util::ToCore,
 };
+
+mod_use::mod_use![crud];
 
 pub type MongoResult<T> = mongodb::error::Result<T>;
 pub type KVCollection<K, V> = Collection<Record<K, V>>;
@@ -90,14 +90,28 @@ where
         }
     }
 
-    pub async fn list(&self, cursor: Option<DirectedCursor>) -> Result<ListResult<WithId<R>>, CursorError>
+    pub async fn list_by(
+        &self,
+        filter: impl Into<Option<Document>>,
+        sort: impl Into<Option<Document>>,
+        param: CursorParam,
+    ) -> CrudResult<ListResult<WithId<R>>>
     where
         R: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync,
     {
         self.get
-            .find_paginated::<WithId<R>>(None, FindOptions::builder().limit(20).build().pipe(Some), cursor)
-            .await
-            .map(|x| x.to_core())
+            .find_paginated::<WithId<R>>(
+                filter.into(),
+                FindOptions::builder()
+                    .sort(sort)
+                    .limit(param.per_page as i64)
+                    .build()
+                    .pipe(Some),
+                param.into_cursor(),
+            )
+            .await?
+            .to_core()
+            .pipe(Ok)
     }
 }
 

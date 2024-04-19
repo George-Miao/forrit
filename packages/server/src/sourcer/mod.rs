@@ -3,7 +3,7 @@
 //! Used to fetch updates of subtitle groups from source websites/feeds.
 
 use forrit_config::{get_config, SourcerType};
-use forrit_core::model::{PartialEntry, WithId};
+use forrit_core::model::{BsonEntry, CursorParam, ListResult, PartialEntry, WithId};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::{IndexOptions, UpdateModifications, UpdateOptions},
@@ -14,7 +14,7 @@ use tap::Pipe;
 use tracing::warn;
 
 use crate::{
-    db::{impl_delegate_crud, Collections, CrudHandler, GetSet, MongoResult},
+    db::{impl_delegate_crud, Collections, CrudHandler, CrudResult, GetSet, MongoResult, Wrapping},
     util::Boom,
     REQ,
 };
@@ -49,20 +49,27 @@ pub enum SourcerMessage {
     Update,
 }
 
+impl Wrapping<PartialEntry> for BsonEntry {
+    fn wrap(x: PartialEntry) -> Self {
+        BsonEntry::from(x)
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct EntryStorage(GetSet<PartialEntry>);
+pub struct EntryStorage(GetSet<PartialEntry, BsonEntry>);
 
 impl CrudHandler for EntryStorage {
     type Resource = PartialEntry;
-    type Shim = PartialEntry;
+    type Shim = BsonEntry;
 
-    impl_delegate_crud!();
+    impl_delegate_crud!(Self::PUB_DATE_INDEX);
 }
 
 impl EntryStorage {
     const GUID_INDEX: &'static str = "guid";
+    const PUB_DATE_INDEX: &'static str = "bson_pub_date";
 
-    pub async fn new(col: Collection<PartialEntry>) -> MongoResult<Self> {
+    pub async fn new(col: Collection<BsonEntry>) -> MongoResult<Self> {
         let this = Self(GetSet::new(col));
         this.create_indexes().await?;
         Ok(this)
@@ -71,15 +78,32 @@ impl EntryStorage {
     pub async fn create_indexes(&self) -> Result<(), mongodb::error::Error> {
         self.0
             .set
-            .create_index(
-                IndexModel::builder()
-                    .keys(doc! { Self::GUID_INDEX: 1 })
-                    .options(IndexOptions::builder().name("guid_index".to_owned()).build())
-                    .build(),
+            .create_indexes(
+                [
+                    IndexModel::builder()
+                        .keys(doc! { Self::GUID_INDEX: 1 })
+                        .options(IndexOptions::builder().name("guid_index".to_owned()).build())
+                        .build(),
+                    IndexModel::builder()
+                        .keys(doc! { Self::PUB_DATE_INDEX: 1 })
+                        .options(IndexOptions::builder().name("pub_date_index".to_owned()).build())
+                        .build(),
+                ],
                 None,
             )
             .await?;
         Ok(())
+    }
+
+    pub async fn list_by_meta_id(
+        &self,
+        meta_id: ObjectId,
+        param: CursorParam,
+    ) -> CrudResult<ListResult<WithId<PartialEntry>>> {
+        self.0
+            .list_by(doc! { "meta_id": meta_id }, doc! { Self::PUB_DATE_INDEX: -1 }, param)
+            .await?
+            .pipe(Ok)
     }
 
     pub async fn get_by_guid(&self, guid: &str) -> MongoResult<Option<WithId<PartialEntry>>> {

@@ -13,6 +13,16 @@ use tracing::debug;
 use ts_rs::TS;
 
 use crate::model::*;
+
+impl CursorParam {
+    pub fn into_cursor(self) -> Option<mongodb_cursor_pagination::DirectedCursor> {
+        Some(match self.direction {
+            Direction::Forward => mongodb_cursor_pagination::DirectedCursor::Forward(self.cursor?),
+            Direction::Backwards => mongodb_cursor_pagination::DirectedCursor::Backwards(self.cursor?),
+        })
+    }
+}
+
 impl<K, V> ToSchema for Record<K, V> {
     fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
         let typename = type_name::<Record<K, V>>().replace("::", ".");
@@ -80,6 +90,7 @@ impl<T: ToSchema> ToSchema for ListResult<T> {
         )))
     }
 }
+
 impl<T> WithId<T> {
     pub fn into<P>(self) -> WithId<P>
     where
@@ -325,6 +336,21 @@ impl From<Meta> for BsonMeta {
 
 impl From<BsonMeta> for Meta {
     fn from(meta: BsonMeta) -> Self {
+        meta.inner
+    }
+}
+
+impl From<PartialEntry> for BsonEntry {
+    fn from(meta: PartialEntry) -> Self {
+        Self {
+            bson_pub_date: meta.base.pub_date.map(bson::DateTime::from_chrono),
+            inner: meta,
+        }
+    }
+}
+
+impl From<BsonEntry> for PartialEntry {
+    fn from(meta: BsonEntry) -> Self {
         meta.inner
     }
 }

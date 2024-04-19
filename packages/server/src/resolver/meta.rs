@@ -19,7 +19,7 @@ impl CrudHandler for MetaStorage {
     type Resource = Meta;
     type Shim = BsonMeta;
 
-    impl_delegate_crud!();
+    impl_delegate_crud!(Self::BEGIN_INDEX);
 }
 
 impl MetaStorage {

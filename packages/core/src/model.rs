@@ -15,6 +15,8 @@ use crate::date::YearMonth;
 pub type Alias = Record<String, ObjectId>;
 pub type DateTime<Tz = chrono::FixedOffset> = chrono::DateTime<Tz>;
 
+pub use mongodb_pagination::*;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[ts(concrete(V = OidExtJson))]
@@ -121,7 +123,7 @@ pub struct Meta {
     pub season_override: Option<SeasonOverride>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BsonMeta {
     pub bson_begin: Option<bson::DateTime>,
 
@@ -167,6 +169,15 @@ pub struct PartialEntry {
     pub meta_id: Option<ObjectId>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BsonEntry {
+    pub bson_pub_date: Option<bson::DateTime>,
+
+    #[serde(flatten)]
+    pub inner: PartialEntry,
+}
+
+/// Resolved entry with metadata
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
 pub struct Entry {
@@ -263,4 +274,40 @@ pub struct IndexStat {
 
     /// Time when the indexing ended
     pub end_at: Option<DateTime<Utc>>,
+}
+
+#[cfg(feature = "mongodb_pagination")]
+mod mongodb_pagination {
+    use mongodb_cursor_pagination::Edge;
+    use salvo_oapi::{ToParameters, ToSchema};
+
+    #[derive(Debug, Clone, serde::Deserialize, ToSchema, ToParameters)]
+    #[salvo(parameters(default_parameter_in = Query))]
+    pub struct CursorParam {
+        /// Number of items in a page
+        #[salvo(parameter(default = "20"))]
+        #[serde(default = "default_per_page")]
+        pub per_page: u32,
+
+        /// Direction to search
+        #[salvo(parameter(default = "forward"))]
+        #[serde(default)]
+        pub direction: Direction,
+
+        /// Cursor to start searching, if not set, search from the beginning
+        #[salvo(parameter(value_type = Option<String>), schema(value_type = Option<String>))]
+        pub cursor: Option<Edge>,
+    }
+
+    fn default_per_page() -> u32 {
+        20
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, Default, ToSchema)]
+    #[serde(rename_all = "lowercase")]
+    pub enum Direction {
+        #[default]
+        Forward,
+        Backwards,
+    }
 }

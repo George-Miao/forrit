@@ -1,5 +1,5 @@
 use chrono::{DateTime, Datelike, NaiveDate, TimeZone, Utc, Weekday};
-use salvo_oapi::ToSchema;
+use salvo_oapi::{ToParameters, ToSchema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -64,7 +64,8 @@ impl Ord for YearMonth {
         self.year.cmp(&other.year).then_with(|| self.month.cmp(&other.month))
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, ToParameters, TS)]
+#[salvo(parameters(default_parameter_in = Query))]
 #[ts(export)]
 pub struct YearSeason {
     year: i32,

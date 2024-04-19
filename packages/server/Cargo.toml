@@ -4,32 +4,34 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-forrit-core   = { workspace = true }
+forrit-core   = { workspace = true, features = ["mongodb_pagination"] }
 forrit-config = { workspace = true }
 
-bangumi-data = { workspace = true }
-camino       = { workspace = true }
-chrono       = { workspace = true }
-futures      = { workspace = true }
-iso8601      = { workspace = true }
-regex        = { workspace = true }
-reqwest      = { workspace = true }
-serde        = { workspace = true }
-tmdb-api     = { workspace = true }
-tokio        = { workspace = true, features = ["macros", "rt-multi-thread"] }
-tracing      = { workspace = true }
-url          = { workspace = true }
-tap          = { workspace = true }
-serde_json   = { workspace = true }
-either       = { workspace = true }
+bangumi-data              = { workspace = true }
+camino                    = { workspace = true }
+chrono                    = { workspace = true }
+futures                   = { workspace = true }
+iso8601                   = { workspace = true }
+regex                     = { workspace = true }
+reqwest                   = { workspace = true }
+serde                     = { workspace = true }
+tmdb-api                  = { workspace = true }
+tokio                     = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing                   = { workspace = true }
+url                       = { workspace = true }
+tap                       = { workspace = true }
+serde_json                = { workspace = true }
+either                    = { workspace = true }
+mongodb-cursor-pagination = { workspace = true }
+salvo_core                = { workspace = true }
 
-figment                   = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
-governor                  = { version = "0.6.0", default-features = false, features = ["futures", "std", "quanta"] }
-mongodb                   = { version = "2.8.0", features = ["bson-chrono-0_4"] }
-ractor                    = { version = "0.9.6", default-features = false, features = ["tokio_runtime"] }
-salvo                     = { version = "0.66.2", features = ["oapi", "websocket", "cors", "logging"] }
-tracing-subscriber        = { version = "0.3.18", features = ["json", "env-filter"] }
-mongodb-cursor-pagination = { version = "1.0.0-rc.1", git = "https://github.com/George-Miao/mongodb-cursor-pagination.git" }
+figment  = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
+governor = { version = "0.6.0", default-features = false, features = ["futures", "std", "quanta"] }
+mongodb  = { version = "2.8.0", features = ["bson-chrono-0_4"] }
+ractor   = { version = "0.9.6", default-features = false, features = ["tokio_runtime"] }
+salvo    = { version = "0.67.0", features = ["oapi", "websocket", "cors", "logging"] }
+
+tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
 
 anitomy   = "0.2.0"
 humantime = "2.1.0"
