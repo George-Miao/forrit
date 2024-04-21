@@ -67,7 +67,6 @@ impl IndexStatRecv {
 }
 
 impl Resolver {
-    // TODO: Transactional indexing
     pub fn index_job(self, arg: IndexArg) -> IndexJob {
         let (tx, rx) = watch::channel(IndexStat::new(arg));
         let handle = tokio::spawn(async move {

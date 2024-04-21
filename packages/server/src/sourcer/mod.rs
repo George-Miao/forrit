@@ -6,20 +6,21 @@ use forrit_config::{get_config, SourcerType};
 use forrit_core::model::{BsonEntry, ListParam, ListResult, PartialEntry, WithId};
 use mongodb::{
     bson::{doc, oid::ObjectId},
-    options::{IndexOptions, UpdateModifications, UpdateOptions},
-    Collection, IndexModel,
+    options::{UpdateModifications, UpdateOptions},
 };
 use ractor::Actor;
 use tap::Pipe;
 use tracing::warn;
 
 use crate::{
-    db::{impl_delegate_crud, Collections, CrudHandler, CrudResult, GetSet, MongoResult, Wrapping},
+    db::{impl_resource, Collections, CrudResult, MongoResult, Storage, Wrapping},
     util::Boom,
     REQ,
 };
 
 mod rss;
+
+pub type EntryStorage = Storage<PartialEntry, BsonEntry>;
 
 pub async fn start(db: &Collections) {
     let config = &get_config().sourcer;
@@ -55,85 +56,37 @@ impl Wrapping<PartialEntry> for BsonEntry {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct EntryStorage(GetSet<PartialEntry, BsonEntry>);
-
-impl CrudHandler for EntryStorage {
-    type Resource = PartialEntry;
-    type Shim = BsonEntry;
-
-    impl_delegate_crud!(Self::PUB_DATE_INDEX);
-}
+impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, meta_id));
 
 impl EntryStorage {
-    const GUID_INDEX: &'static str = "guid";
-    const META_ID_INDEX: &'static str = "meta_id_index";
-    const PUB_DATE_INDEX: &'static str = "bson_pub_date";
-
-    pub async fn new(col: Collection<BsonEntry>) -> MongoResult<Self> {
-        let this = Self(GetSet::new(col));
-        this.create_indexes().await?;
-        Ok(this)
-    }
-
-    pub async fn create_indexes(&self) -> Result<(), mongodb::error::Error> {
-        self.0
-            .set
-            .create_indexes(
-                [
-                    IndexModel::builder()
-                        .keys(doc! { Self::GUID_INDEX: 1 })
-                        .options(IndexOptions::builder().name("guid_index".to_owned()).build())
-                        .build(),
-                    IndexModel::builder()
-                        .keys(doc! { Self::PUB_DATE_INDEX: 1 })
-                        .options(IndexOptions::builder().name("pub_date_index".to_owned()).build())
-                        .build(),
-                    IndexModel::builder()
-                        .keys(doc! { Self::META_ID_INDEX: 1 })
-                        .options(IndexOptions::builder().name("meta_id_index".to_owned()).build())
-                        .build(),
-                ],
-                None,
-            )
-            .await?;
-        Ok(())
-    }
-
     pub async fn list_by_meta_id(
         &self,
         meta_id: ObjectId,
         param: ListParam,
     ) -> CrudResult<ListResult<WithId<PartialEntry>>> {
-        self.0
-            .list_by(
-                doc! { Self::META_ID_INDEX: meta_id },
-                doc! { Self::PUB_DATE_INDEX: -1 },
-                param,
-            )
+        self.list_by(doc! { BsonEntryIdx::META_ID: meta_id }, param)
             .await?
             .pipe(Ok)
     }
 
     pub async fn get_by_guid(&self, guid: &str) -> MongoResult<Option<WithId<PartialEntry>>> {
-        self.0.get.find_one(doc! { Self::GUID_INDEX: guid }, None).await
+        self.get.find_one(doc! { BsonEntryIdx::GUID: guid }, None).await
     }
 
     pub async fn exist(&self, guid: &str, only_resolved: bool) -> MongoResult<bool> {
-        let mut query = doc! { Self::GUID_INDEX: guid };
+        let mut query = doc! { BsonEntryIdx::GUID: guid };
         if only_resolved {
-            query.insert(Self::META_ID_INDEX, doc! { "$ne": null });
+            query.insert(BsonEntryIdx::META_ID, doc! { "$ne": null });
         };
-        self.0.get.find_one(query, None).await?.is_some().pipe(Ok)
+        self.get.find_one(query, None).await?.is_some().pipe(Ok)
     }
 
     pub async fn upsert(&self, entry: &PartialEntry) -> MongoResult<Option<ObjectId>> {
         let doc = mongodb::bson::to_document(entry).expect("Failed to convert Meta to bson Document");
 
-        self.0
-            .set
+        self.set
             .update_one(
-                doc! { Self::GUID_INDEX: &entry.guid },
+                doc! { BsonEntryIdx::GUID: &entry.guid },
                 UpdateModifications::Document(doc! { "$set": doc }),
                 UpdateOptions::builder().upsert(true).build(),
             )
@@ -142,4 +95,31 @@ impl EntryStorage {
             .and_then(|x| x.as_object_id())
             .pipe(Ok)
     }
+}
+
+#[test]
+fn migrate() {
+    use futures::TryStreamExt;
+
+    crate::test::run(|env| async move {
+        let db = env.col.entry.clone();
+        db.get
+            .find(None, None)
+            .await
+            .unwrap()
+            .try_for_each_concurrent(None, |WithId { id, inner }| {
+                let db = db.clone();
+                async move {
+                    let new = BsonEntry::wrap(inner);
+                    let bson = mongodb::bson::to_bson(&new).unwrap();
+                    db.set
+                        .update_one(doc! { "_id": &id }, doc! { "$set": bson }, None)
+                        .await
+                        .unwrap();
+                    Ok(())
+                }
+            })
+            .await
+            .unwrap();
+    })
 }

@@ -1,14 +1,19 @@
-use forrit_core::model::{Entry, Job, Subscription};
+use forrit_core::model::{Download, Entry, Subscription};
 use futures::{future::ready, TryStreamExt};
 use mongodb::bson::doc;
 use ractor::Actor;
 use tracing::{debug, info};
 
+mod api;
+pub use api::subscription_api;
+
 use crate::{
-    db::{Collections, GetSet},
+    db::{impl_resource, Collections, Storage},
     downloader,
     util::Boom,
 };
+
+impl_resource!(Subscription, field(meta_id));
 
 pub fn new_entry(entry: Entry) {
     ractor::registry::where_is(SubscriptionActor::NAME.to_owned())
@@ -18,7 +23,7 @@ pub fn new_entry(entry: Entry) {
 pub async fn start(db: &Collections) {
     Actor::spawn(
         Some(SubscriptionActor::NAME.to_owned()),
-        SubscriptionActor::new(db.subscription.clone(), db.job.clone()),
+        SubscriptionActor::new(db.subscription.clone(), db.download.clone()),
         (),
     )
     .await
@@ -31,14 +36,14 @@ pub enum Message {
 }
 
 struct SubscriptionActor {
-    sub: GetSet<Subscription>,
-    job: GetSet<Job>,
+    sub: Storage<Subscription>,
+    job: Storage<Download>,
 }
 
 impl SubscriptionActor {
     pub const NAME: &'static str = "subscription";
 
-    pub fn new(sub: GetSet<Subscription>, job: GetSet<Job>) -> Self {
+    pub fn new(sub: Storage<Subscription>, job: Storage<Download>) -> Self {
         Self { sub, job }
     }
 }
@@ -80,15 +85,16 @@ impl Actor for SubscriptionActor {
                     return Ok(());
                 };
 
-                let job = Job {
+                let job = Download {
                     meta_id: entry.meta_id,
-                    entry,
+                    subscription_id: sub.id,
                     directory_override: sub.inner.directory,
+                    entry,
                 };
 
                 self.job.set.insert_one(&job, None).await.expect("db error");
 
-                downloader::new_job(job);
+                downloader::new_download(job);
             }
         };
 

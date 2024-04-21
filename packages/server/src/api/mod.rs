@@ -1,5 +1,5 @@
 use forrit_config::get_config;
-use forrit_core::model::{Job, Subscription};
+use forrit_core::model::{Download, Subscription};
 use mongodb::bson::oid::ObjectId;
 use salvo::{
     cors::{Any, Cors},
@@ -8,9 +8,10 @@ use salvo::{
 use tracing::info;
 
 use crate::{
-    db::{Collections, GetSet},
+    db::{Collections, Storage},
     resolver::{resolver_api, AliasKV, MetaStorage},
     sourcer::EntryStorage,
+    subscription::subscription_api,
 };
 
 mod crud;
@@ -35,7 +36,7 @@ impl Handler for Collections {
         depot.inject(self.meta.clone());
         depot.inject(self.entry.clone());
         depot.inject(self.subscription.clone());
-        depot.inject(self.job.clone());
+        depot.inject(self.download.clone());
         depot.inject(self.alias.clone());
     }
 }
@@ -58,16 +59,17 @@ pub async fn run(col: Collections) {
     let entry_api = build_crud!(EntryStorage, "entry",).without_create();
     let meta_api = build_crud!(MetaStorage, "meta",).list().read().update().build();
     let alias_api = build_crud!(AliasKV, "alias").all();
-    let sub_api = build_crud!(GetSet<Subscription>, "subscription",).all();
-    let job_api = build_crud!(GetSet<Job>, "job",).list().read().build();
+    let sub_api = build_crud!(Storage<Subscription>, "subscription",).all();
+    let download_api = build_crud!(Storage<Download>, "download",).list().read().build();
 
     let router = Router::new()
         .push(resolver_api())
+        .push(subscription_api())
         .push(entry_api)
         .push(meta_api)
         .push(alias_api)
         .push(sub_api)
-        .push(job_api);
+        .push(download_api);
 
     let doc = OpenApi::new("Forrit api", "0.1.0").merge_router(&router);
     let router = router

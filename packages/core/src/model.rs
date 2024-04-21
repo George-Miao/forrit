@@ -15,6 +15,7 @@ use crate::date::YearMonth;
 pub type Alias = Record<String, ObjectId>;
 pub type DateTime<Tz = chrono::FixedOffset> = chrono::DateTime<Tz>;
 
+#[cfg(feature = "mongodb_pagination")]
 pub use mongodb_pagination::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
@@ -89,6 +90,7 @@ pub struct ObjectIdSchema;
 pub struct Meta {
     pub title: String,
 
+    #[ts(type = "Record<Language, Array<string>>")]
     pub title_translate: BTreeMap<Language, Vec<String>>,
 
     #[serde(rename = "type")]
@@ -128,6 +130,8 @@ pub struct BsonMeta {
     pub bson_begin: Option<bson::DateTime>,
 
     pub bson_end: Option<bson::DateTime>,
+
+    pub tv_id: Option<u64>,
 
     #[serde(flatten)]
     pub inner: Meta,
@@ -193,11 +197,17 @@ pub struct Entry {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
-pub struct Job {
+pub struct Download {
     #[salvo(schema(value_type = ObjectIdSchema))]
     #[ts(as = "OidExtJson")]
     pub meta_id: ObjectId,
+
+    #[salvo(schema(value_type = ObjectIdSchema))]
+    #[ts(as = "OidExtJson")]
+    pub subscription_id: ObjectId,
+
     pub entry: Entry,
+
     #[salvo(schema(value_type = Option<String>))]
     #[ts(as = "Option<String>")]
     pub directory_override: Option<Utf8PathBuf>,
@@ -280,22 +290,27 @@ pub struct IndexStat {
 mod mongodb_pagination {
     use mongodb_cursor_pagination::Edge;
     use salvo_oapi::{ToParameters, ToSchema};
+    use ts_rs::TS;
 
-    #[derive(Debug, Clone, serde::Deserialize, ToSchema, ToParameters)]
+    #[derive(Debug, Clone, serde::Deserialize, ToSchema, ToParameters, TS)]
     #[salvo(parameters(default_parameter_in = Query))]
+    #[ts(export)]
     pub struct ListParam {
         /// Number of items in a page
         #[salvo(parameter(default = "20"))]
         #[serde(default = "default_per_page")]
+        #[ts(optional, as = "Option<u32>")]
         pub per_page: u32,
 
         /// Direction to search
         #[salvo(parameter(default = "forward"))]
         #[serde(default)]
+        #[ts(optional, as = "Option<Direction>")]
         pub direction: Direction,
 
         /// Cursor to start searching, if not set, search from the beginning
         #[salvo(parameter(value_type = Option<String>), schema(value_type = Option<String>))]
+        #[ts(optional, as = "Option<String>")]
         pub cursor: Option<Edge>,
     }
 
@@ -303,8 +318,9 @@ mod mongodb_pagination {
         20
     }
 
-    #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, Default, ToSchema)]
+    #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, Default, ToSchema, TS)]
     #[serde(rename_all = "lowercase")]
+    #[ts(export)]
     pub enum Direction {
         #[default]
         Forward,

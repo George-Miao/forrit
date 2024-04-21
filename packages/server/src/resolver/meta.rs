@@ -6,73 +6,37 @@ use futures::{StreamExt, TryStreamExt};
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
     options::{FindOneOptions, IndexOptions, UpdateModifications, UpdateOptions},
-    Collection, IndexModel,
+    IndexModel,
 };
 use tap::Pipe;
 
-use crate::db::{impl_delegate_crud, CrudHandler, GetSet, MongoResult};
+use crate::db::{impl_resource, MongoResult, Storage};
 
-#[derive(Debug, Clone)]
-pub struct MetaStorage(GetSet<Meta, BsonMeta>);
+pub type MetaStorage = Storage<Meta, BsonMeta>;
 
-impl CrudHandler for MetaStorage {
-    type Resource = Meta;
-    type Shim = BsonMeta;
-
-    impl_delegate_crud!(Self::BEGIN_INDEX);
-}
+impl_resource!(
+    BsonMeta,
+    sort_by bson_begin,
+    field(bson_end, tv_id, title),
+    index(
+        IndexModel::builder()
+            .keys(doc! {
+                "title": "text",
+                "title_translate.zh-Hans": "text",
+                "title_translate.zh-Hant": "text",
+                "title_translate.en": "text",
+                "title_translate.ja": "text",
+                "tv.name": "text",
+                "tv.original_name": "text",
+            })
+            .options(IndexOptions::builder().name("text_search_index".to_owned()).build())
+            .build()
+    )
+);
 
 impl MetaStorage {
-    pub const BEGIN_INDEX: &'static str = "bson_begin";
-    pub const END_INDEX: &'static str = "bson_end";
-    pub const TITLE_INDEX: &'static str = "title";
-    pub const TMDB_ID_INDEX: &'static str = "tv.id";
-
-    pub async fn new(col: Collection<BsonMeta>) -> MongoResult<Self> {
-        let this = Self(GetSet::new(col));
-        this.create_indexes().await?;
-        Ok(this)
-    }
-
-    pub async fn create_indexes(&self) -> MongoResult<()> {
-        self.0
-            .set
-            .create_indexes(
-                [
-                    IndexModel::builder()
-                        .keys(doc! { Self::TITLE_INDEX: 1 })
-                        .options(IndexOptions::builder().name("title_index".to_owned()).build())
-                        .build(),
-                    IndexModel::builder()
-                        .keys(doc! { Self::TMDB_ID_INDEX: 1 })
-                        .options(IndexOptions::builder().name("tmdb_id_index".to_owned()).build())
-                        .build(),
-                    IndexModel::builder()
-                        .keys(doc! { Self::BEGIN_INDEX: 1 })
-                        .options(IndexOptions::builder().name("begin_index".to_owned()).build())
-                        .build(),
-                    IndexModel::builder()
-                        .keys(doc! {
-                            "title": "text",
-                            "title_translate.zh-Hans": "text",
-                            "title_translate.zh-Hant": "text",
-                            "title_translate.en": "text",
-                            "title_translate.ja": "text",
-                            "tv.name": "text",
-                            "tv.original_name": "text",
-                        })
-                        .options(IndexOptions::builder().name("text_search_index".to_owned()).build())
-                        .build(),
-                ],
-                None,
-            )
-            .await?;
-        Ok(())
-    }
-
     pub async fn text_search(&self, query: &str) -> MongoResult<Option<WithId<Meta>>> {
-        self.0
-            .get
+        self.get
             .find_one(doc! { "$text": { "$search": query } }, None)
             .await?
             .map(WithId::into)
@@ -86,13 +50,12 @@ impl MetaStorage {
         let after_season = doc! { "$gte": season_begin };
         let within_season = doc! { "$gte": &season_begin,"$lt": &season_end,};
 
-        self.0
-            .get
+        self.get
             .find(
                 doc! {
                   "$or": [
-                    { Self::BEGIN_INDEX: &within_season },
-                    { Self::BEGIN_INDEX: &before_season, Self::END_INDEX: &after_season },
+                    { BsonMetaIdx::BSON_BEGIN : &within_season },
+                    { BsonMetaIdx::BSON_BEGIN : &before_season, BsonMetaIdx::BSON_END: &after_season },
                   ],
                 },
                 None,
@@ -104,11 +67,12 @@ impl MetaStorage {
     }
 
     pub async fn get_latest(&self, tmdb_id: u64) -> MongoResult<Option<WithId<Meta>>> {
-        self.0
-            .get
+        self.get
             .find_one(
-                doc! { Self::TMDB_ID_INDEX: tmdb_id as u32 },
-                FindOneOptions::builder().sort(doc! { Self::BEGIN_INDEX: -1 }).build(),
+                doc! { BsonMetaIdx::TV_ID: tmdb_id as u32 },
+                FindOneOptions::builder()
+                    .sort(doc! { BsonMetaIdx::BSON_BEGIN: -1 })
+                    .build(),
             )
             .await?
             .map(WithId::into)
@@ -116,17 +80,15 @@ impl MetaStorage {
     }
 
     pub async fn get_by_title(&self, title: &str) -> MongoResult<Option<WithId<Meta>>> {
-        self.0
-            .get
-            .find_one(doc! { Self::TITLE_INDEX: title }, None)
+        self.get
+            .find_one(doc! { BsonMetaIdx::TITLE: title }, None)
             .await?
             .map(WithId::into)
             .pipe(Ok)
     }
 
     pub async fn get_by_oid(&self, oid: ObjectId) -> MongoResult<Option<WithId<Meta>>> {
-        self.0
-            .get
+        self.get
             .find_one(doc! { "_id": oid }, None)
             .await?
             .map(WithId::into)
@@ -134,7 +96,7 @@ impl MetaStorage {
     }
 
     // pub async fn get_by_tmdb_id(&self, id: u64) -> MongoResult<Vec<WithId<Meta>>>
-    // {     self.0
+    // {     self
     //         .get
     //         .find(doc! { Self::TMDB_ID_INDEX: id as u32 }, None)
     //         .await?
@@ -145,10 +107,9 @@ impl MetaStorage {
 
     pub async fn upsert(&self, meta: &BsonMeta) -> MongoResult<()> {
         let doc = mongodb::bson::to_document(&meta).expect("Failed to convert Meta to bson Document");
-        self.0
-            .set
+        self.set
             .update_one(
-                doc! { Self::TITLE_INDEX: &meta.title },
+                doc! { BsonMetaIdx::TITLE: &meta.title },
                 UpdateModifications::Document(doc! { "$set": doc }),
                 UpdateOptions::builder().upsert(true).build(),
             )

@@ -1,7 +1,8 @@
 use forrit_core::{
     date::{Season, YearSeason},
-    model::{Alias, IndexArg, IndexStat, ListParam, ListResult, Meta, PartialEntry, WithId},
+    model::{Alias, Download, IndexArg, IndexStat, ListParam, ListResult, Meta, PartialEntry, Subscription, WithId},
 };
+use mongodb::bson::doc;
 use salvo::{
     oapi::extract::{JsonBody, QueryParam},
     prelude::*,
@@ -11,8 +12,11 @@ use tap::Pipe;
 
 use crate::{
     api::{ApiResult, OidParam},
+    db::Storage,
+    downloader::DownloadIdx,
     resolver::AliasKV,
     sourcer::EntryStorage,
+    subscription::SubscriptionIdx,
 };
 
 /// Subscribe to index status updates
@@ -72,7 +76,7 @@ async fn by_season(year: QueryParam<i32, false>, season: QueryParam<Season, fals
 
 /// Get all entries of a meta
 #[endpoint(tags("meta"))]
-async fn get_entry(
+async fn list_entry(
     pod: &mut Depot,
     id: OidParam,
     param: ListParam,
@@ -87,7 +91,7 @@ async fn get_entry(
 
 /// Get all aliases of a meta
 #[endpoint(tags("meta"))]
-async fn get_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Alias>>>> {
+async fn list_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Alias>>>> {
     pod.obtain::<AliasKV>()
         .expect("missing AliasKV")
         .list_keys_by_value(&id.id, param)
@@ -96,11 +100,41 @@ async fn get_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResult
         .pipe(Ok)
 }
 
+/// Get all subscriptions of a meta
+#[endpoint(tags("meta"))]
+async fn list_subscription(
+    pod: &mut Depot,
+    id: OidParam,
+    param: ListParam,
+) -> ApiResult<Json<ListResult<WithId<Subscription>>>> {
+    pod.obtain::<Storage<Subscription>>()
+        .expect("missing AliasKV")
+        .list_by(doc! { SubscriptionIdx::META_ID: id.id }, param)
+        .await?
+        .pipe(Json)
+        .pipe(Ok)
+}
+
+#[endpoint]
+async fn list_download(pod: &Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Download>>>> {
+    pod.obtain::<Storage<Download>>()
+        .expect("missing GetSet<Download>")
+        .list_by(doc! { DownloadIdx::META_ID : id.id }, param)
+        .await?
+        .pipe(Json)
+        .pipe(Ok)
+}
+
 pub fn resolver_api() -> Router {
     Router::new()
-        .push(Router::with_path("meta/season").get(by_season))
-        .push(Router::with_path("meta/<id>/entry").get(get_entry))
-        .push(Router::with_path("meta/<id>/alias").get(get_alias))
+        .push(
+            Router::with_path("meta")
+                .push(Router::with_path("season").get(by_season))
+                .push(Router::with_path("<id>/entry").get(list_entry))
+                .push(Router::with_path("<id>/alias").get(list_alias))
+                .push(Router::with_path("<id>/download").get(list_download))
+                .push(Router::with_path("<id>/subscription").get(list_subscription)),
+        )
         .push(
             Router::with_path("index")
                 .get(get_index)

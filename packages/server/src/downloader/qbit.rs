@@ -14,7 +14,7 @@ use tap::Pipe;
 use tracing::{debug, info, warn};
 
 use crate::{
-    downloader::{Job, Message},
+    downloader::{Download, Message},
     resolver,
     util::{normalize_title, timestamp},
 };
@@ -79,7 +79,7 @@ impl Actor for QbitActor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
-            Message::NewJob(job) => {
+            Message::NewDownload(job) => {
                 self.download(job, state).await?;
                 //         let n =
                 // Notification::new().with(NotificationChunk::Paragraph {
@@ -108,7 +108,7 @@ impl Actor for QbitActor {
 }
 
 impl QbitActor {
-    async fn download(&self, job: Job, state: &State) -> Result<(), ActorProcessingErr> {
+    async fn download(&self, job: Download, state: &State) -> Result<(), ActorProcessingErr> {
         let Some(meta) = resolver::get_one(job.entry.meta_id).await else {
             warn!("Failed to get meta for job");
             return Ok(());

@@ -3,16 +3,23 @@
 //! Download torrents
 
 use forrit_config::{get_config, DownloaderType};
-use forrit_core::model::Job;
+use forrit_core::model::Download;
 use ractor::Actor;
 
-use crate::{db::Collections, downloader::qbit::QbitActor, util::Boom, REQ};
+use crate::{
+    db::{impl_resource, Collections},
+    downloader::qbit::QbitActor,
+    util::Boom,
+    REQ,
+};
 pub const NAME: &str = "downloader";
 
 mod qbit;
 
-pub fn new_job(job: Job) {
-    ractor::registry::where_is(NAME.to_owned()).map(|sub| sub.send_message(Message::NewJob(job)));
+impl_resource!(Download, field(subscription_id, meta_id));
+
+pub fn new_download(job: Download) {
+    ractor::registry::where_is(NAME.to_owned()).map(|sub| sub.send_message(Message::NewDownload(job)));
 }
 
 pub async fn start(_db: &Collections) {
@@ -30,6 +37,6 @@ pub async fn start(_db: &Collections) {
 }
 
 pub enum Message {
-    NewJob(Job),
+    NewDownload(Download),
     Rename,
 }

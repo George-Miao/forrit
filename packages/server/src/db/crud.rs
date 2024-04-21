@@ -7,42 +7,6 @@ use tap::Pipe;
 
 use crate::db::*;
 
-macro_rules! impl_delegate_crud {
-    ($($index:expr)?) => {
-        async fn list(
-            &self,
-            param: forrit_core::model::ListParam,
-        ) -> crate::db::CrudResult<forrit_core::model::ListResult<WithId<Self::Resource>>> {
-            #[allow(unused_mut, unused_assignments)]
-            let mut sort = None;
-            $(sort = Some(mongodb::bson::doc! { $index: -1 });)?
-            self.0.list_by(None, sort, param).await
-        }
-
-        async fn create(&self, data: Self::Resource) -> crate::db::CrudResult<ObjectId> {
-            <GetSet<_, _> as CrudHandler>::create(&self.0, data).await
-        }
-
-        async fn get(&self, id: ObjectId) -> crate::db::CrudResult<Option<WithId<Self::Resource>>> {
-            <GetSet<_, _> as CrudHandler>::get(&self.0, id).await
-        }
-
-        async fn update(
-            &self,
-            id: ObjectId,
-            data: Self::Resource,
-        ) -> crate::db::CrudResult<forrit_core::model::UpdateResult> {
-            <GetSet<_, _> as CrudHandler>::update(&self.0, id, data).await
-        }
-
-        async fn delete(&self, id: ObjectId) -> crate::db::CrudResult<Option<WithId<Self::Resource>>> {
-            <GetSet<_, _> as CrudHandler>::delete(&self.0, id).await
-        }
-    };
-}
-
-pub(crate) use impl_delegate_crud;
-
 #[derive(Debug, Error)]
 pub enum CrudError {
     #[error("Database error: {0}")]
@@ -65,9 +29,9 @@ pub(crate) trait CrudHandler {
     async fn delete(&self, id: ObjectId) -> CrudResult<Option<WithId<Self::Resource>>>;
 }
 
-impl<G, S> CrudHandler for GetSet<G, S>
+impl<G, S> CrudHandler for Storage<G, S>
 where
-    S: Wrapping<G>,
+    S: Wrapping<G> + Resource,
     G: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync + 'static,
     S: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync + 'static,
 {
@@ -75,7 +39,7 @@ where
     type Shim = S;
 
     async fn list(&self, param: ListParam) -> CrudResult<ListResult<WithId<Self::Resource>>> {
-        self.list_by(None, None, param).await
+        self.list_by(None, param).await
     }
 
     async fn create(&self, data: Self::Resource) -> CrudResult<ObjectId> {

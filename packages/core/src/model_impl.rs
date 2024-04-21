@@ -14,6 +14,7 @@ use ts_rs::TS;
 
 use crate::model::*;
 
+#[cfg(feature = "mongodb_pagination")]
 impl ListParam {
     pub fn into_cursor(self) -> Option<mongodb_cursor_pagination::DirectedCursor> {
         Some(match self.direction {
@@ -329,6 +330,7 @@ impl From<Meta> for BsonMeta {
         Self {
             bson_begin: meta.begin.map(bson::DateTime::from_chrono),
             bson_end: meta.end.map(bson::DateTime::from_chrono),
+            tv_id: meta.tv.as_ref().map(|tv| tv.inner.id),
             inner: meta,
         }
     }
@@ -352,6 +354,14 @@ impl From<PartialEntry> for BsonEntry {
 impl From<BsonEntry> for PartialEntry {
     fn from(meta: BsonEntry) -> Self {
         meta.inner
+    }
+}
+
+impl Deref for BsonEntry {
+    type Target = PartialEntry;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
@@ -380,7 +390,7 @@ impl PartialEntry {
         })
     }
 }
-impl Job {
+impl Download {
     pub fn get_path(&self, meta: &WithId<Meta>, savepath: impl AsRef<Utf8Path>) -> Utf8PathBuf {
         let name = self
             .directory_override
