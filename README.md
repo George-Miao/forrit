@@ -1,6 +1,8 @@
 # Forrit
 
-Bangumi tracker and downloader with an elegant web UI and robust backend server.
+Bangumi tracker, subscribe manager and downloader with an elegant web UI and robust backend server.
+
+Main branch is under active develop and is not ready for usage. For old stable version, see `legacy` branch.
 
 ## TODO
 
