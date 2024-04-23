@@ -1,7 +1,7 @@
 use salvo::prelude::*;
 
 macro_rules! build_crud {
-    ($handler:ty, $tag:literal $(,)?) => {{
+    ($handler:ty, $tag:literal $(,on_create = $on_create:expr)? $(,on_update = $on_update:expr)? $(,)?) => {{
         use std::{fmt::Debug, marker::PhantomData};
 
         use forrit_core::model::{ListParam, ListResult, UpdateResult, WithId};
@@ -10,7 +10,8 @@ macro_rules! build_crud {
             oapi::{endpoint, extract::JsonBody},
             prelude::*,
         };
-        use tap::Pipe;
+        #[allow(unused_imports)]
+        use tap::{Pipe, Tap};
 
         use crate::{
             api::{ApiResult, CrudResultExt, OidParam},
@@ -39,6 +40,7 @@ macro_rules! build_crud {
         async fn post(depot: &mut Depot, obj: JsonBody<R>) -> ApiResult<String> {
             <$handler as CrudHandler>::create(obtain(depot), obj.0)
                 .await?
+                $(.tap(|id| ($on_create)(*id)))?
                 .to_hex()
                 .pipe(Ok)
         }
@@ -58,6 +60,7 @@ macro_rules! build_crud {
         async fn put(depot: &mut Depot, id: OidParam, obj: JsonBody<R>) -> ApiResult<Json<UpdateResult>> {
             <$handler as CrudHandler>::update(obtain(depot), id.id, obj.0)
                 .await?
+                $(.tap(|_| ($on_update)(id.id)))?
                 .pipe(Json)
                 .pipe(Ok)
         }

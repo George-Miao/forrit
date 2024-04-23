@@ -1,7 +1,15 @@
 [package]
 name    = "forrit-server"
-version = "0.1.0"
+version = { workspace = true }
 edition = "2021"
+
+[[bin]]
+name = "gen_api"
+path = "bin/gen_api.rs"
+
+[[bin]]
+name = "server"
+path = "bin/server.rs"
 
 [dependencies]
 forrit-core   = { workspace = true, features = ["mongodb_pagination"] }
@@ -33,12 +41,12 @@ salvo    = { version = "0.67.0", features = ["oapi", "websocket", "cors", "loggi
 
 tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
 
-anitomy   = "0.2.0"
-humantime = "2.1.0"
-mod_use   = "0.2.1"
-qbit-rs   = "0.4.1"
-rss       = "2.0.6"
-thiserror = "1.0.58"
+anitomy    = "0.2.0"
+humantime  = "2.1.0"
+mod_use    = "0.2.1"
+qbit-rs    = "0.4.1"
+rss        = "2.0.6"
+thiserror  = "1.0.58"
 camelpaste = "0.1.0"
 
 [dev-dependencies]

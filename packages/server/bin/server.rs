@@ -1,39 +1,15 @@
-#![allow(clippy::large_enum_variant)]
-#![feature(lazy_cell, let_chains, try_blocks, type_changing_struct_update, once_cell_try)]
+#![feature(lazy_cell, try_blocks)]
 
-use std::{process::exit, str::FromStr, sync::LazyLock, time::Duration};
+use std::{process::exit, str::FromStr};
 
 use camino::Utf8PathBuf;
 use forrit_config::init_config;
+use forrit_server::{db::Collections, util::Boom, *};
 use futures::future::join4;
 use mongodb::Client;
 use tap::Conv;
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt, Layer};
-
-use crate::{db::Collections, util::Boom};
-
-mod api;
-mod db;
-mod downloader;
-mod notifier;
-mod resolver;
-mod sourcer;
-mod subscription;
-mod test;
-mod util;
-
-#[cfg(not(debug_assertions))]
-const RPC_TIMEOUT: Duration = Duration::from_secs(3);
-
-#[cfg(debug_assertions)]
-const RPC_TIMEOUT: Duration = Duration::from_secs(100);
-
-const ACTOR_ERR: &str = "Actor is not running or registered";
-const SEND_ERR: &str = "Failed to send message to actor";
-const RECV_ERR: &str = "Failed to receive response from actor";
-
-static REQ: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 #[tokio::main]
 async fn main() {

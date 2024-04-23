@@ -11,7 +11,7 @@ use crate::{
     db::{Collections, Storage},
     resolver::{resolver_api, AliasKV, MetaStorage},
     sourcer::EntryStorage,
-    subscription::subscription_api,
+    subscription::{refresh_subscription, subscription_api},
 };
 
 mod crud;
@@ -41,6 +41,35 @@ impl Handler for Collections {
     }
 }
 
+pub fn api() -> Router {
+    let entry_api = build_crud!(EntryStorage, "entry",).without_create();
+    let meta_api = build_crud!(MetaStorage, "meta",).list().read().update().build();
+    let alias_api = build_crud!(AliasKV, "alias").all();
+    let sub_api = build_crud!(
+        Storage<Subscription>,
+        "subscription",
+        on_create = refresh_subscription,
+        on_update = refresh_subscription,
+    )
+    .all();
+    let download_api = build_crud!(Storage<Download>, "download",).list().read().build();
+
+    Router::new()
+        .push(resolver_api())
+        .push(subscription_api())
+        .push(entry_api)
+        .push(meta_api)
+        .push(alias_api)
+        .push(sub_api)
+        .push(download_api)
+}
+
+pub fn gen_oapi() -> Result<String, serde_json::Error> {
+    OpenApi::new("Forrit api", env!("CARGO_PKG_VERSION"))
+        .merge_router(&api())
+        .to_json()
+}
+
 pub async fn run(col: Collections) {
     let config = &get_config().api;
     if !config.enable {
@@ -56,25 +85,15 @@ pub async fn run(col: Collections) {
         .allow_headers(Any)
         .into_handler();
 
-    let entry_api = build_crud!(EntryStorage, "entry",).without_create();
-    let meta_api = build_crud!(MetaStorage, "meta",).list().read().update().build();
-    let alias_api = build_crud!(AliasKV, "alias").all();
-    let sub_api = build_crud!(Storage<Subscription>, "subscription",).all();
-    let download_api = build_crud!(Storage<Download>, "download",).list().read().build();
+    let mut router = api();
 
-    let router = Router::new()
-        .push(resolver_api())
-        .push(subscription_api())
-        .push(entry_api)
-        .push(meta_api)
-        .push(alias_api)
-        .push(sub_api)
-        .push(download_api);
-
-    let doc = OpenApi::new("Forrit api", "0.1.0").merge_router(&router);
-    let router = router
-        .push(doc.into_router("/api-doc/openapi.json"))
-        .push(Scalar::new("/api-doc/openapi.json").into_router("scalar"));
+    if config.doc.enable {
+        let doc = OpenApi::new("Forrit api", env!("CARGO_PKG_VERSION")).merge_router(&router);
+        let doc_path = config.doc.path.join("openapi.json");
+        router = router
+            .push(doc.into_router(doc_path.as_str()))
+            .push(Scalar::new(doc_path.into_string()).into_router(config.doc.path.as_str()));
+    }
 
     let service = Service::new(router)
         .hoop(col)
