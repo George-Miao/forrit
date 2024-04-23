@@ -67,6 +67,10 @@ pub struct Config {
     #[serde(default)]
     pub sourcer: MapOrVec<SourcerConfig>,
 
+    /// Subscription related configuration
+    #[serde(default)]
+    pub subscription: SubscriptionConfig,
+
     /// Downloader related configuration
     pub downloader: DownloaderConfig,
 
@@ -145,6 +149,9 @@ pub struct RssConfig {
     #[serde(default = "sourcer::rss::deny_non_torrent")]
     pub deny_non_torrent: bool,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct SubscriptionConfig {}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DownloaderConfig {
@@ -237,4 +244,20 @@ pub struct ApiConfig {
     /// build
     #[serde(default = "api::debug")]
     pub debug: bool,
+
+    /// API doc (OpenAPI spec and scalar) configuration
+    #[serde(default)]
+    pub doc: ApiDocConfig,
+}
+
+/// API doc (OpenAPI spec and scalar) configuration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApiDocConfig {
+    /// Enable the API doc, default to true
+    #[serde(default = "enable")]
+    pub enable: bool,
+
+    /// Path the API doc lives, default to `/api-doc`
+    #[serde(default = "api::doc::path")]
+    pub path: Utf8PathBuf,
 }

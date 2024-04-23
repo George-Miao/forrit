@@ -106,6 +106,7 @@ pub mod api {
                 enable: super::enable(),
                 bind: bind(),
                 debug: debug(),
+                doc: Default::default(),
             }
         }
     }
@@ -116,5 +117,24 @@ pub mod api {
 
     pub fn debug() -> bool {
         cfg!(debug_assertions)
+    }
+
+    pub mod doc {
+        use camino::Utf8PathBuf;
+
+        use crate::ApiDocConfig;
+
+        impl Default for ApiDocConfig {
+            fn default() -> Self {
+                Self {
+                    enable: crate::default::enable(),
+                    path: path(),
+                }
+            }
+        }
+
+        pub fn path() -> Utf8PathBuf {
+            "/api-doc".into()
+        }
     }
 }
