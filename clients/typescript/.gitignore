@@ -1,4 +1,8 @@
 src/bindings/
+src/schema.d.ts
+
+pnpm-lock.yaml
+
 # Logs
 logs
 *.log

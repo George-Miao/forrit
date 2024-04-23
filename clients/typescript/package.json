@@ -6,11 +6,13 @@
   "description": "Client library for forrit API's",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "/dist"
-  ],
+  "files": ["/dist"],
   "scripts": {
-    "build": "npm run gen && tsc",
-    "gen": "just gen_ts"
+    "build": "npm run gen:schema && tsc",
+    "gen:schema": "openapi-typescript ../../data/openapi.json -o src/schema.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^6.7.5",
+    "typescript": "^5.4.5"
   }
 }

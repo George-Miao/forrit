@@ -3,7 +3,9 @@
     "module": "CommonJS",
     "target": "ESNext",
     "declaration": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "alwaysStrict": true,
+    "strict": true
   },
   "include": ["src/**/*"]
 }
