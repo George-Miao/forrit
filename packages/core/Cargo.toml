@@ -25,3 +25,4 @@ salvo_core                = { workspace = true }
 serde_json                = { workspace = true }
 bson                      = { workspace = true, features = ["chrono-0_4"] }
 mongodb-cursor-pagination = { workspace = true, optional = true }
+pin-project-lite = "0.2.14"
