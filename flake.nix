@@ -40,6 +40,7 @@
                 just
                 openssl
                 biome
+                nodejs
                 nodePackages.typescript
                 nodePackages.pnpm
                 mongosh
