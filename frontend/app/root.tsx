@@ -5,13 +5,46 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  json,
+  useLoaderData,
 } from '@remix-run/react'
 import * as icons from '@douyinfe/semi-icons'
 import 'reset-css'
-import { Button, Nav, Layout as SemiLayout } from '@douyinfe/semi-ui'
+import {
+  Button,
+  Nav,
+  Layout as SemiLayout,
+  Typography,
+} from '@douyinfe/semi-ui'
+import WidthLimit from './components/width_limit'
+
+const { Header, Content, Footer } = SemiLayout
+const { Text, Paragraph } = Typography
+
+interface Env {
+  api: string
+}
+
+export async function loader() {
+  const { API_ENDPOINT } = process.env
+  if (!API_ENDPOINT) {
+    throw new Error('API_ENDPOINT not set')
+  }
+  return json({
+    ENV: {
+      api: API_ENDPOINT,
+    } as Env,
+  })
+}
+
+declare global {
+  interface Window {
+    ENV: Env
+  }
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { Header, Content } = SemiLayout
+  const data = useLoaderData<typeof loader>()
 
   return (
     <html lang='en'>
@@ -22,7 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <SemiLayout className='components-layout-demo'>
+        <SemiLayout>
           <Header>
             <Nav
               mode='horizontal'
@@ -35,23 +68,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 )
               }}
             >
+              <Nav.Item itemKey='/' link='/' icon={<icons.IconHome />} />
               <Nav.Item
-                text='首页'
-                itemKey='/'
-                link='/'
-                icon={<icons.IconHome />}
-              />
-              <Nav.Item
-                text='订阅'
-                itemKey='/subscription'
-                link='/subscription'
-                icon={<icons.IconWifi />}
-              />
-              <Nav.Item
-                text='更新'
                 itemKey='/entry'
                 link='/entry'
-                icon={<icons.IconList />}
+                icon={<icons.IconActivity />}
+              />
+              <Nav.Item
+                itemKey='/subscription'
+                link='/subscription'
+                icon={<icons.IconFavoriteList />}
+              />
+              <Nav.Item
+                itemKey='/download'
+                link='/download'
+                icon={<icons.IconDownload />}
               />
               <Nav.Footer>
                 <Button
@@ -64,7 +95,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 />
                 <Button
                   theme='borderless'
-                  icon={<icons.IconHelpCircle />}
+                  icon={<icons.IconGithubLogo />}
                   style={{
                     color: 'var(--semi-color-text-2)',
                     marginRight: '12px',
@@ -75,18 +106,47 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Header>
           <Content
             style={{
-              margin: '1em max(3vw, calc(50vw - 800px))',
-              minHeight: 'calc(100vh - 64px)',
-              maxWidth: '1600px',
+              minHeight: 'calc(100svh - 204px)',
             }}
           >
             {children}
           </Content>
-          {/* <Footer>Footer</Footer> */}
+          <Footer
+            style={{
+              backgroundColor: 'var(--semi-color-fill-0)',
+              padding: '2em 0',
+              marginTop: '1em',
+            }}
+          >
+            <WidthLimit>
+              <Paragraph
+                type='tertiary'
+                style={{
+                  textAlign: 'center',
+                }}
+              >
+                Project Forrit © {new Date().getFullYear()} <br />
+                By{' '}
+                <Text link={{ href: 'https://github.com/George-Miao' }}>
+                  Pop
+                </Text>
+                <br />
+                Built with{' '}
+                <Text link={{ href: 'https://remix.run' }}>Remix</Text> and{' '}
+                <Text link={{ href: 'https://semi.design' }}>Semi UI</Text>
+              </Paragraph>
+            </WidthLimit>
+          </Footer>
         </SemiLayout>
 
         <ScrollRestoration />
         <Scripts />
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml:
+          dangerouslySetInnerHTML={{
+            __html: `window.ENV = ${JSON.stringify(data.ENV)}`,
+          }}
+        />
       </body>
     </html>
   )

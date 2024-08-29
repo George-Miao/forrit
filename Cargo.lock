@@ -391,6 +391,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 
 [[package]]
+name = "camelpaste"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d88a780e6aa14b75d7be99f374d8b5c315aaf9c12ada1e2b1cb281468584c9"
+
+[[package]]
 name = "camino"
 version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -960,13 +966,12 @@ dependencies = [
  "futures",
  "iso8601",
  "mongodb-cursor-pagination",
- "regex",
+ "pin-project-lite",
  "salvo-oapi",
  "salvo_core",
  "serde",
  "serde_json",
  "tmdb-api",
- "tracing",
  "ts-rs",
  "url",
 ]
@@ -977,6 +982,7 @@ version = "0.1.0"
 dependencies = [
  "anitomy",
  "bangumi-data",
+ "camelpaste",
  "camino",
  "chrono",
  "dotenvy",

@@ -6,10 +6,8 @@ use std::{
 
 use bangumi_data::{Item, Language};
 use camino::{Utf8Path, Utf8PathBuf};
-use regex::Regex;
 use salvo_oapi::{schema, Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema};
 use tmdb_api::tvshow::{SeasonShort, TVShowShort};
-use tracing::debug;
 use ts_rs::TS;
 
 use crate::model::*;
@@ -101,6 +99,19 @@ impl<T> WithId<T> {
             id: self.id,
             inner: self.inner.into(),
         }
+    }
+
+    pub fn map<P>(self, f: impl FnOnce(T) -> P) -> WithId<P> {
+        WithId {
+            id: self.id,
+            inner: f(self.inner),
+        }
+    }
+}
+
+impl<T> WithId<Option<T>> {
+    pub fn transpose(self) -> Option<WithId<T>> {
+        self.inner.map(|inner| WithId { id: self.id, inner })
     }
 }
 impl<T> Deref for WithId<T> {
@@ -238,17 +249,34 @@ impl<T: ToSchema + 'static> ToSchema for WithId<T> {
         ret
     }
 }
+
 impl ToSchema for ObjectIdSchema {
     fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
         components.schemas.entry("ObjectId".to_owned()).or_insert_with(|| {
             RefOr::T(Schema::Object(
                 Object::new()
-                    .schema_type(SchemaType::String)
-                    .format(SchemaFormat::Custom("ObjectId".to_owned()))
-                    .pattern("^[0-9a-fA-F]{24}$"),
+                    .property("$oid", Ref::from_schema_name("ObjectIdString"))
+                    .required("$oid"),
             ))
         });
         RefOr::Ref(schema::Ref::from_schema_name("ObjectId"))
+    }
+}
+
+impl ToSchema for ObjectIdStringSchema {
+    fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
+        components
+            .schemas
+            .entry("ObjectIdString".to_owned())
+            .or_insert_with(|| {
+                RefOr::T(Schema::Object(
+                    Object::new()
+                        .schema_type(SchemaType::String)
+                        .format(SchemaFormat::Custom("ObjectId".to_owned()))
+                        .pattern("^[0-9a-fA-F]{24}$"),
+                ))
+            });
+        RefOr::Ref(schema::Ref::from_schema_name("ObjectIdString"))
     }
 }
 
@@ -357,6 +385,16 @@ impl From<BsonEntry> for PartialEntry {
     }
 }
 
+impl From<Entry> for PartialEntry {
+    fn from(entry: Entry) -> Self {
+        Self {
+            base: entry.base,
+            meta_title: Some(entry.meta_title),
+            meta_id: Some(entry.meta_id),
+        }
+    }
+}
+
 impl Deref for BsonEntry {
     type Target = PartialEntry;
 
@@ -404,29 +442,12 @@ impl Download {
     }
 }
 
-impl Subscription {
-    pub fn want_entry(&self, entry: &Entry) -> bool {
-        if let Some(include) = &self.include {
-            let regex = Regex::new(include).expect("Invalid regex");
-            if !regex.is_match(&entry.title) {
-                debug!(?entry.title, pattern = include, "Entry does not match include regex");
-                return false;
-            }
+impl DownloadState {
+    pub fn not_error(&self) -> bool {
+        match self {
+            Self::Pending | Self::Downloading | Self::Finished => true,
+            Self::Failed => false,
         }
-        if let Some(exclude) = &self.exclude {
-            let regex = Regex::new(exclude).expect("Invalid regex");
-            if regex.is_match(&entry.title) {
-                debug!(?entry.title, pattern = exclude, "Entry matches exclude regex");
-                return false;
-            }
-        }
-        if let Some(team) = &self.team {
-            if entry.group.as_ref() != Some(team) {
-                debug!(?entry.group, want = team, "Entry does not match team");
-                return false;
-            }
-        }
-        true
     }
 }
 

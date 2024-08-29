@@ -1,7 +1,8 @@
 [package]
 name    = "forrit-core"
-version = "0.1.0"
-edition = "2021"
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,12 +18,10 @@ iso8601                   = { workspace = true }
 camino                    = { workspace = true }
 url                       = { workspace = true }
 chrono                    = { workspace = true }
-regex                     = { workspace = true }
-tracing                   = { workspace = true }
 ts-rs                     = { workspace = true, features = ["url-impl", "chrono-impl"] }
 salvo-oapi                = { workspace = true, features = ["url"] }
 salvo_core                = { workspace = true }
 serde_json                = { workspace = true }
 bson                      = { workspace = true, features = ["chrono-0_4"] }
 mongodb-cursor-pagination = { workspace = true, optional = true }
-pin-project-lite = "0.2.14"
+pin-project-lite          = "0.2.14"

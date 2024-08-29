@@ -8,7 +8,7 @@ use ractor::ActorCell;
 use crate::{
     resolver::{index::IndexStatRecv, ExtractResult, Message, Resolver},
     util::ActorCellExt,
-    ACTOR_ERR, RECV_ERR, RPC_TIMEOUT, SEND_ERR,
+    ACTOR_ERR, RECV_ERR, SEND_ERR,
 };
 
 fn resolver() -> ActorCell {
@@ -18,7 +18,7 @@ fn resolver() -> ActorCell {
 /// Resolve file name and match it to a meta entry.
 pub async fn resolve(file_name: String) -> ExtractResult {
     resolver()
-        .call(|port| Message::Resolve { file_name, port }, Some(RPC_TIMEOUT))
+        .call(|port| Message::Resolve { file_name, port }, None)
         .await
         .expect(SEND_ERR)
         .expect(RECV_ERR)
@@ -26,7 +26,7 @@ pub async fn resolve(file_name: String) -> ExtractResult {
 
 pub async fn get_index() -> Option<IndexStatRecv> {
     resolver()
-        .call(Message::GetIndexJob, Some(RPC_TIMEOUT))
+        .call(Message::GetIndexJob, None)
         .await
         .expect(SEND_ERR)
         .expect(RECV_ERR)
@@ -34,10 +34,7 @@ pub async fn get_index() -> Option<IndexStatRecv> {
 
 pub async fn start_index(arg: IndexArg) -> IndexStatRecv {
     resolver()
-        .call(
-            |port| Message::StartIndexJob { arg, port: Some(port) },
-            Some(RPC_TIMEOUT),
-        )
+        .call(|port| Message::StartIndexJob { arg, port: Some(port) }, None)
         .await
         .expect(SEND_ERR)
         .expect(RECV_ERR)
@@ -45,7 +42,7 @@ pub async fn start_index(arg: IndexArg) -> IndexStatRecv {
 
 pub async fn get_by_season(season: Option<YearSeason>) -> Vec<WithId<Meta>> {
     resolver()
-        .call(|port| Message::GetBySeason { season, port }, Some(RPC_TIMEOUT))
+        .call(|port| Message::GetBySeason { season, port }, None)
         .await
         .expect(SEND_ERR)
         .expect(RECV_ERR)
@@ -61,7 +58,7 @@ pub(super) fn index_finished() {
 
 pub async fn get_one(id: ObjectId) -> Option<WithId<Meta>> {
     resolver()
-        .call(|port| Message::GetOne { id, port }, Some(RPC_TIMEOUT))
+        .call(|port| Message::GetOne { id, port }, None)
         .await
         .expect(SEND_ERR)
         .expect(RECV_ERR)

@@ -1,3 +1,4 @@
+use futures::Future;
 use governor::DefaultDirectRateLimiter;
 use tmdb_api::prelude::Command;
 
@@ -18,8 +19,11 @@ impl GovernedClient {
 }
 
 pub trait CommandExt: Command {
-    async fn execute_with_governor(&self, client: &GovernedClient) -> Result<Self::Output, tmdb_api::error::Error> {
-        client.execute(self).await
+    fn execute_with_governor(
+        &self,
+        client: &GovernedClient,
+    ) -> impl Future<Output = Result<Self::Output, tmdb_api::error::Error>> + Send {
+        async { client.execute(self).await }
     }
 }
 

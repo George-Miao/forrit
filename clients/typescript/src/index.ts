@@ -1,52 +1,31 @@
-// import type { Alias } from './bindings/Alias'
-// import type { DirectedCursor } from './bindings/DirectedCursor'
-// import type { Entry } from './bindings/Entry'
-// import type { Download } from './bindings/Download'
-// import type { ListParam } from './bindings/ListParam'
-// import type { ListResult } from './bindings/ListResult'
-// import type { Meta } from './bindings/Meta'
-// import type { PartialEntry } from './bindings/PartialEntry'
-// import type { Subscription } from './bindings/Subscription'
-// import type { UpdateResult } from './bindings/UpdateResult'
-// import type { WithId } from './bindings/WithId'
-// import type { YearSeason } from './bindings/YearSeason'
+import type { components } from './schema'
+export type { paths, components } from './schema'
 
-// export type { Alias } from './bindings/Alias'
-// export type { DirectedCursor } from './bindings/DirectedCursor'
-// export type { Direction } from './bindings/Direction'
-// export type { Entry } from './bindings/Entry'
-// export type { EntryBase } from './bindings/EntryBase'
-// export type { IndexArg } from './bindings/IndexArg'
-// export type { IndexStat } from './bindings/IndexStat'
-// export type { ItemType } from './bindings/ItemType'
-// export type { Download } from './bindings/Download'
-// export type { Language } from './bindings/Language'
-// export type { ListParam } from './bindings/ListParam'
-// export type { ListResult } from './bindings/ListResult'
-// export type { Meta } from './bindings/Meta'
-// export type { ObjectId } from './bindings/ObjectId'
-// export type { PageInfo } from './bindings/PageInfo'
-// export type { PartialEntry } from './bindings/PartialEntry'
-// export type { Record } from './bindings/Record'
-// export type { Season } from './bindings/Season'
-// export type { SeasonOverride } from './bindings/SeasonOverride'
-// export type { SeasonShort } from './bindings/SeasonShort'
-// export type { Site } from './bindings/Site'
-// export type { Subscription } from './bindings/Subscription'
-// export type { TVShowShort } from './bindings/TVShowShort'
-// export type { UpdateResult } from './bindings/UpdateResult'
-// export type { WithId } from './bindings/WithId'
-// export type { YearMonth } from './bindings/YearMonth'
-// export type { YearSeason } from './bindings/YearSeason'
+type S = components['schemas']
 
-// interface ReqArg<B = undefined> {
-//   id?: string
-//   body?: B
-//   sub_resource?: string
-//   param?: { [key: string]: unknown }
-// }
+export type DirectedCursor = S['forrit_core.model.DirectedCursor']
+export type EntryBase = S['forrit_core.model.EntryBase']
+export type IndexArg = S['forrit_core.model.IndexArg']
+export type IndexStat = S['forrit_core.model.IndexStat']
+export type Download = S['forrit_core.model.Download']
+export type Meta = S['forrit_core.model.Meta']
+export type ObjectId = S['ObjectId']
+export type PageInfo = S['forrit_core.model.PageInfo']
+export type PartialEntry = S['forrit_core.model.PartialEntry']
+export type Season = S['forrit_core.date.Season']
+export type Subscription = S['forrit_core.model.Subscription']
+export type UpdateResult = S['forrit_core.model.UpdateResult']
+export type YearMonth = S['forrit_core.date.YearMonth']
 
-export type { paths } from './schema'
+export type ListResult<T> = {
+  items: T[]
+  page_info: PageInfo
+  total_count: number
+}
+
+export type WithId<T> = {
+  _id: S['ObjectId']
+} & T
 
 // export abstract class Client {
 //   protected endpoint: string

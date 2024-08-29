@@ -1,0 +1,13 @@
+.subscription-form .semi-input-prefix-text,
+.subscription-form .semi-input-suffix-text {
+  margin: 0 6px
+}
+
+.subscription-form.semi-form-vertical .semi-col {
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.subscription-form [class^="semi-input"] {
+  font-size: 12px;
+}

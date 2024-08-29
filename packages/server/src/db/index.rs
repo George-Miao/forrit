@@ -1,5 +1,7 @@
 use mongodb::IndexModel;
 
+pub const NON_OID: &str = "MongoDB returned non-objectid type for inserted id";
+
 pub trait Idx {
     const SORT_INDEX: Option<&'static str>;
 
@@ -21,7 +23,7 @@ pub trait Resource {
 macro_rules! impl_resource {
     ($r:ty
         $(,sort_by $sort:ident)?
-        $(,field($($field:ident),* $(,)? ))?
+        $(,field($($field:ident),* ))?
         $(,index($($idx:expr),*) )?
         $(,)?
     ) => {

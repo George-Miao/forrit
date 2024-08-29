@@ -1,7 +1,8 @@
 [package]
 name    = "forrit-server"
 version = { workspace = true }
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
 
 [[bin]]
 name = "gen_api"

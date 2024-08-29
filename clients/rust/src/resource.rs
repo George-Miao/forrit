@@ -1,4 +1,4 @@
-use forrit_core::model::{Alias, Job, Meta, PartialEntry, Subscription};
+use forrit_core::model::{Alias, Download, Meta, PartialEntry, Subscription};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::resource::sealed::Sealed;
@@ -41,4 +41,4 @@ impl_resource!(entry, PartialEntry: List, Read, Update, Delete);
 impl_resource!(meta, Meta: List, Read, Update);
 impl_resource!(alias, Alias: List, Create, Read, Update, Delete);
 impl_resource!(subscription, Subscription: List, Create, Read, Update, Delete);
-impl_resource!(job, Job: List, Read);
+impl_resource!(download, Download: List, Read);

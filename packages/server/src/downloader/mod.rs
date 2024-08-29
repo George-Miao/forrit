@@ -16,7 +16,7 @@ pub const NAME: &str = "downloader";
 
 mod qbit;
 
-impl_resource!(Download, field(subscription_id, meta_id));
+impl_resource!(Download, field(subscription_id, meta_id, entry_id, state));
 
 pub fn new_download(job: Download) {
     ractor::registry::where_is(NAME.to_owned()).map(|sub| sub.send_message(Message::NewDownload(job)));

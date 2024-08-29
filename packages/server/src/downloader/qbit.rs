@@ -15,7 +15,6 @@ use tracing::{debug, info, warn};
 
 use crate::{
     downloader::{Download, Message},
-    resolver,
     util::{normalize_title, timestamp},
 };
 
@@ -109,28 +108,30 @@ impl Actor for QbitActor {
 
 impl QbitActor {
     async fn download(&self, job: Download, state: &State) -> Result<(), ActorProcessingErr> {
-        let Some(meta) = resolver::get_one(job.entry.meta_id).await else {
-            warn!("Failed to get meta for job");
-            return Ok(());
-        };
-        let path = job.get_path(&meta, &state.savepath);
-        let url = job.entry.base.torrent;
+        // let Some(meta) = resolver::get_one(job.meta_id).await else {
+        //     warn!("Failed to get meta for job");
+        //     return Ok(());
+        // };
+        // let path = job.get_path(&meta, &state.savepath);
+        // let url = job.entry.base.torrent;
 
         // if get_config().dry_run {
         //     info!(%url, dir = %dir.display(), %id, "Download");
         //     return Ok(());
         // }
 
-        info!(%url, %path, "Adding torrent to qbit");
+        // info!(%url, %path, "Adding torrent to qbit");
 
-        AddTorrentArg::builder()
-            .source(TorrentSource::Urls { urls: vec![url].into() })
-            .savepath(path.to_string())
-            .build()
-            .pipe(|arg| self.qbit.add_torrent(arg))
-            .await?;
+        // AddTorrentArg::builder()
+        //     .source(TorrentSource::Urls { urls: vec![url].into() })
+        //     .savepath(path.to_string())
+        //     .build()
+        //     .pipe(|arg| self.qbit.add_torrent(arg))
+        //     .await?;
 
-        Ok(())
+        // Ok(())
+
+        todo!("Download")
     }
 
     fn should_rename(&self, torrent: &Torrent) -> bool {

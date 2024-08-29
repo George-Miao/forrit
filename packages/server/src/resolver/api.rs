@@ -13,10 +13,10 @@ use tap::Pipe;
 use crate::{
     api::{ApiResult, OidParam},
     db::Storage,
+    dispatcher::SubscriptionIdx,
     downloader::DownloadIdx,
     resolver::AliasKV,
     sourcer::EntryStorage,
-    subscription::SubscriptionIdx,
 };
 
 /// Subscribe to index status updates
@@ -55,16 +55,14 @@ async fn get_index() -> Json<Option<IndexStat>> {
 
 /// Start new index job if none is running
 #[endpoint(tags("index"))]
-async fn start_index(arg: JsonBody<IndexArg>) -> StatusCode {
+async fn start_index(arg: JsonBody<IndexArg>) {
     super::start_index(arg.into_inner()).await;
-    StatusCode::NO_CONTENT
 }
 
 /// Stop current index job immediately if there's one running
 #[endpoint(tags("index"))]
-async fn stop_index() -> StatusCode {
+async fn stop_index() {
     super::stop_index();
-    StatusCode::NO_CONTENT
 }
 
 /// Get all meta by season

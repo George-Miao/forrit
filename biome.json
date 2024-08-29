@@ -2,7 +2,7 @@
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
-    "ignore": [],
+    "ignore": ["frontend/app/client.ts"],
     "attributePosition": "auto",
     "indentStyle": "space",
     "indentWidth": 2,

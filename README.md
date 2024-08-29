@@ -8,6 +8,8 @@ Main branch is under active develop and is not ready for usage. For old stable v
 
 - [ ] (Frontend) Download job page
 - [ ] (Frontend) Entry detail page
+- [ ] (Frontend) Fix wrong matching (entry - meta) and create alias for the fix
+- [ ] (Frontend) Manually override season info (meta)
 - [ ] (Server) RSS html Sanitization (w/ [ammonia](https://github.com/rust-ammonia/ammonia))
 - [ ] (Server) Read torrent info for better resolution and file size
 - [ ] (Server) Transmission API

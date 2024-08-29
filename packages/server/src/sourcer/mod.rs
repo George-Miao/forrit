@@ -52,11 +52,15 @@ pub enum SourcerMessage {
 
 impl Wrapping<PartialEntry> for BsonEntry {
     fn wrap(x: PartialEntry) -> Self {
-        BsonEntry::from(x)
+        x.into()
+    }
+
+    fn unwrap(self) -> PartialEntry {
+        self.into()
     }
 }
 
-impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, meta_id));
+impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, meta_id, download_id));
 
 impl EntryStorage {
     pub async fn list_by_meta_id(
@@ -79,6 +83,17 @@ impl EntryStorage {
             query.insert(BsonEntryIdx::META_ID, doc! { "$ne": null });
         };
         self.get.find_one(query, None).await?.is_some().pipe(Ok)
+    }
+
+    pub async fn set_download_id(&self, id: ObjectId, download_id: ObjectId) -> MongoResult<()> {
+        self.set
+            .update_one(
+                doc! { "_id": id },
+                doc! { "$set": doc! { BsonEntryIdx::DOWNLOAD_ID: download_id } },
+                None,
+            )
+            .await
+            .map(|_| ())
     }
 
     pub async fn upsert(&self, entry: &PartialEntry) -> MongoResult<Option<ObjectId>> {

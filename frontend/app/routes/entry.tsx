@@ -2,9 +2,13 @@ import { List, Popover, Skeleton } from '@douyinfe/semi-ui'
 import { Await, json, useLoaderData } from '@remix-run/react'
 import MetaPreview from '../components/meta_preview'
 import { Suspense } from 'react'
+import { EntryClient } from 'forrit-client'
 
 export const loader = async () => {
-  const data = await import('../../../data/entry.json').then(m => m.default)
+  // const data = await import('../../../data/entry.json').then(m => m.default)
+  const data = await new EntryClient('http://localhost:8080')
+    .list()
+    .then(m => m.items)
   return json(data)
 }
 

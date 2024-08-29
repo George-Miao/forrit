@@ -54,7 +54,7 @@ async fn main() {
         resolver::start(&col),
         downloader::start(&col),
         sourcer::start(&col),
-        subscription::start(&col),
+        dispatcher::start(&col),
     )
     .await;
 

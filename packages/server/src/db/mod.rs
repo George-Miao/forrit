@@ -52,8 +52,9 @@ impl Collections {
 /// Guarantee that `Self` wraps `T` and it acts like a supertype of `T`
 /// after serialization. Serialized form of `Self` **MUST** also be a valid `T`,
 /// that is, it can be deserialized back to `T`.
-pub(crate) trait Wrapping<T> {
+pub trait Wrapping<T> {
     fn wrap(x: T) -> Self;
+    fn unwrap(self) -> T;
 }
 
 impl<T> Wrapping<T> for T {
@@ -61,12 +62,22 @@ impl<T> Wrapping<T> for T {
     fn wrap(x: T) -> Self {
         x
     }
+
+    #[inline(always)]
+    fn unwrap(self) -> T {
+        self
+    }
 }
 
 impl Wrapping<Meta> for BsonMeta {
     #[inline(always)]
     fn wrap(x: Meta) -> Self {
         x.into()
+    }
+
+    #[inline(always)]
+    fn unwrap(self) -> Meta {
+        self.inner
     }
 }
 
@@ -88,6 +99,24 @@ where
         })
     }
 
+    pub async fn insert(&self, data: R) -> MongoResult<WithId<R>>
+    where
+        W: Serialize,
+    {
+        let wrapped = W::wrap(data);
+        let id = self
+            .set
+            .insert_one(&wrapped, None)
+            .await?
+            .inserted_id
+            .as_object_id()
+            .expect(NON_OID);
+        Ok(WithId {
+            id,
+            inner: wrapped.unwrap(),
+        })
+    }
+
     pub async fn list_by(
         &self,
         filter: impl Into<Option<Document>>,
@@ -100,7 +129,7 @@ where
             .find_paginated(
                 filter.into(),
                 FindOptions::builder()
-                    .sort(None)
+                    .sort(W::Idx::SORT_INDEX.map(|x| doc! { x: -1 }))
                     .limit(param.per_page as i64)
                     .build()
                     .pipe(Some),

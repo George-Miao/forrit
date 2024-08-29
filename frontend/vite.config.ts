@@ -3,6 +3,7 @@ import { installGlobals } from '@remix-run/node'
 import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { cjsInterop } from 'vite-plugin-cjs-interop'
+import SemiTheme from '@kousum/vite-plugin-semi-theme'
 
 installGlobals()
 
@@ -13,6 +14,9 @@ export default defineConfig({
     }),
     remix(),
     tsconfigPaths(),
+    SemiTheme({
+      theme: '@semi-bot/semi-theme-momo',
+    }),
   ],
   build: {
     cssCodeSplit: false,

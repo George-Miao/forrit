@@ -83,6 +83,7 @@ pub struct WithId<T> {
 }
 
 pub struct ObjectIdSchema;
+pub struct ObjectIdStringSchema;
 
 /// Metadata of a bangumi season
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema, TS)]
@@ -158,6 +159,10 @@ pub struct EntryBase {
     pub link: Option<Url>,
     pub group: Option<String>,
     pub elements: BTreeMap<String, String>,
+
+    #[salvo(schema(value_type = Option<ObjectIdSchema>))]
+    #[ts(as = "Option<OidExtJson>")]
+    pub download_id: Option<ObjectId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
@@ -197,16 +202,30 @@ pub struct Entry {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
+#[serde(rename_all = "lowercase")]
+pub enum DownloadState {
+    Pending,
+    Downloading,
+    Finished,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
 pub struct Download {
-    #[salvo(schema(value_type = ObjectIdSchema))]
-    #[ts(as = "OidExtJson")]
-    pub meta_id: ObjectId,
+    #[salvo(schema(value_type = Option<ObjectIdSchema>))]
+    #[ts(as = "Option<OidExtJson>")]
+    pub meta_id: Option<ObjectId>,
+
+    #[salvo(schema(value_type = Option<ObjectIdSchema>))]
+    #[ts(as = "Option<OidExtJson>")]
+    pub subscription_id: Option<ObjectId>,
 
     #[salvo(schema(value_type = ObjectIdSchema))]
     #[ts(as = "OidExtJson")]
-    pub subscription_id: ObjectId,
+    pub entry_id: ObjectId,
 
-    pub entry: Entry,
+    pub state: DownloadState,
 
     #[salvo(schema(value_type = Option<String>))]
     #[ts(as = "Option<String>")]
@@ -219,11 +238,14 @@ pub struct Subscription {
     #[salvo(schema(value_type = ObjectIdSchema))]
     #[ts(as = "OidExtJson")]
     pub meta_id: ObjectId,
+
     pub include: Option<String>,
     pub exclude: Option<String>,
+
     #[salvo(schema(value_type = Option<String>))]
     #[ts(as = "Option<String>")]
     pub directory: Option<Utf8PathBuf>,
+
     pub team: Option<String>,
     pub min_size: Option<u64>, // TODO: Implement size filter
     pub max_size: Option<u64>,
@@ -312,6 +334,16 @@ mod mongodb_pagination {
         #[salvo(parameter(value_type = Option<String>), schema(value_type = Option<String>))]
         #[ts(optional, as = "Option<String>")]
         pub cursor: Option<Edge>,
+    }
+
+    impl Default for ListParam {
+        fn default() -> Self {
+            Self {
+                per_page: default_per_page(),
+                direction: Direction::Forward,
+                cursor: None,
+            }
+        }
     }
 
     fn default_per_page() -> u32 {

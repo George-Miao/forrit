@@ -202,7 +202,6 @@ impl ResolverInner {
             .seasons
             .into_iter()
             .find_map(|season| {
-                info!(?season);
                 let air_date = season.inner.air_date?;
 
                 // IMDB adds a "Specials" season to shows for things like SPs and OVAs. It

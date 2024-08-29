@@ -3,6 +3,7 @@ members  = ["packages/*", "clients/rust", "integration"]
 resolver = "2"
 
 [workspace.package]
+authors = ["George Miao <gm@miao.dev>"]
 edition = "2021"
 version = "0.1.0"
 

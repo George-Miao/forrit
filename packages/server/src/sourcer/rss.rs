@@ -8,8 +8,8 @@ use tap::Pipe;
 use tracing::{debug, info, instrument};
 
 use crate::{
+    dispatcher::new_entry,
     sourcer::{EntryStorage, PartialEntry, SourcerMessage},
-    subscription::new_entry,
 };
 
 pub struct RssActor {
@@ -91,6 +91,7 @@ impl RssActor {
             mime_type: closure.mime_type,
             group: resolved.group,
             elements,
+            download_id: None,
         };
 
         let (meta_title, meta_id) = if let Some(meta) = resolved.meta {

@@ -9,9 +9,9 @@ use tracing::info;
 
 use crate::{
     db::{Collections, Storage},
+    dispatcher::{dispatcher_api, refresh_subscription},
     resolver::{resolver_api, AliasKV, MetaStorage},
     sourcer::EntryStorage,
-    subscription::{refresh_subscription, subscription_api},
 };
 
 mod crud;
@@ -42,21 +42,21 @@ impl Handler for Collections {
 }
 
 pub fn api() -> Router {
-    let entry_api = build_crud!(EntryStorage, "entry",).without_create();
-    let meta_api = build_crud!(MetaStorage, "meta",).list().read().update().build();
+    let entry_api = build_crud!(EntryStorage, "entry").without_create();
+    let meta_api = build_crud!(MetaStorage, "meta").list().read().update().build();
     let alias_api = build_crud!(AliasKV, "alias").all();
     let sub_api = build_crud!(
         Storage<Subscription>,
         "subscription",
         on_create = refresh_subscription,
-        on_update = refresh_subscription,
+        on_update = refresh_subscription
     )
     .all();
-    let download_api = build_crud!(Storage<Download>, "download",).list().read().build();
+    let download_api = build_crud!(Storage<Download>, "download").list().read().build();
 
     Router::new()
         .push(resolver_api())
-        .push(subscription_api())
+        .push(dispatcher_api())
         .push(entry_api)
         .push(meta_api)
         .push(alias_api)
@@ -107,6 +107,6 @@ pub async fn run(col: Collections) {
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, ToParameters)]
 pub struct OidParam {
-    #[salvo(parameter(parameter_in = Path, value_type = forrit_core::model::ObjectIdSchema))]
+    #[salvo(parameter(parameter_in = Path, value_type = forrit_core::model::ObjectIdStringSchema))]
     pub id: ObjectId,
 }

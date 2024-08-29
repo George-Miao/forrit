@@ -8,8 +8,7 @@
   "types": "dist/index.d.ts",
   "files": ["/dist"],
   "scripts": {
-    "build": "npm run gen:schema && tsc",
-    "gen:schema": "openapi-typescript ../../data/openapi.json -o src/schema.d.ts"
+    "build": "tsc"
   },
   "devDependencies": {
     "openapi-typescript": "^6.7.5",

@@ -1,47 +1,48 @@
 import { Card } from '@douyinfe/semi-ui'
-import { Await } from '@remix-run/react'
-import { MetaClient } from 'forrit-client'
-import { Suspense } from 'react'
 
-import { format_broadcast, get_title, parse_broadcast } from '../util'
+import {
+  type ExtractedMeta,
+  format_broadcast,
+  get_title,
+  parse_broadcast,
+} from '../util'
+import hooks from 'app/client'
+import Loading from './loading'
 
 export default function MetaPreview({ id }: { id?: string }) {
-  if (!id) return <Card>未知</Card>
+  if (id) {
+    function useData() {
+      return hooks.useExtractedMeta(id as string)
+    }
+    return <Loading useData={useData}>{meta => Loaded({ meta: meta })}</Loading>
+  }
 
-  const load = new MetaClient('http://localhost:8081').get(id)
+  return <Card>未知</Card>
+}
+
+const width = 200
+
+function Loaded({ meta }: { meta: ExtractedMeta }) {
+  const cover = meta.tv?.poster_path ? (
+    <img
+      style={{
+        width: width,
+        height: width * 1.5,
+      }}
+      alt='poster'
+      src={`https://image.tmdb.org/t/p/original/${meta.tv.poster_path}`}
+    />
+  ) : null
+  const interval = meta.broadcast ? parse_broadcast(meta.broadcast) : {}
 
   return (
-    <Suspense>
-      <Await resolve={load}>
-        {meta => {
-          console.log(meta)
-          // const season =
-          //   meta.season_override?.number ?? meta.season?.season_number
-          // const season_comp = (
-          //   <p style={{ marginRight: 10, fontSize: 18 }}>
-          //     {season ? `S${season}` : ''}
-          //   </p>
-          // )
-          const cover = meta.tv?.backdrop_path ? (
-            <img
-              height={169}
-              alt='backdrop'
-              src={`https://image.tmdb.org/t/p/original/${meta.tv.backdrop_path}`}
-            />
-          ) : null
-          const interval = meta.broadcast ? parse_broadcast(meta.broadcast) : {}
-
-          return (
-            <Card style={{ maxWidth: 300 }} cover={cover}>
-              <Card.Meta
-                title={get_title(meta)}
-                description={format_broadcast(interval)}
-                // avatar={season_comp}
-              />
-            </Card>
-          )
-        }}
-      </Await>
-    </Suspense>
+    <Card
+      cover={cover}
+      style={{
+        maxWidth: width,
+      }}
+    >
+      <Card.Meta title={meta.title} description={format_broadcast(interval)} />
+    </Card>
   )
 }
