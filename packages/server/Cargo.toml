@@ -9,7 +9,7 @@ name = "gen_api"
 path = "bin/gen_api.rs"
 
 [[bin]]
-name = "server"
+name = "forrit-server"
 path = "bin/server.rs"
 
 [dependencies]

@@ -151,7 +151,7 @@ impl SubscriptionActor {
 
         self.entry.set_download_id(entry_id, downloaded.id).await?;
 
-        downloader::new_download(download.clone());
+        downloader::new_download(download);
 
         Ok(Some(downloaded))
     }

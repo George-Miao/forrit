@@ -60,7 +60,7 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
                 no_padding
                 meta_id={meta.id}
                 subs={data}
-                onAdd={() => {}}
+                onAdd={() => alert('NOT IMPLEMENTED')}
                 onDelete={() => {}}
               />
             )}

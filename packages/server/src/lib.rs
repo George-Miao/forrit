@@ -1,5 +1,5 @@
 #![allow(clippy::large_enum_variant)]
-#![feature(lazy_cell, let_chains, try_blocks, type_changing_struct_update)]
+#![feature(let_chains, try_blocks, type_changing_struct_update)]
 
 pub mod api;
 pub mod db;

@@ -23,6 +23,7 @@ export default function Subscription() {
       </PageHeader>
       <WidthLimit>
         <Button
+          onClick={() => alert('NOT IMPLEMENTED')}
           style={{
             height: 100,
             width: '100%',

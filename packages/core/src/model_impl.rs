@@ -420,6 +420,10 @@ impl Deref for PartialEntry {
 }
 
 impl PartialEntry {
+    pub fn has_meta(&self) -> bool {
+        self.meta_title.is_some() && self.meta_id.is_some()
+    }
+
     pub fn into_entry(self) -> Option<Entry> {
         Some(Entry {
             base: self.base,
@@ -429,7 +433,7 @@ impl PartialEntry {
     }
 }
 impl Download {
-    pub fn get_path(&self, meta: &WithId<Meta>, savepath: impl AsRef<Utf8Path>) -> Utf8PathBuf {
+    pub fn get_path(&self, meta: &WithId<Meta>) -> Utf8PathBuf {
         let name = self
             .directory_override
             .as_ref()
@@ -438,7 +442,7 @@ impl Download {
             .or_else(|| meta.original_title())
             .unwrap_or(&meta.title);
         let season = meta.inner.season_number().unwrap_or(1);
-        savepath.as_ref().join(name).join(format!("S{season}"))
+        Utf8PathBuf::from(name).join(format!("S{season}"))
     }
 }
 

@@ -30,7 +30,7 @@ export default function SubscriptionList({ data }: SubscriptionListProps) {
       }}
     >
       {[...grouped.entries()].map(([id, subs]) => (
-        <Loading useData={() => hooks.useExtractedMeta(id)}>
+        <Loading key={id} useData={() => hooks.useExtractedMeta(id)}>
           {meta => {
             return (
               <Space
@@ -76,6 +76,7 @@ export default function SubscriptionList({ data }: SubscriptionListProps) {
                     key={id}
                     subs={subs}
                     meta_id={id}
+                    onAdd={added => {}}
                     onDelete={deleted => {
                       set_grouped(v => {
                         const group = v.get(id)

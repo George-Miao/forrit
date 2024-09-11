@@ -1,4 +1,4 @@
-#![feature(lazy_cell, try_blocks)]
+#![feature(try_blocks)]
 
 use std::{process::exit, str::FromStr};
 

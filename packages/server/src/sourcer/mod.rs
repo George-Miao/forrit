@@ -5,7 +5,7 @@
 use forrit_config::{get_config, SourcerType};
 use forrit_core::model::{BsonEntry, ListParam, ListResult, PartialEntry, WithId};
 use mongodb::{
-    bson::{doc, oid::ObjectId},
+    bson::{doc, oid::ObjectId, Bson},
     options::{UpdateModifications, UpdateOptions},
 };
 use ractor::Actor;
@@ -70,6 +70,22 @@ impl EntryStorage {
     ) -> CrudResult<ListResult<WithId<PartialEntry>>> {
         self.list_by(doc! { BsonEntryIdx::META_ID: meta_id }, param)
             .await?
+            .pipe(Ok)
+    }
+
+    pub async fn list_groups_of_meta(&self, meta_id: ObjectId) -> MongoResult<Vec<String>> {
+        self.get
+            .distinct("group", doc! { "meta_id": meta_id }, None)
+            .await?
+            .into_iter()
+            .map(|x| {
+                if let Bson::String(s) = x {
+                    s
+                } else {
+                    panic!("Invalid group value")
+                }
+            })
+            .collect::<Vec<_>>()
             .pipe(Ok)
     }
 

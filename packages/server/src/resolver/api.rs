@@ -87,6 +87,17 @@ async fn list_entry(
         .pipe(Ok)
 }
 
+/// Get all group of a meta
+#[endpoint(tags("meta"))]
+async fn list_groups(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<String>>> {
+    pod.obtain::<EntryStorage>()
+        .expect("missing EntryStorage")
+        .list_groups_of_meta(id.id)
+        .await?
+        .pipe(Json)
+        .pipe(Ok)
+}
+
 /// Get all aliases of a meta
 #[endpoint(tags("meta"))]
 async fn list_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Alias>>>> {
@@ -129,6 +140,7 @@ pub fn resolver_api() -> Router {
             Router::with_path("meta")
                 .push(Router::with_path("season").get(by_season))
                 .push(Router::with_path("<id>/entry").get(list_entry))
+                .push(Router::with_path("<id>/group").get(list_groups))
                 .push(Router::with_path("<id>/alias").get(list_alias))
                 .push(Router::with_path("<id>/download").get(list_download))
                 .push(Router::with_path("<id>/subscription").get(list_subscription)),

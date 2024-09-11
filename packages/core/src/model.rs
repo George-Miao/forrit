@@ -210,6 +210,17 @@ pub enum DownloadState {
     Failed,
 }
 
+impl DownloadState {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            DownloadState::Pending => "pending",
+            DownloadState::Downloading => "downloading",
+            DownloadState::Finished => "finished",
+            DownloadState::Failed => "failed",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
 pub struct Download {

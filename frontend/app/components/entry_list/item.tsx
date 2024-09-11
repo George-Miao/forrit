@@ -13,6 +13,8 @@ import { format_time_relative, use_is_xs } from 'app/util'
 import { IconCheckboxTick, IconCopy, IconDownload } from '@douyinfe/semi-icons'
 import useClipboard from 'react-use-clipboard'
 import MetaPreview from '../meta_preview'
+import { useClient } from 'app/client'
+import { useState } from 'react'
 
 const { Text, Paragraph } = Typography
 
@@ -30,7 +32,10 @@ export default function EntryListItem({
   const [copied, copy] = useClipboard(item.torrent, {
     successDuration: 1000,
   })
+  const [downloaded, setDownloaded] = useState(false)
+  const client = useClient()
   const is_xs = use_is_xs()
+
   const meta_link = item.meta_id ? (
     <Text
       size='small'
@@ -45,6 +50,7 @@ export default function EntryListItem({
       {item.meta_title}
     </Text>
   ) : null
+
   const sourcer = (
     <Text
       size='small'
@@ -170,7 +176,22 @@ export default function EntryListItem({
           </Tooltip>
           {/* TODO: Create download job */}
           <Tooltip content='下载'>
-            <Button theme='borderless' icon={<IconDownload />} />
+            <Button
+              theme='borderless'
+              icon={downloaded ? <IconCheckboxTick /> : <IconDownload />}
+              onClick={() => {
+                if (downloaded) return
+                client.POST('/download', {
+                  body: {
+                    state: 'pending',
+                    entry_id: { $oid: item.id },
+                    meta_id: item.meta_id,
+                  },
+                })
+                setDownloaded(true)
+                setTimeout(() => setDownloaded(false), 1000)
+              }}
+            />
           </Tooltip>
         </ButtonGroup>
       }

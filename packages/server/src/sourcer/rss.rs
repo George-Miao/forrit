@@ -56,10 +56,12 @@ impl RssActor {
 
         // This size is *NOT* reliable.
         // TODO: decode the torrent file and get the size from there
-        let Ok(size) = closure.length.parse() else {
-            debug!("Failed to parse size");
-            return None;
-        };
+        // let Ok(size) = closure.length.parse() else {
+        //     debug!("Failed to parse size");
+        //     return None;
+        // };
+
+        let size = 0;
         if closure.mime_type.as_str() != "application/x-bittorrent" {
             info!(
                 guid = guid.value,

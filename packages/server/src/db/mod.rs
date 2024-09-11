@@ -99,6 +99,13 @@ where
         })
     }
 
+    pub async fn get_one(&self, id: ObjectId) -> MongoResult<Option<WithId<R>>>
+    where
+        WithId<R>: DeserializeOwned + Send + Sync + Unpin,
+    {
+        self.get.find_one(doc! { "_id": id }, None).await
+    }
+
     pub async fn insert(&self, data: R) -> MongoResult<WithId<R>>
     where
         W: Serialize,

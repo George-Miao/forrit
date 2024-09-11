@@ -86,7 +86,7 @@ impl YearSeason {
     pub fn current() -> Self {
         let now = Utc::now();
         let year = now.year();
-        let month = now.month();
+        let month = now.month0();
         let season = Season::from_month(month as _).expect("Invalid month");
         Self { year, season }
     }
@@ -115,9 +115,13 @@ impl YearSeason {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
 #[serde(rename_all = "lowercase")]
 pub enum Season {
+    // January new bangumi (一月新番)
     Winter = 1,
+    // April new bangumi (四月新番)
     Spring = 2,
+    // July new bangumi (七月新番)
     Summer = 3,
+    // October new bangumi (十月新番)
     Fall   = 4,
 }
 

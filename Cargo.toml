@@ -9,7 +9,7 @@ version = "0.1.0"
 
 [workspace.dependencies]
 serde        = "1.0.195"
-bangumi-data = "0.1.4"
+bangumi-data = "0.1.5"
 chrono       = "0.4.35"
 regex        = "1.10.3"
 tracing      = "0.1.40"

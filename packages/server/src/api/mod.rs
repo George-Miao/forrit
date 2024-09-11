@@ -10,6 +10,7 @@ use tracing::info;
 use crate::{
     db::{Collections, Storage},
     dispatcher::{dispatcher_api, refresh_subscription},
+    downloader::download_added,
     resolver::{resolver_api, AliasKV, MetaStorage},
     sourcer::EntryStorage,
 };
@@ -52,7 +53,11 @@ pub fn api() -> Router {
         on_update = refresh_subscription
     )
     .all();
-    let download_api = build_crud!(Storage<Download>, "download").list().read().build();
+    let download_api = build_crud!(Storage<Download>, "download", on_create = download_added)
+        .list()
+        .read()
+        .create()
+        .build();
 
     Router::new()
         .push(resolver_api())

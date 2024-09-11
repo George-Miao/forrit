@@ -14,8 +14,9 @@ import { IconDelete, IconEdit, IconPlus, IconSave } from '@douyinfe/semi-icons'
 import type { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import { mutate } from 'swr'
 
+import { useClient } from '../../client'
+
 import './item.css'
-import { client } from 'app/client'
 
 const { Text } = Typography
 
@@ -24,7 +25,7 @@ export interface SubscriptionItemProps {
   meta_id: string
   no_padding?: boolean
   onDelete: (id: string) => void
-  onAdd?: (sub: WithId<Subscription>) => void
+  onAdd: (sub: WithId<Subscription>) => void
 }
 
 enum ItemState {
@@ -39,7 +40,7 @@ export default function SubscriptionItem({
   onDelete,
   no_padding,
 }: SubscriptionItemProps) {
-  const c = client()
+  const c = useClient()
   const [state, set_state] = useState<Record<string, ItemState>>({})
   const [forms, set_forms] = useState<Record<string, FormApi<Subscription>>>({})
 
@@ -47,14 +48,16 @@ export default function SubscriptionItem({
   const [active, set_active] = useState(subs[0]?._id.$oid ?? '')
   const active_editing = state[active] ?? false
 
-  const on_add = () => {}
-  const on_edit = () =>
+  const onAddHandler = () => {
+    alert('NOT IMPLEMENTED')
+  }
+  const onEditHandler = () =>
     has_subs &&
     set_state(val => ({
       ...val,
       [active]: ItemState.Editing,
     }))
-  const on_delete = () => {
+  const onDeleteHandler = () => {
     if (!has_subs) return
     c.DELETE('/subscription/{id}', { params: { path: { id: active } } })
     subs = subs.filter(({ _id }) => _id.$oid !== active)
@@ -127,15 +130,15 @@ export default function SubscriptionItem({
             <Button
               icon={<IconEdit />}
               disabled={!has_subs}
-              onClick={on_edit}
+              onClick={onEditHandler}
             />
           )}
           <Button
             icon={<IconDelete />}
             disabled={!has_subs}
-            onClick={on_delete}
+            onClick={onDeleteHandler}
           />
-          <Button icon={<IconPlus onClick={on_add} />} />
+          <Button icon={<IconPlus onClick={onAddHandler} />} />
         </ButtonGroup>
       }
     >
@@ -146,6 +149,7 @@ export default function SubscriptionItem({
       ) : (
         subs.map((sub, i) => (
           <Tabs.TabPane
+            key={sub._id.$oid}
             style={{
               padding: no_padding ? undefined : '.3em .6em',
               boxSizing: 'border-box',

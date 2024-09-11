@@ -17,30 +17,17 @@ import {
   Typography,
 } from '@douyinfe/semi-ui'
 import WidthLimit from './components/width_limit'
+import { get_endpoint } from './util'
 
 const { Header, Content, Footer } = SemiLayout
 const { Text, Paragraph } = Typography
 
-interface Env {
-  api: string
-}
-
 export async function loader() {
-  const { API_ENDPOINT } = process.env
-  if (!API_ENDPOINT) {
+  const api = get_endpoint()
+  if (!api) {
     throw new Error('API_ENDPOINT not set')
   }
-  return json({
-    ENV: {
-      api: API_ENDPOINT,
-    } as Env,
-  })
-}
-
-declare global {
-  interface Window {
-    ENV: Env
-  }
+  return json({ api })
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -141,12 +128,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <ScrollRestoration />
         <Scripts />
-        <script
-          // biome-ignore lint/security/noDangerouslySetInnerHtml:
-          dangerouslySetInnerHTML={{
-            __html: `window.ENV = ${JSON.stringify(data.ENV)}`,
-          }}
-        />
       </body>
     </html>
   )
