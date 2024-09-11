@@ -47,6 +47,8 @@
           }
           // shared);
       in {
+        inherit forrit-server;
+
         devShells = with pkgs; {
           default = mkShell.override {stdenv = stdenvNoLibs;} ({
               packages =
