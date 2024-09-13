@@ -1,8 +1,11 @@
 use forrit_core::{
     date::{Season, YearSeason},
-    model::{Alias, Download, IndexArg, IndexStat, ListParam, ListResult, Meta, PartialEntry, Subscription, WithId},
+    model::{
+        Alias, Download, IndexArg, IndexStat, ListParam, ListResult, Meta, PartialEntry, Subscription, UpdateResult,
+        WithId,
+    },
 };
-use mongodb::bson::doc;
+use mongodb::bson::{doc, to_bson};
 use salvo::{
     oapi::extract::{JsonBody, QueryParam},
     prelude::*,
@@ -13,9 +16,9 @@ use tap::Pipe;
 use crate::{
     api::{ApiResult, OidParam},
     db::Storage,
-    dispatcher::SubscriptionIdx,
+    dispatcher::refresh_subscription,
     downloader::DownloadIdx,
-    resolver::AliasKV,
+    resolver::{AliasKV, MetaStorage},
     sourcer::EntryStorage,
 };
 
@@ -111,17 +114,26 @@ async fn list_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResul
 
 /// Get all subscriptions of a meta
 #[endpoint(tags("meta"))]
-async fn list_subscription(
+async fn update_subscription(
     pod: &mut Depot,
     id: OidParam,
-    param: ListParam,
-) -> ApiResult<Json<ListResult<WithId<Subscription>>>> {
-    pod.obtain::<Storage<Subscription>>()
-        .expect("missing AliasKV")
-        .list_by(doc! { SubscriptionIdx::META_ID: id.id }, param)
-        .await?
-        .pipe(Json)
-        .pipe(Ok)
+    obj: JsonBody<Subscription>,
+) -> ApiResult<Json<UpdateResult>> {
+    let res = pod
+        .obtain::<MetaStorage>()
+        .expect("missing MetaStorage")
+        .set
+        .update_one(
+            doc! { "_id": id.id },
+            doc! { "$set": { "subscription": to_bson(&obj.0)? }},
+            None,
+        )
+        .await?;
+    let updated = res.modified_count != 0;
+    if updated {
+        refresh_subscription(id.id);
+    }
+    Ok(Json(UpdateResult { updated }))
 }
 
 #[endpoint]
@@ -143,7 +155,7 @@ pub fn resolver_api() -> Router {
                 .push(Router::with_path("<id>/group").get(list_groups))
                 .push(Router::with_path("<id>/alias").get(list_alias))
                 .push(Router::with_path("<id>/download").get(list_download))
-                .push(Router::with_path("<id>/subscription").get(list_subscription)),
+                .push(Router::with_path("<id>/subscription").put(update_subscription)),
         )
         .push(
             Router::with_path("index")

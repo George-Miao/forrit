@@ -1,5 +1,5 @@
 use forrit_config::get_config;
-use forrit_core::model::{Download, Subscription};
+use forrit_core::model::Download;
 use mongodb::bson::oid::ObjectId;
 use salvo::{
     cors::{Any, Cors},
@@ -9,7 +9,7 @@ use tracing::info;
 
 use crate::{
     db::{Collections, Storage},
-    dispatcher::{dispatcher_api, refresh_subscription},
+    dispatcher::dispatcher_api,
     downloader::download_added,
     resolver::{resolver_api, AliasKV, MetaStorage},
     sourcer::EntryStorage,
@@ -36,7 +36,6 @@ impl Handler for Collections {
     async fn handle(&self, _: &mut Request, depot: &mut Depot, _: &mut Response, _: &mut FlowCtrl) {
         depot.inject(self.meta.clone());
         depot.inject(self.entry.clone());
-        depot.inject(self.subscription.clone());
         depot.inject(self.download.clone());
         depot.inject(self.alias.clone());
     }
@@ -46,13 +45,6 @@ pub fn api() -> Router {
     let entry_api = build_crud!(EntryStorage, "entry").without_create();
     let meta_api = build_crud!(MetaStorage, "meta").list().read().update().build();
     let alias_api = build_crud!(AliasKV, "alias").all();
-    let sub_api = build_crud!(
-        Storage<Subscription>,
-        "subscription",
-        on_create = refresh_subscription,
-        on_update = refresh_subscription
-    )
-    .all();
     let download_api = build_crud!(Storage<Download>, "download", on_create = download_added)
         .list()
         .read()
@@ -65,7 +57,6 @@ pub fn api() -> Router {
         .push(entry_api)
         .push(meta_api)
         .push(alias_api)
-        .push(sub_api)
         .push(download_api)
 }
 

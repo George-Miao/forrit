@@ -7,7 +7,6 @@ use forrit_config::{get_config, DownloaderConfig, DownloaderType};
 use forrit_core::model::{Download, DownloadState, Meta, PartialEntry, WithId};
 use mongodb::{
     bson::{doc, oid::ObjectId},
-    options::UpdateModifications,
     results::UpdateResult,
 };
 use ractor::Actor;

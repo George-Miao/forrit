@@ -111,6 +111,18 @@ impl From<CrudError> for ApiError {
     }
 }
 
+impl From<mongodb::bson::ser::Error> for ApiError {
+    fn from(err: mongodb::bson::ser::Error) -> Self {
+        ApiError::from(mongodb::error::Error::from(err))
+    }
+}
+
+impl From<mongodb::bson::de::Error> for ApiError {
+    fn from(err: mongodb::bson::de::Error) -> Self {
+        ApiError::from(mongodb::error::Error::from(err))
+    }
+}
+
 pub type ApiResult<T, E = ApiError> = Result<T, E>;
 
 pub trait CrudResultExt {

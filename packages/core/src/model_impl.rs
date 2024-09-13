@@ -5,7 +5,7 @@ use std::{
 };
 
 use bangumi_data::{Item, Language};
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use salvo_oapi::{schema, Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema};
 use tmdb_api::tvshow::{SeasonShort, TVShowShort};
 use ts_rs::TS;
@@ -90,6 +90,26 @@ impl<T: ToSchema> ToSchema for ListResult<T> {
     }
 }
 
+// Recursive expansion of ToSchema macro
+// ======================================
+
+impl ToSchema for SubscribeGroups {
+    fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
+        let schema = Into::<schema::OneOf>::into(schema::OneOf::with_capacity(3usize))
+            .item(Object::new().schema_type(SchemaType::String).enum_values(["none"]))
+            .item(Object::new().schema_type(SchemaType::String).enum_values(["all"]))
+            .item(schema::Array::new(Object::new().schema_type(SchemaType::String)));
+        components.schemas.insert(
+            std::any::type_name::<SubscribeGroups>().replace("::", "."),
+            schema.into(),
+        );
+        RefOr::Ref(Ref::new(format!(
+            "#/components/schemas/{}",
+            std::any::type_name::<SubscribeGroups>().replace("::", ".")
+        )))
+    }
+}
+
 impl<T> WithId<T> {
     pub fn into<P>(self) -> WithId<P>
     where
@@ -126,6 +146,7 @@ impl<T> DerefMut for WithId<T> {
         &mut self.inner
     }
 }
+
 // Recursive expansion of TS macro
 // ================================
 
@@ -293,6 +314,7 @@ impl Meta {
             comment: item.comment,
             begin: item.begin.map(crate::util::iso8601_to_chrono),
             end: item.end.map(crate::util::iso8601_to_chrono),
+            subscription: None,
             tv,
             season,
             season_override: None,

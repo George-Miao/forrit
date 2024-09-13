@@ -116,6 +116,8 @@ pub struct Meta {
 
     pub end: Option<DateTime>,
 
+    pub subscription: Option<Subscription>,
+
     #[salvo(schema(value_type = Option<Object>))]
     pub tv: Option<TVShowShort>,
 
@@ -246,20 +248,40 @@ pub struct Download {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
 pub struct Subscription {
-    #[salvo(schema(value_type = ObjectIdSchema))]
-    #[ts(as = "OidExtJson")]
-    pub meta_id: ObjectId,
-
-    pub include: Option<String>,
-    pub exclude: Option<String>,
-
     #[salvo(schema(value_type = Option<String>))]
     #[ts(as = "Option<String>")]
     pub directory: Option<Utf8PathBuf>,
 
-    pub team: Option<String>,
+    // Group subscription
+    pub groups: SubscribeGroups,
+
+    // Filters
+    /// Include the entry if it matches include regex
+    pub include: Option<String>,
+    /// Exclude the entry if it matches include regex (overrides include)
+    pub exclude: Option<String>,
+    /// Exclude the entry if it's smaller than min_size
     pub min_size: Option<u64>, // TODO: Implement size filter
+    /// Exclude the entry if it's bigger than max_size
     pub max_size: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "lowercase")]
+pub enum SubscribeGroups {
+    /// Subscribe to all groups
+    All,
+    #[serde(untagged)]
+    Groups(Vec<String>),
+}
+
+#[test]
+fn test_subscribe_group() {
+    let g = SubscribeGroups::All;
+    assert_eq!(serde_json::to_string(&g).unwrap(), r#""all""#);
+    let g = SubscribeGroups::Groups(vec!["a".to_string(), "b".to_string()]);
+    assert_eq!(serde_json::to_string(&g).unwrap(), r#"["a","b"]"#);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize, ToSchema, TS)]

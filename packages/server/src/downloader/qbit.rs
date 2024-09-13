@@ -40,7 +40,7 @@ impl QbitActor {
 pub struct State {
     savepath: Utf8PathBuf,
     rename_job: Option<JoinHandle<()>>,
-    downloading: Vec<ObjectId>,
+    downloading: Vec<ObjectId>, // TODO: Use downloading
 }
 
 impl Actor for QbitActor {

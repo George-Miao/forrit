@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, fmt::Debug};
 
-use forrit_core::model::{BsonMeta, Download, ListParam, ListResult, Meta, Record, Subscription, WithId};
+use forrit_core::model::{BsonMeta, Download, ListParam, ListResult, Meta, Record, WithId};
 use mongodb::{
     bson::{self, doc, oid::ObjectId, Bson, Document},
     options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
@@ -26,7 +26,6 @@ pub type MongoResult<T> = mongodb::error::Result<T>;
 pub struct Collections {
     pub meta: MetaStorage,
     pub entry: EntryStorage,
-    pub subscription: Storage<Subscription>,
     pub download: Storage<Download>,
     pub alias: AliasKV,
 }
@@ -35,14 +34,12 @@ impl Collections {
     pub async fn new(db: &mongodb::Database) -> MongoResult<Self> {
         let meta = MetaStorage::new(db.collection("meta")).await?;
         let entry = EntryStorage::new(db.collection("entry")).await?;
-        let subscription = Storage::new(db.collection("subscription")).await?;
         let download = Storage::new(db.collection("job")).await?;
         let alias = AliasKV::new(db.collection("alias")).await?;
 
         Ok(Self {
             meta,
             entry,
-            subscription,
             download,
             alias,
         })
