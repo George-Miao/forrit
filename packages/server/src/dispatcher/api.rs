@@ -22,7 +22,7 @@ async fn new_download(id: OidParam) -> ApiResult<Json<Option<WithId<Download>>>>
 #[endpoint]
 async fn list_downloads(pod: &Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Download>>>> {
     pod.obtain::<Storage<Download>>()
-        .expect("missing GetSet<Download>")
+        .expect("missing Storage<Download>")
         .list_by(doc! { DownloadIdx::SUBSCRIPTION_ID : id.id }, param)
         .await?
         .pipe(Json)
@@ -30,7 +30,5 @@ async fn list_downloads(pod: &Depot, id: OidParam, param: ListParam) -> ApiResul
 }
 
 pub fn dispatcher_api() -> Router {
-    Router::new()
-        .push(Router::with_path("subscription").push(Router::with_path("<id>/download").get(list_downloads)))
-        .push(Router::with_path("entry").push(Router::with_path("<id>/download").post(new_download)))
+    Router::new().push(Router::with_path("entry").push(Router::with_path("<id>/download").post(new_download)))
 }

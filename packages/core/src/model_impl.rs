@@ -96,7 +96,6 @@ impl<T: ToSchema> ToSchema for ListResult<T> {
 impl ToSchema for SubscribeGroups {
     fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
         let schema = Into::<schema::OneOf>::into(schema::OneOf::with_capacity(3usize))
-            .item(Object::new().schema_type(SchemaType::String).enum_values(["none"]))
             .item(Object::new().schema_type(SchemaType::String).enum_values(["all"]))
             .item(schema::Array::new(Object::new().schema_type(SchemaType::String)));
         components.schemas.insert(
