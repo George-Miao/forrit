@@ -42,7 +42,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <SemiLayout>
+        <SemiLayout
+          style={{
+            backgroundColor: 'var(--semi-color-fill-0)',
+          }}
+        >
           <Header>
             <Nav
               mode='horizontal'
@@ -100,7 +104,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Content>
           <Footer
             style={{
-              backgroundColor: 'var(--semi-color-fill-0)',
               padding: '2em 0',
               marginTop: '1em',
             }}

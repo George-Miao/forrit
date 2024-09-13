@@ -14,8 +14,8 @@ use salvo::{
 use tap::Pipe;
 
 use crate::{
-    api::{ApiResult, OidParam},
-    db::Storage,
+    api::{ApiResult, CrudResultExt, OidParam},
+    db::{CrudError, Storage},
     dispatcher::refresh_subscription,
     downloader::DownloadIdx,
     resolver::{AliasKV, MetaStorage},
@@ -112,7 +112,22 @@ async fn list_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResul
         .pipe(Ok)
 }
 
-/// Get all subscriptions of a meta
+/// Get subscription of a meta
+#[endpoint(tags("meta"))]
+async fn get_subscription(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Option<Subscription>>> {
+    pod.obtain::<MetaStorage>()
+        .expect("missing MetaStorage")
+        .get_by_oid(id.id)
+        .await
+        .map_err(CrudError::from)
+        .unwrap_not_found("meta")?
+        .inner
+        .subscription
+        .pipe(Json)
+        .pipe(Ok)
+}
+
+/// Update subscription of a meta
 #[endpoint(tags("meta"))]
 async fn update_subscription(
     pod: &mut Depot,
@@ -136,6 +151,20 @@ async fn update_subscription(
     Ok(Json(UpdateResult { updated }))
 }
 
+/// Delete subscription of a meta
+#[endpoint(tags("meta"))]
+async fn delete_subscription(pod: &mut Depot, id: OidParam) -> ApiResult<Json<UpdateResult>> {
+    let res = pod
+        .obtain::<MetaStorage>()
+        .expect("missing MetaStorage")
+        .set
+        .update_one(doc! { "_id": id.id }, doc! { "$set": { "subscription": null }}, None)
+        .await?;
+    Ok(Json(UpdateResult {
+        updated: res.modified_count != 0,
+    }))
+}
+
 #[endpoint]
 async fn list_download(pod: &Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Download>>>> {
     pod.obtain::<Storage<Download>>()
@@ -155,7 +184,12 @@ pub fn resolver_api() -> Router {
                 .push(Router::with_path("<id>/group").get(list_groups))
                 .push(Router::with_path("<id>/alias").get(list_alias))
                 .push(Router::with_path("<id>/download").get(list_download))
-                .push(Router::with_path("<id>/subscription").put(update_subscription)),
+                .push(
+                    Router::with_path("<id>/subscription")
+                        .get(get_subscription)
+                        .put(update_subscription)
+                        .delete(delete_subscription),
+                ),
         )
         .push(
             Router::with_path("index")

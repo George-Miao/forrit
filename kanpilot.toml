@@ -7,30 +7,8 @@ id = "process1"
 name = "To Do"
 
   [[processes.tasks]]
-  id = "r11xpz251sp08cmpgbc7ilvt"
-  title = "Frontend: entry list ordering"
-  description = ""
-  tag = "bug"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
-  id = "juvln3ioubi1159xddl9i6em"
-  title = "Frontend: backdrop is not showed"
-  description = "<p></p>"
-  tag = "bug"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
   id = "d4gpgwlqtueg7zjufj2c0q2a"
-  title = "Frontend: implement subscription add"
+  title = "FE: implement subscription add"
   description = ""
   tag = "backlog"
   linkFiles = [ ]
@@ -41,29 +19,7 @@ name = "To Do"
 
   [[processes.tasks]]
   id = "gt1z8uh3fucd1jpjtwqrlnx4"
-  title = "Frontend: implement downloads list"
-  description = ""
-  tag = "backlog"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
-  id = "tm4nnk0xbjv0muq77cebkmyy"
-  title = "Frontend: implement entry detail"
-  description = ""
-  tag = "backlog"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
-  id = "nvjeytgpa1kaad9iqnon8xiy"
-  title = "Frontend: implement notifications"
+  title = "FE: implement downloads list"
   description = ""
   tag = "backlog"
   linkFiles = [ ]
@@ -74,9 +30,86 @@ name = "To Do"
 
   [[processes.tasks]]
   id = "ihyvyhpl3lo8yae0kzavuiw9"
-  title = "Frontend: Input path when manually download"
+  title = "FE: Input path when manually download"
   description = "<p></p>"
   tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "rq0lkafs5g30v3k7nviyzo82"
+  title = "FE: Advanced subscription"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "utrgespog8d4ycn40vk6cq8l"
+  title = "FE: Filter out unmatched in entry list"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "a8vo9dc8lexbe5xsvh1p060o"
+  title = "BE: Combine group name in TC/SC"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "tm4nnk0xbjv0muq77cebkmyy"
+  title = "FE: implement entry detail"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "nvjeytgpa1kaad9iqnon8xiy"
+  title = "FE: implement notifications"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "hc5e4226eamgw1u0ne4umynz"
+  title = "FE: Add subscription in meta dropdown"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "r11xpz251sp08cmpgbc7ilvt"
+  title = "FE: entry list ordering"
+  description = ""
+  tag = "bug"
   linkFiles = [ ]
   dueDate = ""
   checkList = [ ]
@@ -86,7 +119,17 @@ name = "To Do"
 [[processes]]
 id = "process2"
 name = "In Progress"
-tasks = [ ]
+
+  [[processes.tasks]]
+  id = "o7im59eki4sgpykbi09uscta"
+  title = "BE: Refactor & simplify subscription"
+  description = "<p></p>"
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
 
 [[processes]]
 id = "process3"
@@ -94,7 +137,7 @@ name = "Done"
 
   [[processes.tasks]]
   id = "y22z32sfhs9vvzh14smqe6z1"
-  title = "Server: Manually trigger download"
+  title = "BE: Manually trigger download"
   description = "<p></p>"
   tag = "backlog"
   linkFiles = [ ]
@@ -105,7 +148,7 @@ name = "Done"
 
   [[processes.tasks]]
   id = "utblpi0qjve8d30j34gsdqic"
-  title = "Frontend: Manually trigger download"
+  title = "FE: Manually trigger download"
   description = ""
   tag = "backlog"
   linkFiles = [ ]
@@ -116,9 +159,20 @@ name = "Done"
 
   [[processes.tasks]]
   id = "eumdd0kcxkwi2qhcrwmxqpln"
-  title = "Server: manual download path wrong"
+  title = "BE: manual download path wrong"
   description = "<p></p>"
   tag = "bug"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "kol37d499u391v6vluzjbh5x"
+  title = "BE: get list of groups by meta"
+  description = ""
+  tag = "backlog"
   linkFiles = [ ]
   dueDate = ""
   checkList = [ ]

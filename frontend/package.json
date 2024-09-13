@@ -17,7 +17,7 @@
     "@remix-run/node": "^2.11.2",
     "@remix-run/react": "^2.11.2",
     "@remix-run/serve": "^2.11.2",
-    "@semi-bot/semi-theme-momo": "^0.1.2",
+    "@semi-bot/semi-theme-forrit": "^1.0.0",
     "forrit-client": "file:../clients/typescript",
     "isbot": "^4.4.0",
     "openapi-fetch": "^0.9.8",
@@ -29,7 +29,8 @@
     "react-use-clipboard": "^1.0.9",
     "reset-css": "^5.0.2",
     "swr": "^2.2.5",
-    "vite-plugin-cjs-interop": "^2.1.2"
+    "vite-plugin-cjs-interop": "^2.1.2",
+    "immutable": "^4.3.7"
   },
   "devDependencies": {
     "@remix-run/dev": "^2.11.2",

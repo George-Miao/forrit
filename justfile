@@ -1,3 +1,6 @@
+alias f := frontend
+alias s := server
+
 gen_api:
   cargo run --bin gen_api -- data/openapi.json
 

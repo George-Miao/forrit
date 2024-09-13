@@ -26,9 +26,9 @@ importers:
       '@remix-run/serve':
         specifier: ^2.11.2
         version: 2.11.2(typescript@5.5.4)
-      '@semi-bot/semi-theme-momo':
-        specifier: ^0.1.2
-        version: 0.1.2
+      '@semi-bot/semi-theme-forrit':
+        specifier: ^1.0.0
+        version: 1.0.0
       forrit-client:
         specifier: file:../clients/typescript
         version: file:../clients/typescript
@@ -831,8 +831,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@semi-bot/semi-theme-momo@0.1.2':
-    resolution: {integrity: sha512-Iiv732h4uPMzabvU+w9UvsAXXRA6pFjO/cF0r1oH+DP4UjNcMKVby0OLFWmKbNoG08ga94jA0jPuq4nmTvT/9A==}
+  '@semi-bot/semi-theme-forrit@1.0.0':
+    resolution: {integrity: sha512-wBSfEeoBDqjpnBanjxrJqjQ10KrG0aBvBoJfH/MYZ3LAHF9EY5dkr3WiCY02ERsU7AaNLWLv2EYogKwwlCk+Pw==}
 
   '@types/acorn@4.0.6':
     resolution: {integrity: sha512-veQTnWP+1D/xbxVrPC3zHnCZRjSrKfhbMUlEA43iMZLu7EsnTtkJklIuwrCPbOi8YkvDQAiW05VQQFvvz9oieQ==}
@@ -4259,7 +4259,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.21.1':
     optional: true
 
-  '@semi-bot/semi-theme-momo@0.1.2': {}
+  '@semi-bot/semi-theme-forrit@1.0.0': {}
 
   '@types/acorn@4.0.6':
     dependencies:

@@ -2,7 +2,7 @@ import { Space, Typography } from '@douyinfe/semi-ui'
 import { group_by, use_is_md } from 'app/util'
 import type { Subscription, WithId } from 'forrit-client'
 import Loading from '../loading'
-import hooks from 'app/client'
+import { useExtractedMeta } from 'app/client'
 import { useState } from 'react'
 
 import SubscriptionItem from './item'
@@ -30,7 +30,7 @@ export default function SubscriptionList({ data }: SubscriptionListProps) {
       }}
     >
       {[...grouped.entries()].map(([id, subs]) => (
-        <Loading key={id} useData={() => hooks.useExtractedMeta(id)}>
+        <Loading key={id} useData={() => useExtractedMeta(id)}>
           {meta => {
             return (
               <Space

@@ -1,18 +1,13 @@
 import { Card } from '@douyinfe/semi-ui'
 
-import {
-  type ExtractedMeta,
-  format_broadcast,
-  get_title,
-  parse_broadcast,
-} from '../util'
-import hooks from 'app/client'
+import { type ExtractedMeta, format_broadcast, parse_broadcast } from '../util'
+import { useExtractedMeta } from 'app/client'
 import Loading from './loading'
 
 export default function MetaPreview({ id }: { id?: string }) {
   if (id) {
     function useData() {
-      return hooks.useExtractedMeta(id as string)
+      return useExtractedMeta(id as string)
     }
     return <Loading useData={useData}>{meta => Loaded({ meta: meta })}</Loading>
   }

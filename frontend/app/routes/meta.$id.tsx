@@ -4,7 +4,7 @@ import { Breadcrumb, Space, Typography } from '@douyinfe/semi-ui'
 import { json, type LoaderFunctionArgs } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
 import { useRerender, type ExtractedMeta } from 'app/util'
-import hooks from 'app/client'
+import { useMetaEntries, useExtractedMeta, useMetaSubs } from 'app/client'
 import Loading from 'app/components/loading'
 import MetaEntryList from 'app/components/entry_list'
 import MetaDetailHeader, {
@@ -28,7 +28,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 export default function MetaDetail() {
   function useData() {
     const id = useLoaderData<typeof loader>().id
-    return hooks.useExtractedMeta(id)
+    return useExtractedMeta(id)
   }
   return (
     <Loading size='large' useData={useData}>
@@ -39,7 +39,7 @@ export default function MetaDetail() {
 
 export function Loaded({ meta }: { meta: ExtractedMeta }) {
   const rerender = useRerender()
-  const subs = hooks.useMetaSubs(meta.id)
+  const subs = useMetaSubs(meta.id)
   return (
     <>
       <PageHeader
@@ -54,7 +54,7 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
 
       <WidthLimit top>
         <Space vertical align='start' spacing='loose' style={{ width: '100%' }}>
-          <LoadingInfinite useData={subs}>
+          {/* <LoadingInfinite useData={subs}>
             {data => (
               <SubscriptionItem
                 no_padding
@@ -64,13 +64,9 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
                 onDelete={() => {}}
               />
             )}
-          </LoadingInfinite>
+          </LoadingInfinite> */}
 
-          <Title heading={4} type='secondary'>
-            更新
-          </Title>
-
-          <LoadingInfinite useData={hooks.useMetaEntries(meta.id)}>
+          <LoadingInfinite useData={useMetaEntries(meta.id)}>
             {data => <MetaEntryList data={data} />}
           </LoadingInfinite>
         </Space>

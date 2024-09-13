@@ -69,7 +69,9 @@ export default function MetaDetailHeader({ meta }: { meta: ExtractedMeta }) {
               )}
 
               {i < arr.length - 1 ? (
-                <span style={{ margin: '0 .3em' }}>·</span>
+                <span key={x.content} style={{ margin: '0 .3em' }}>
+                  ·
+                </span>
               ) : null}
             </>
           ))}

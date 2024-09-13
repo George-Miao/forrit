@@ -1,4 +1,4 @@
-import { Button, Card, Space, Typography } from '@douyinfe/semi-ui'
+import { Button, Card, Dropdown, Space, Typography } from '@douyinfe/semi-ui'
 import {
   get_title,
   format_broadcast,
@@ -8,9 +8,11 @@ import {
 import type { Meta, WithId } from 'forrit-client'
 
 import './index.css'
-import hooks, { map } from 'app/client'
+import { IconPlus } from '@douyinfe/semi-icons'
+import { useMetaGroup } from 'app/client'
 import Loading from '../loading'
-import { IconPlusCircleStroked, IconRadio } from '@douyinfe/semi-icons'
+import { useState } from 'react'
+import SubscribeButton from './subscription'
 
 const xs_width = '47dvw - 8px'
 
@@ -20,6 +22,7 @@ export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
   const [width, height] = is_xs
     ? [`calc(${xs_width})`, `calc(1.5 * (${xs_width}))`]
     : [230, 230 * 1.5]
+
   // const useNumEntries = () => {
   //   return map(hooks.useMetaEntries(meta._id.$oid), x => x.length)
   // }
@@ -45,9 +48,11 @@ export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
 
   return (
     <Card
-      shadows='hover'
+      shadows='always'
+      bordered={false}
       cover={cover}
       style={{
+        width,
         cursor: 'unset',
       }}
       bodyStyle={{
@@ -74,16 +79,8 @@ export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
           </Space>
         }
       />
-      <Button
-        onClick={() => alert('NOT IMPLEMENTED')}
-        style={{
-          margin: '2px',
-          height: '38px',
-          width: '38px',
-          minWidth: '38px',
-        }}
-        icon={<IconPlusCircleStroked />}
-      />
+
+      <SubscribeButton meta_id={meta._id.$oid} />
     </Card>
   )
 }

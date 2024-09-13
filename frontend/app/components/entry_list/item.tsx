@@ -161,9 +161,7 @@ export default function EntryListItem({
 
   return (
     <List.Item
-      style={{
-        padding: '0.5em 0',
-      }}
+      style={{ padding: '0.5em 0' }}
       main={main}
       extra={
         <ButtonGroup>

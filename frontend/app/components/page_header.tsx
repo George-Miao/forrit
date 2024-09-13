@@ -10,8 +10,9 @@ export default function PageHeader({ children, routes }: PageHeaderProps) {
   return (
     <div
       style={{
-        backgroundColor: 'var(--semi-color-fill-0)',
         padding: '1em 0',
+        backgroundColor: '#FFF',
+        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)',
       }}
     >
       <WidthLimit>

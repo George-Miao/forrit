@@ -15,7 +15,7 @@ export default defineConfig({
     remix(),
     tsconfigPaths(),
     SemiTheme({
-      theme: '@semi-bot/semi-theme-momo',
+      theme: '@semi-bot/semi-theme-forrit',
     }),
   ],
   build: {

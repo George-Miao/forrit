@@ -3,9 +3,8 @@ import create_client, { type FetchResponse } from 'openapi-fetch'
 import useSWR, { type KeyedMutator, type SWRResponse } from 'swr'
 import { type ExtractedMeta, extract } from './util'
 import useSWRInfinite from 'swr/infinite'
-import { useOutletContext } from '@remix-run/react'
 
-type JsonMedia = "application/json"
+type JsonMedia = 'application/json'
 
 export type Ret<T> =
   | {
@@ -28,7 +27,7 @@ const get_edge = (cursor: DirectedCursor) =>
   'Backwards' in cursor ? cursor.Backwards : cursor.Forward
 
 const handle = <T>(
-  x: SWRResponse<T, unknown, unknown>,
+  x: SWRResponse<T, unknown, unknown>
 ): Ret<T> & {
   mutate: KeyedMutator<T>
 } => {
@@ -42,7 +41,7 @@ export const map = <T, U>(x: Ret<T>, f: (x: T) => U): Ret<U> => {
 }
 
 export const useClient = () => {
-  const api = "http://localhost:8080"
+  const api = 'http://10.0.1.69:8080'
   return create_client<paths>({ baseUrl: api })
 }
 
@@ -55,8 +54,8 @@ const get_key =
     i === 0
       ? [resource]
       : prev.page_info.has_next_page
-        ? [resource, get_edge(prev.page_info.end_cursor as DirectedCursor)]
-        : null
+      ? [resource, get_edge(prev.page_info.end_cursor as DirectedCursor)]
+      : null
 
 const throw_it = <T, O>(resp: FetchResponse<T, O, JsonMedia>) => {
   if (resp.error) throw resp.error
@@ -65,7 +64,7 @@ const throw_it = <T, O>(resp: FetchResponse<T, O, JsonMedia>) => {
 
 function make_inf<T, O>(
   resource: string,
-  req: (key: InfKey) => Promise<FetchResponse<T, O, JsonMedia>>,
+  req: (key: InfKey) => Promise<FetchResponse<T, O, JsonMedia>>
 ) {
   return () =>
     useSWRInfinite(get_key(resource), (key: InfKey) => req(key).then(throw_it))
@@ -80,81 +79,93 @@ const get_key_with_id =
     i === 0
       ? [resource, id]
       : prev.page_info.has_next_page
-        ? [resource, id, get_edge(prev.page_info.end_cursor as DirectedCursor)]
-        : null
+      ? [resource, id, get_edge(prev.page_info.end_cursor as DirectedCursor)]
+      : null
 
 function make_inf_with_id<O, T>(
   resource: string,
-  req: (key: IdInfKey) => Promise<FetchResponse<O, T, JsonMedia >>,
+  req: (key: IdInfKey) => Promise<FetchResponse<O, T, JsonMedia>>
 ) {
   return (id: string) =>
     useSWRInfinite(get_key_with_id(id, resource), (key: IdInfKey) =>
-      req(key).then(throw_it),
+      req(key).then(throw_it)
     )
 }
 
 function make_get<P, O>(
   resource: string,
-  req: (id: string) => Promise<FetchResponse<P, O, JsonMedia >>,
+  req: (id: string) => Promise<FetchResponse<P, O, JsonMedia>>
 ) {
   return (id: string) =>
     handle(useSWR([resource, id], ([, id]) => req(id).then(throw_it)))
 }
 
-const useMeta = make_get('meta', id =>
-  useClient().GET('/meta/{id}', { params: { path: { id } } }),
+export const useMeta = make_get('meta', id =>
+  useClient().GET('/meta/{id}', { params: { path: { id } } })
 )
 
-const hooks = {
-  useMeta,
-  useMetaList: make_inf('meta', ([, cursor]) =>
-    useClient().GET('/meta', { params: { query: { cursor } } }),
-  ),
-  // useMetaSeason: (season?: YearSeason) =>  make_inf('meta-season', ([,cursor]) => client().GET('/meta/season', )),
-  useMetaEntries: make_inf_with_id('meta-entry', ([, id, cursor]) =>
-    useClient().GET('/meta/{id}/entry', {
-      params: { path: { id }, query: { cursor } },
-    }),
-  ),
-  useMetaAlias: make_inf_with_id('meta-alias', ([, id, cursor]) =>
-    useClient().GET('/meta/{id}/alias', {
-      params: { path: { id }, query: { cursor } },
-    }),
-  ),
-  useMetaSubs: make_inf_with_id('meta-subscription', ([, id, cursor]) =>
+// useMetaSeason: (season?: YearSeason) =>  make_inf('meta-season', ([,cursor]) => client().GET('/meta/season', )),
+export const useMetaList = make_inf('meta', ([, cursor]) =>
+  useClient().GET('/meta', { params: { query: { cursor } } })
+)
+
+export const useMetaGroup = make_get('meta-group', id => {
+  return useClient().GET('/meta/{id}/group', { params: { path: { id } } })
+})
+
+export const useMetaEntries = make_inf_with_id('meta-entry', ([, id, cursor]) =>
+  useClient().GET('/meta/{id}/entry', {
+    params: { path: { id }, query: { cursor } }
+  })
+)
+
+export const useMetaAlias = make_inf_with_id('meta-alias', ([, id, cursor]) =>
+  useClient().GET('/meta/{id}/alias', {
+    params: { path: { id }, query: { cursor } }
+  })
+)
+
+export const useMetaSubs = make_inf_with_id(
+  'meta-subscription',
+  ([, id, cursor]) =>
     useClient().GET('/meta/{id}/subscription', {
-      params: { path: { id }, query: { cursor } },
-    }),
-  ),
-  useMetaSeason: (year?: number, season?: Season) =>
-    handle(
-      useSWR(['season', year, season], () =>
-        useClient()
-          .GET('/meta/season', { params: { query: { year, season } } })
-          .then(throw_it),
-      ),
-    ),
-  useExtractedMeta: (id: string): Ret<ExtractedMeta> =>
-    map(useMeta(id), extract),
+      params: { path: { id }, query: { cursor } }
+    })
+)
 
-  useSub: make_get('subscription', id =>
-    useClient().GET('/subscription/{id}', { params: { path: { id } } }),
-  ),
-  useSubList: make_inf('subscription', ([, cursor]) =>
-    useClient().GET('/subscription', { params: { query: { cursor } } }),
-  ),
-  useDownload: make_get('download', id =>
-    useClient().GET('/download/{id}', { params: { path: { id } } }),
-  ),
-  useDownloadList: make_inf('download', ([, cursor]) =>
-    useClient().GET('/download', { params: { query: { cursor } } }),
-  ),
-  useEntry: make_get('entry', id =>
-    useClient().GET('/entry/{id}', { params: { path: { id } } }),
-  ),
-  useEntryList: make_inf('entry', ([, cursor]) =>
-    useClient().GET('/entry', { params: { query: { cursor } } }),
-  ),
-}
+export const useMetaSeason = (year?: number, season?: Season) =>
+  handle(
+    useSWR(['season', year, season], () =>
+      useClient()
+        .GET('/meta/season', { params: { query: { year, season } } })
+        .then(throw_it)
+    )
+  )
 
-export default hooks
+export const useExtractedMeta = (id: string): Ret<ExtractedMeta> =>
+  map(useMeta(id), extract)
+
+
+export const useSub = make_get('subscription', id =>
+  useClient().GET('/subscription/{id}', { params: { path: { id } } })
+)
+
+export const useSubList = make_inf('subscription', ([, cursor]) =>
+  useClient().GET('/subscription', { params: { query: { cursor } } })
+)
+
+export const useDownload = make_get('download', id =>
+  useClient().GET('/download/{id}', { params: { path: { id } } })
+)
+
+export const useDownloadList = make_inf('download', ([, cursor]) =>
+  useClient().GET('/download', { params: { query: { cursor } } })
+)
+
+export const useEntry = make_get('entry', id =>
+  useClient().GET('/entry/{id}', { params: { path: { id } } })
+)
+
+export const useEntryList = make_inf('entry', ([, cursor]) =>
+  useClient().GET('/entry', { params: { query: { cursor } } })
+)

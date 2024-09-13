@@ -9,7 +9,7 @@ import {
 import type { Meta, WithId } from 'forrit-client'
 import { Col, Divider, Row, Typography } from '@douyinfe/semi-ui'
 import MetaCard from 'app/components/meta_card'
-import hooks from 'app/client'
+import {useMetaSeason} from 'app/client'
 import Loading from 'app/components/loading'
 import WidthLimit from 'app/components/width_limit'
 import PageHeader from 'app/components/page_header'
@@ -29,7 +29,7 @@ export const loader = async () => {
 
 export default function Index() {
   return (
-    <Loading size='large' useData={hooks.useMetaSeason}>
+    <Loading size='large' useData={useMetaSeason}>
       {data => Loaded(data)}
     </Loading>
   )

@@ -13,6 +13,8 @@ export type ExtractedInfo = {
 }
 
 export type ExtractedMeta = ReturnType<typeof extract>
+
+// TODO: Show styled information instead of plain text
 export const extract = (meta: WithId<Meta>) => {
   const id = meta._id.$oid
   const title = get_title(meta)
@@ -82,7 +84,7 @@ export const group_by = <K, T>(list: T[], keyGetter: (item: T) => K) => {
 }
 
 export const get_endpoint = () => {
-  return process.env.API_ENDPOINT ?? 'http://localhost:8080'
+  return process.env.API_ENDPOINT ?? 'http://10.0.1.69:8080'
 }
 
 export const get_title = (m: Meta) => {

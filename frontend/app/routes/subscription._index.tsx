@@ -1,6 +1,6 @@
 import { IconPlus } from '@douyinfe/semi-icons'
 import { Button, Typography } from '@douyinfe/semi-ui'
-import hooks from 'app/client'
+import { useSubList } from 'app/client'
 import LoadingInfinite from 'app/components/loading_infinite'
 import PageHeader from 'app/components/page_header'
 import SubscriptionList from 'app/components/subscription_list'
@@ -37,7 +37,7 @@ export default function Subscription() {
         >
           <IconPlus size='extra-large' />
         </Button>
-        <LoadingInfinite useData={hooks.useSubList()}>
+        <LoadingInfinite useData={useSubList()}>
           {data => <SubscriptionList data={data} />}
         </LoadingInfinite>
       </WidthLimit>
