@@ -9,7 +9,7 @@ use mongodb::{
     bson::{doc, oid::ObjectId},
     results::UpdateResult,
 };
-use ractor::Actor;
+use ractor::{Actor, ActorCell};
 use tap::Pipe;
 use tracing::warn;
 
@@ -88,7 +88,7 @@ impl DownloadManager {
     }
 }
 
-pub async fn start(db: &Collections) {
+pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
     let config = &get_config().downloader;
     let manager = DownloadManager::new(db, config);
 
@@ -96,9 +96,11 @@ pub async fn start(db: &Collections) {
         DownloaderType::Transmission(_) => todo!("Transmission downloader is not yet implemented"),
         DownloaderType::Qbittorrent(qb_conf) => {
             let actor = QbitActor::new(REQ.clone(), qb_conf, manager);
-            Actor::spawn(Some(NAME.to_owned()), actor, ())
+            Actor::spawn_linked(Some(NAME.to_owned()), actor, (), supervisor)
                 .await
-                .boom("Failed to spawn downloader actor");
+                .boom("Failed to spawn downloader actor")
+                .0
+                .get_cell()
         }
     }
 }

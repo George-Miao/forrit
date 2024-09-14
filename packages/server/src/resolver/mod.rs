@@ -16,7 +16,7 @@ use futures::Future;
 use governor::{Quota, RateLimiter};
 // use color_eyre::eyre::Result;
 use mongodb::bson::oid::ObjectId;
-use ractor::{concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
+use ractor::{concurrency::JoinHandle, Actor, ActorCell, ActorProcessingErr, ActorRef, RpcReplyPort};
 use tap::{Pipe, TapFallible, TapOptional};
 use tmdb_api::tvshow::{search::TVShowSearch, SeasonShort, TVShowShort};
 use tracing::{debug, info, instrument, trace};
@@ -49,7 +49,7 @@ pub type AliasKV = KV<String, ObjectId>;
 /// See: https://www.themoviedb.org/genre/16-animation
 const ANIME_GENRE: u64 = 16;
 
-pub async fn start(db: &Collections) {
+pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
     let config = &get_config().resolver;
     let client = GovernedClient::new(
         tmdb_api::Client::builder()
@@ -62,9 +62,11 @@ pub async fn start(db: &Collections) {
     );
 
     let resolver = Resolver::new(client, db.meta.clone(), db.alias.clone(), config);
-    Actor::spawn(Some(Resolver::NAME.to_owned()), resolver, ())
+    Actor::spawn_linked(Some(Resolver::NAME.to_owned()), resolver, (), supervisor)
         .await
-        .boom("Failed to spawn resolver actor");
+        .boom("Failed to spawn resolver actor")
+        .0
+        .get_cell()
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

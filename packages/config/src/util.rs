@@ -11,6 +11,13 @@ pub enum MapOrVec<T> {
 }
 
 impl<T> MapOrVec<T> {
+    pub fn len(&self) -> usize {
+        match self {
+            MapOrVec::Map(map) => map.len(),
+            MapOrVec::Vec(vec) => vec.len(),
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         match self {
             MapOrVec::Map(map) => map.is_empty(),

@@ -42,14 +42,17 @@ pub fn refresh_subscription(meta_id: ObjectId) {
         .expect(SEND_ERR);
 }
 
-pub async fn start(db: &Collections) {
-    Actor::spawn(
+pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
+    Actor::spawn_linked(
         Some(SubscriptionActor::NAME.to_owned()),
         SubscriptionActor::new(db.meta.clone(), db.entry.clone(), db.jobs.clone()),
         (),
+        supervisor,
     )
     .await
-    .boom("Failed to spawn subscription actor");
+    .boom("Failed to spawn subscription actor")
+    .0
+    .get_cell()
 }
 
 #[derive(Debug)]

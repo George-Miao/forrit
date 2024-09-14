@@ -37,7 +37,7 @@ salvo_core                = { workspace = true }
 figment  = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
 governor = { version = "0.6.0", default-features = false, features = ["futures", "std", "quanta"] }
 mongodb  = { version = "2.8.0", features = ["bson-chrono-0_4"] }
-ractor   = { version = "0.9.6", default-features = false, features = ["tokio_runtime"] }
+ractor   = { version = "0.10", default-features = false, features = ["tokio_runtime"] }
 salvo    = { version = "0.67.0", features = ["oapi", "websocket", "cors", "logging"] }
 
 tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }

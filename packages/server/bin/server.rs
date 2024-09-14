@@ -4,15 +4,13 @@ use std::{process::exit, str::FromStr};
 
 use camino::Utf8PathBuf;
 use forrit_config::init_config;
-use forrit_server::{db::Collections, util::Boom, *};
-use futures::future::join5;
-use mongodb::Client;
+use forrit_server::{util::Boom, *};
 use tap::Conv;
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), ractor::SpawnErr> {
     let level = std::env::var("FORRIT_LOG")
         .ok()
         .map(|s| LevelFilter::from_str(&s).boom("Invalid log level"))
@@ -44,18 +42,5 @@ async fn main() {
 
     let config = init_config(path).boom("Failed to load config");
 
-    let mongo = Client::with_uri_str(&config.database.url)
-        .await
-        .boom("Failed to connect to database");
-    let db = mongo.database(&config.database.database);
-    let col = Collections::new(&db).await.boom("Database error");
-
-    join5(
-        resolver::start(&col),
-        downloader::start(&col),
-        sourcer::start(&col),
-        dispatcher::start(&col),
-        api::run(col.clone()),
-    )
-    .await;
+    Forrit::new(config).await.boom("Failed to start Forrit").run().await
 }

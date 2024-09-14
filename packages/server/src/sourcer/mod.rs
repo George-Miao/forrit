@@ -8,7 +8,7 @@ use mongodb::{
     bson::{doc, oid::ObjectId, Bson},
     options::{UpdateModifications, UpdateOptions},
 };
-use ractor::Actor;
+use ractor::{Actor, ActorCell};
 use tap::Pipe;
 use tracing::warn;
 
@@ -22,12 +22,14 @@ mod rss;
 
 pub type EntryStorage = Storage<PartialEntry, BsonEntry>;
 
-pub async fn start(db: &Collections) {
+pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
     let config = &get_config().sourcer;
 
     if config.is_empty() {
         warn!("No sourcer enabled, nothing will be fetched nor downloaded.");
     }
+
+    let mut ret = Vec::with_capacity(config.len());
 
     for (id, conf) in config.iter("rss-") {
         if !conf.enable {
@@ -37,12 +39,16 @@ pub async fn start(db: &Collections) {
         match &conf.ty {
             SourcerType::Rss(rss_conf) => {
                 let actor = rss::RssActor::new(rss_conf, REQ.clone(), db.entry.clone(), id.clone());
-                Actor::spawn(format!("sourcer-{id}").pipe(Some), actor, ())
-                    .await
-                    .boom("Failed to spawn rss actor");
+                let (actor_ref, _) =
+                    Actor::spawn_linked(format!("sourcer-{id}").pipe(Some), actor, (), supervisor.clone())
+                        .await
+                        .boom("Failed to spawn rss actor");
+                ret.push(actor_ref.get_cell());
             }
         }
     }
+
+    ret
 }
 
 #[derive(Debug)]

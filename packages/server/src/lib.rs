@@ -11,10 +11,135 @@ pub mod sourcer;
 pub mod test;
 pub mod util;
 
-use std::sync::LazyLock;
+use std::{mem::take, sync::LazyLock, time::Duration};
+
+use forrit_config::Config;
+use futures::future::join4;
+use mongodb::Client;
+use ractor::{Actor, ActorCell, SpawnErr, SupervisionEvent};
+use tracing::{info, warn};
+
+use crate::db::Collections;
 
 const ACTOR_ERR: &str = "Actor is not running or registered";
 const SEND_ERR: &str = "Failed to send message to actor";
 const RECV_ERR: &str = "Failed to receive response from actor";
 
 static REQ: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
+
+pub struct Forrit {
+    col: Collections,
+}
+
+impl Forrit {
+    pub async fn new(config: &'static Config) -> Result<Self, ractor::ActorProcessingErr> {
+        let mongo = Client::with_uri_str(&config.database.url).await?;
+        let db = mongo.database(&config.database.database);
+        let col = Collections::new(&db).await?;
+
+        Ok(Forrit { col })
+    }
+
+    pub async fn run(self) -> Result<(), SpawnErr> {
+        let col = self.col.clone();
+        Actor::spawn(Some("supervisor".to_owned()), self, ()).await?;
+        api::run(col).await;
+        Ok(())
+    }
+}
+
+pub enum Message {
+    Check,
+}
+
+#[derive(Debug, Clone)]
+pub struct Running {
+    resolver: ActorCell,
+    downloader: ActorCell,
+    sourcer: Vec<ActorCell>,
+    dispatcher: ActorCell,
+}
+
+impl Running {
+    async fn restart(&mut self, this: ActorCell, cell: ActorCell, col: &Collections) {
+        let id = cell.get_id();
+
+        if self.resolver.get_id() == id {
+            self.resolver = resolver::start(col, this).await;
+        } else if self.downloader.get_id() == id {
+            self.downloader = downloader::start(col, this).await;
+        } else if self.dispatcher.get_id() == id {
+            self.dispatcher = dispatcher::start(col, this).await;
+        } else if self.sourcer.iter().any(|cell| cell.get_id() == id) {
+            take(&mut self.sourcer).into_iter().for_each(|cell| {
+                cell.stop(Some("Restarting".to_owned()));
+            });
+            self.sourcer = sourcer::start(col, this).await;
+        }
+    }
+}
+
+impl Actor for Forrit {
+    type Arguments = ();
+    type Msg = Message;
+    type State = Running;
+
+    async fn pre_start(
+        &self,
+        this: ractor::ActorRef<Self::Msg>,
+        _: Self::Arguments,
+    ) -> Result<Self::State, ractor::ActorProcessingErr> {
+        info!("Forrit starting");
+
+        let this = this.get_cell();
+
+        let (resolver, downloader, sourcer, dispatcher) = join4(
+            resolver::start(&self.col, this.clone()),
+            downloader::start(&self.col, this.clone()),
+            sourcer::start(&self.col, this.clone()),
+            dispatcher::start(&self.col, this.clone()),
+        )
+        .await;
+
+        ractor::time::send_after(Duration::from_secs(3), this, || Message::Check);
+
+        Ok(Running {
+            resolver,
+            downloader,
+            sourcer,
+            dispatcher,
+        })
+    }
+
+    async fn post_start(
+        &self,
+        _: ractor::ActorRef<Self::Msg>,
+        _: &mut Self::State,
+    ) -> Result<(), ractor::ActorProcessingErr> {
+        info!("Forrit started, starting API");
+
+        Ok(())
+    }
+
+    async fn handle_supervisor_evt(
+        &self,
+        myself: ractor::ActorRef<Self::Msg>,
+        message: ractor::SupervisionEvent,
+        state: &mut Self::State,
+    ) -> Result<(), ractor::ActorProcessingErr> {
+        use SupervisionEvent::*;
+        match message {
+            ActorStarted(_) => {}
+            ActorTerminated(cell, _, reason) => {
+                warn!(?reason, name=?cell.get_name(), "Actor terminated, restarting");
+                state.restart(myself.get_cell(), cell, &self.col).await;
+            }
+            ActorFailed(cell, error) => {
+                warn!(?error, name=?cell.get_name(), "Actor failed, restarting");
+                state.restart(myself.get_cell(), cell, &self.col).await;
+            }
+            ProcessGroupChanged(_) => {}
+        }
+        Ok(())
+    }
+}
