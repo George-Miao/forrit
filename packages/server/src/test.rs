@@ -91,7 +91,7 @@ async fn prepare(jail: &mut Jail) -> Env {
         RateLimiter::direct(Quota::per_second(NonZeroU32::new(20).unwrap())),
     );
     let col = Collections::new(&db).await.unwrap();
-    let resolver = Resolver::new(client, col.meta.clone(), col.alias.clone(), &config.resolver).await;
+    let resolver = Resolver::new(client, col.meta.clone(), col.alias.clone(), &config.resolver);
 
     Env { db, col, resolver }
 }

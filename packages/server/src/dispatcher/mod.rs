@@ -158,6 +158,11 @@ impl Actor for SubscriptionActor {
         Ok(())
     }
 
+    async fn post_start(&self, _: ractor::ActorRef<Self::Msg>, _: &mut Self::State) -> Result<(), ActorProcessingErr> {
+        info!("Subscription actor started");
+        Ok(())
+    }
+
     async fn handle(
         &self,
         _: ractor::ActorRef<Self::Msg>,

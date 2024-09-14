@@ -61,7 +61,7 @@ pub async fn start(db: &Collections) {
         RateLimiter::direct(Quota::per_second(config.tmdb_rate_limit)),
     );
 
-    let resolver = Resolver::new(client, db.meta.clone(), db.alias.clone(), config).await;
+    let resolver = Resolver::new(client, db.meta.clone(), db.alias.clone(), config);
     Actor::spawn(Some(Resolver::NAME.to_owned()), resolver, ())
         .await
         .boom("Failed to spawn resolver actor");
@@ -149,7 +149,7 @@ impl Deref for Resolver {
 impl Resolver {
     pub const NAME: &'static str = "resolve";
 
-    pub async fn new(tmdb: GovernedClient, meta: MetaStorage, alias: AliasKV, config: &'static ResolverConfig) -> Self {
+    pub fn new(tmdb: GovernedClient, meta: MetaStorage, alias: AliasKV, config: &'static ResolverConfig) -> Self {
         Self(Arc::new(ResolverInner {
             tmdb,
             meta,
@@ -398,6 +398,11 @@ impl Actor for Resolver {
             index_job: None,
             index_timer,
         })
+    }
+
+    async fn post_start(&self, _: ActorRef<Self::Msg>, _: &mut Self::State) -> Result<(), ActorProcessingErr> {
+        info!("Resolver started");
+        Ok(())
     }
 
     async fn post_stop(&self, _: ActorRef<Self::Msg>, state: &mut Self::State) -> Result<(), ActorProcessingErr> {

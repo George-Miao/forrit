@@ -97,6 +97,11 @@ impl Actor for QbitActor {
         })
     }
 
+    async fn post_start(&self, _: ActorRef<Message>, _: &mut Self::State) -> Result<(), ActorProcessingErr> {
+        info!("QBit actor started");
+        Ok(())
+    }
+
     async fn handle(
         &self,
         _: ActorRef<Message>,
