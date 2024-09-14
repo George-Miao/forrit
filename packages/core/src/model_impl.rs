@@ -5,6 +5,7 @@ use std::{
 };
 
 use bangumi_data::{Item, Language};
+use bson::oid::ObjectId;
 use camino::Utf8PathBuf;
 use salvo_oapi::{schema, Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema};
 use tmdb_api::tvshow::{SeasonShort, TVShowShort};
@@ -118,6 +119,10 @@ impl<T> WithId<T> {
             id: self.id,
             inner: self.inner.into(),
         }
+    }
+
+    pub fn split(self) -> (ObjectId, T) {
+        (self.id, self.inner)
     }
 
     pub fn map<P>(self, f: impl FnOnce(T) -> P) -> WithId<P> {
@@ -469,10 +474,11 @@ impl Download {
 
 impl DownloadState {
     pub fn not_error(&self) -> bool {
-        match self {
-            Self::Pending | Self::Downloading | Self::Finished => true,
-            Self::Failed => false,
-        }
+        !self.is_error()
+    }
+
+    pub fn is_error(&self) -> bool {
+        matches!(self, Self::Failed)
     }
 }
 

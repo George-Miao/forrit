@@ -218,6 +218,9 @@ pub struct TransmissionConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct QbittorrentConfig {
+    #[serde(with = "humantime_serde", default = "downloader::qbittorrent::check_interval")]
+    pub check_interval: Duration,
+
     /// Save path for the downloaded torrent, leave it empty to use the default
     #[serde(default)]
     pub savepath: Option<Utf8PathBuf>,
@@ -235,6 +238,10 @@ pub struct ApiConfig {
     /// Enable the API, default to true
     #[serde(default = "enable")]
     pub enable: bool,
+
+    /// Enable the API log, default to false
+    #[serde(default = "api::log")]
+    pub log: bool,
 
     /// Socket address to bind the API, default to 0.0.0.0:8080
     #[serde(default = "api::bind")]

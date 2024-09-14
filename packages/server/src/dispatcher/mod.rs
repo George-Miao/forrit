@@ -2,11 +2,8 @@ use forrit_core::model::{
     Download, DownloadState, Entry, EntryBase, PartialEntry, SubscribeGroups, Subscription, WithId,
 };
 use futures::{future::ready, TryStreamExt};
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    options::FindOneOptions,
-};
-use ractor::{Actor, ActorCell};
+use mongodb::bson::{doc, oid::ObjectId};
+use ractor::{Actor, ActorCell, ActorProcessingErr};
 use regex::Regex;
 use tracing::{debug, info, warn};
 
@@ -14,11 +11,11 @@ mod api;
 pub use api::dispatcher_api;
 
 use crate::{
-    db::{Collections, CrudHandler, MongoResult, Storage},
+    db::{Collections, CrudHandler, Storage},
     downloader::{self, DownloadIdx},
     resolver::MetaStorage,
     sourcer::{BsonEntryIdx, EntryStorage},
-    util::{ActorCellExt, Boom},
+    util::{get_torrent_name, ActorCellExt, Boom},
     ACTOR_ERR, RECV_ERR, SEND_ERR,
 };
 
@@ -26,6 +23,7 @@ fn actor() -> ActorCell {
     ractor::registry::where_is(SubscriptionActor::NAME.to_owned()).expect(ACTOR_ERR)
 }
 
+/// Manually trigger a download job for an entry
 pub async fn download_entry(id: ObjectId) -> Option<WithId<Download>> {
     actor()
         .call(|port| Message::DownloadEntry { entry_id: id, port }, None)
@@ -117,7 +115,7 @@ impl SubscriptionActor {
         &self,
         entry: WithId<PartialEntry>,
         sub: Option<&Subscription>,
-    ) -> MongoResult<Option<WithId<Download>>> {
+    ) -> Result<Option<WithId<Download>>, ActorProcessingErr> {
         let (subscription_id, directory_override) = sub
             .map(|sub| (entry.meta_id, sub.directory.clone()))
             .unwrap_or((None, None));
@@ -127,22 +125,10 @@ impl SubscriptionActor {
             inner: entry,
         } = entry;
 
-        let last = self
-            .download
-            .get
-            .find_one(
-                doc! { DownloadIdx::ENTRY_ID: &entry_id },
-                FindOneOptions::builder().sort(doc! { "_id": -1 }).build(),
-            )
-            .await?;
-
-        if let Some(last) = last
-            && last.state.not_error()
-        {
-            return Ok(None);
-        }
+        let name = get_torrent_name(entry.torrent.as_str()).await?;
 
         let download = Download {
+            name,
             meta_id: entry.meta_id,
             subscription_id,
             entry_id,
@@ -151,8 +137,6 @@ impl SubscriptionActor {
         };
 
         let downloaded = self.download.insert(download.clone()).await?;
-
-        self.entry.set_download_id(entry_id, downloaded.id).await?;
 
         downloader::new_download(download);
 
@@ -229,22 +213,22 @@ impl Actor for SubscriptionActor {
                             .find(doc! { BsonEntryIdx::META_ID: meta_id }, None)
                             .await
                             .expect("db error")
+                            // Only keep entries that are "wanted" by the subscription
                             .try_filter(|entry| ready(Self::sub_wants_entry(&sub, entry)))
                             .try_filter(|entry| {
                                 let get = this.download.get.clone();
                                 let entry_id = entry.id;
                                 async move {
-                                    get.find_one(
-                                        doc! {
-                                            DownloadIdx::ENTRY_ID: entry_id,
-                                        },
-                                        None,
-                                    )
-                                    .await
-                                    .expect("db error")
-                                    .is_none()
+                                    get.find_one(doc! { DownloadIdx::ENTRY_ID: entry_id,}, None)
+                                        .await
+                                        .expect("db error")
+                                        // If it's not erroneous, recognize it so it's not downloaded again
+                                        .filter(|x| x.state.not_error())
+                                        // It it's not recognized, download it
+                                        .is_some()
                                 }
                             })
+                            .map_err(ActorProcessingErr::from)
                             .try_for_each_concurrent(None, |entry| async {
                                 this.download_one(entry, Some(&sub)).await?;
                                 Ok(())

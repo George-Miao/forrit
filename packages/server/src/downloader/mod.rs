@@ -25,7 +25,7 @@ pub const NAME: &str = "downloader";
 
 mod qbit;
 
-impl_resource!(Download, field(subscription_id, meta_id, entry_id, state));
+impl_resource!(Download, field(subscription_id, meta_id, entry_id, state, name));
 
 pub fn new_download(job: Download) {
     ractor::registry::where_is(NAME.to_owned()).map(|sub| sub.send_message(Message::NewDownload(job)));
@@ -60,16 +60,10 @@ impl DownloadManager {
         }
     }
 
-    async fn update_state(&self, id: ObjectId, state: DownloadState) -> MongoResult<UpdateResult> {
+    async fn update_state(&self, job_id: ObjectId, state: DownloadState) -> MongoResult<UpdateResult> {
         self.download
             .set
-            .update_one(
-                doc! { "_id": id },
-                doc! {
-                    "$set": { "state": state.to_str() }
-                },
-                None,
-            )
+            .update_one(doc! { "_id": job_id }, doc! {"$set": { "state": state.to_str() }}, None)
             .await
     }
 
@@ -114,7 +108,15 @@ pub async fn start(db: &Collections) {
 }
 
 pub enum Message {
+    /// A new download job by subscription
     NewDownload(Download),
+
+    /// A manual download is added via RESTful API
     NewDownloadAdded(ObjectId),
+
+    /// Periodically rename files
     Rename,
+
+    /// Periodically check download status
+    Check,
 }

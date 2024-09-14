@@ -49,6 +49,7 @@ qbit-rs    = "0.4.1"
 rss        = "2.0.6"
 thiserror  = "1.0.58"
 camelpaste = "0.1.0"
+bt_bencode = "0.8.1"
 
 [dev-dependencies]
 tracing-appender = "0.2.3"

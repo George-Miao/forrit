@@ -345,6 +345,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bt_bencode"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b053353330a01eaf38e90ab7a87cbe6caa5e4d073e37bfb559c2311b95857624"
+dependencies = [
+ "itoa",
+ "serde",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -982,6 +992,7 @@ version = "0.1.0"
 dependencies = [
  "anitomy",
  "bangumi-data",
+ "bt_bencode",
  "camelpaste",
  "camino",
  "chrono",

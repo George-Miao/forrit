@@ -93,7 +93,6 @@ impl RssActor {
             mime_type: closure.mime_type,
             group: resolved.group,
             elements,
-            download_id: None,
         };
 
         let (meta_title, meta_id) = if let Some(meta) = resolved.meta {

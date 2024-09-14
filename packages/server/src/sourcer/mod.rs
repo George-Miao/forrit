@@ -60,7 +60,7 @@ impl Wrapping<PartialEntry> for BsonEntry {
     }
 }
 
-impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, meta_id, download_id));
+impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, meta_id));
 
 impl EntryStorage {
     pub async fn list_by_meta_id(
@@ -101,16 +101,16 @@ impl EntryStorage {
         self.get.find_one(query, None).await?.is_some().pipe(Ok)
     }
 
-    pub async fn set_download_id(&self, id: ObjectId, download_id: ObjectId) -> MongoResult<()> {
-        self.set
-            .update_one(
-                doc! { "_id": id },
-                doc! { "$set": doc! { BsonEntryIdx::DOWNLOAD_ID: download_id } },
-                None,
-            )
-            .await
-            .map(|_| ())
-    }
+    // pub async fn set_download_id(&self, id: ObjectId, download_id: ObjectId) ->
+    // MongoResult<()> {     self.set
+    //         .update_one(
+    //             doc! { "_id": id },
+    //             doc! { "$set": doc! { BsonEntryIdx::DOWNLOAD_ID: download_id } },
+    //             None,
+    //         )
+    //         .await
+    //         .map(|_| ())
+    // }
 
     pub async fn upsert(&self, entry: &PartialEntry) -> MongoResult<Option<ObjectId>> {
         let doc = mongodb::bson::to_document(entry).expect("Failed to convert Meta to bson Document");

@@ -128,6 +128,45 @@ pub struct Meta {
     pub season_override: Option<SeasonOverride>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
+pub struct Subscription {
+    #[salvo(schema(value_type = Option<String>))]
+    #[ts(as = "Option<String>")]
+    pub directory: Option<Utf8PathBuf>,
+
+    // Group subscription
+    pub groups: SubscribeGroups,
+
+    // Filters
+    /// Include the entry if it matches include regex
+    pub include: Option<String>,
+    /// Exclude the entry if it matches include regex (overrides include)
+    pub exclude: Option<String>,
+    /// Exclude the entry if it's smaller than min_size
+    pub min_size: Option<u64>, // TODO: Implement size filter
+    /// Exclude the entry if it's bigger than max_size
+    pub max_size: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "lowercase")]
+pub enum SubscribeGroups {
+    /// Subscribe to all groups
+    All,
+    #[serde(untagged)]
+    Groups(Vec<String>),
+}
+
+#[test]
+fn test_subscribe_group() {
+    let g = SubscribeGroups::All;
+    assert_eq!(serde_json::to_string(&g).unwrap(), r#""all""#);
+    let g = SubscribeGroups::Groups(vec!["a".to_string(), "b".to_string()]);
+    assert_eq!(serde_json::to_string(&g).unwrap(), r#"["a","b"]"#);
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BsonMeta {
     pub bson_begin: Option<bson::DateTime>,
@@ -161,10 +200,6 @@ pub struct EntryBase {
     pub link: Option<Url>,
     pub group: Option<String>,
     pub elements: BTreeMap<String, String>,
-
-    #[salvo(schema(value_type = Option<ObjectIdSchema>))]
-    #[ts(as = "Option<OidExtJson>")]
-    pub download_id: Option<ObjectId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
@@ -209,6 +244,7 @@ pub enum DownloadState {
     Pending,
     Downloading,
     Finished,
+    Cancelled,
     Failed,
 }
 
@@ -218,6 +254,7 @@ impl DownloadState {
             DownloadState::Pending => "pending",
             DownloadState::Downloading => "downloading",
             DownloadState::Finished => "finished",
+            DownloadState::Cancelled => "cancelled",
             DownloadState::Failed => "failed",
         }
     }
@@ -226,6 +263,8 @@ impl DownloadState {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
 pub struct Download {
+    pub name: String,
+
     #[salvo(schema(value_type = Option<ObjectIdSchema>))]
     #[ts(as = "Option<OidExtJson>")]
     pub meta_id: Option<ObjectId>,
@@ -243,45 +282,6 @@ pub struct Download {
     #[salvo(schema(value_type = Option<String>))]
     #[ts(as = "Option<String>")]
     pub directory_override: Option<Utf8PathBuf>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
-#[ts(export)]
-pub struct Subscription {
-    #[salvo(schema(value_type = Option<String>))]
-    #[ts(as = "Option<String>")]
-    pub directory: Option<Utf8PathBuf>,
-
-    // Group subscription
-    pub groups: SubscribeGroups,
-
-    // Filters
-    /// Include the entry if it matches include regex
-    pub include: Option<String>,
-    /// Exclude the entry if it matches include regex (overrides include)
-    pub exclude: Option<String>,
-    /// Exclude the entry if it's smaller than min_size
-    pub min_size: Option<u64>, // TODO: Implement size filter
-    /// Exclude the entry if it's bigger than max_size
-    pub max_size: Option<u64>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(export)]
-#[serde(rename_all = "lowercase")]
-pub enum SubscribeGroups {
-    /// Subscribe to all groups
-    All,
-    #[serde(untagged)]
-    Groups(Vec<String>),
-}
-
-#[test]
-fn test_subscribe_group() {
-    let g = SubscribeGroups::All;
-    assert_eq!(serde_json::to_string(&g).unwrap(), r#""all""#);
-    let g = SubscribeGroups::Groups(vec!["a".to_string(), "b".to_string()]);
-    assert_eq!(serde_json::to_string(&g).unwrap(), r#"["a","b"]"#);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize, ToSchema, TS)]

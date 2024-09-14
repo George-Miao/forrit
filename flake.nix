@@ -44,7 +44,7 @@
         forrit-server = craneLib.buildPackage ({
             src = craneLib.cleanCargoSource ./.;
             pname = "forrit-server";
-            cargoExtraArgs = "--locked --package forrit-server --bin forrit-server";
+            cargoExtraArgs = "--locked --release --package forrit-server --bin forrit-server";
             strictDeps = true;
             doCheck = false;
           }

@@ -10,8 +10,10 @@ use mongodb_cursor_pagination::{CursorError, Pagination};
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
 use thiserror::Error;
+use url::Url;
 
 use crate::{
+    downloader::DownloadIdx,
     resolver::{AliasKV, MetaStorage},
     sourcer::EntryStorage,
     util::ToCore,
@@ -101,6 +103,13 @@ where
         WithId<R>: DeserializeOwned + Send + Sync + Unpin,
     {
         self.get.find_one(doc! { "_id": id }, None).await
+    }
+
+    pub async fn get_by_name(&self, name: &str) -> MongoResult<Option<WithId<R>>>
+    where
+        WithId<R>: DeserializeOwned + Send + Sync + Unpin,
+    {
+        self.get.find_one(doc! { DownloadIdx::NAME: name }, None).await
     }
 
     pub async fn insert(&self, data: R) -> MongoResult<WithId<R>>

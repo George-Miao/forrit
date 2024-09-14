@@ -89,6 +89,12 @@ pub mod downloader {
     }
 
     pub mod qbittorrent {
+        use std::time::Duration;
+
+        pub fn check_interval() -> Duration {
+            Duration::from_secs(1)
+        }
+
         pub fn url() -> url::Url {
             "http://localhost:8080/".parse().expect("invalid url")
         }
@@ -104,11 +110,16 @@ pub mod api {
         fn default() -> Self {
             Self {
                 enable: super::enable(),
+                log: log(),
                 bind: bind(),
                 debug: debug(),
                 doc: Default::default(),
             }
         }
+    }
+
+    pub fn log() -> bool {
+        false
     }
 
     pub fn bind() -> SocketAddr {

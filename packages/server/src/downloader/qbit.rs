@@ -1,8 +1,11 @@
-use std::{borrow::Cow, time::Duration};
+use std::{borrow::Cow, collections::HashMap, time::Duration};
 
 use camino::Utf8PathBuf;
 use forrit_config::QbittorrentConfig;
-use forrit_core::{model::DownloadState, IntoStream};
+use forrit_core::{
+    model::{DownloadState, WithId},
+    IntoStream,
+};
 use futures::{future::try_join_all, StreamExt};
 use mongodb::bson::oid::ObjectId;
 use qbit_rs::{
@@ -37,10 +40,26 @@ impl QbitActor {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct ActiveDownload {
+    id: ObjectId,
+}
+
+impl ActiveDownload {
+    fn new(id: ObjectId) -> Self {
+        Self { id }
+    }
+}
+
 pub struct State {
+    check_id: i64,
+    /// Map of torrent hash to name given by qbit
+    qb_torrents: HashMap<String, String>,
+    /// Map of name to download job spawned by us
+    downloading: HashMap<String, ActiveDownload>,
     savepath: Utf8PathBuf,
     rename_job: Option<JoinHandle<()>>,
-    downloading: Vec<ObjectId>, // TODO: Use downloading
+    check_job: JoinHandle<()>,
 }
 
 impl Actor for QbitActor {
@@ -50,30 +69,32 @@ impl Actor for QbitActor {
 
     async fn pre_start(&self, this: ActorRef<Message>, _: Self::Arguments) -> Result<Self::State, ActorProcessingErr> {
         info!("QBit actor starting");
-        let downloading = Vec::with_capacity(16);
         let rename_job = if self.manager.config.rename.enable {
             ractor::time::send_interval(self.manager.config.rename.interval, this.get_cell(), || Message::Rename)
                 .pipe(Some)
         } else {
             None
         };
-        if let Some(savepath) = self.config.savepath.clone() {
-            Ok(State {
-                savepath,
-                rename_job,
-                downloading,
-            })
+        let check_job = ractor::time::send_interval(self.config.check_interval, this.get_cell(), || Message::Check);
+
+        let savepath = if let Some(savepath) = self.config.savepath.clone() {
+            savepath
         } else {
             self.qbit
                 .get_default_save_path()
                 .await?
-                .pipe(|savepath| State {
-                    savepath: Utf8PathBuf::from_path_buf(savepath).expect("Non utf-8 path"),
-                    rename_job,
-                    downloading,
-                })
-                .pipe(Ok)
-        }
+                .try_into()
+                .expect("Non utf-8 path")
+        };
+
+        Ok(State {
+            check_id: 0,
+            qb_torrents: HashMap::new(),
+            downloading: HashMap::new(),
+            savepath,
+            rename_job,
+            check_job,
+        })
     }
 
     async fn handle(
@@ -83,18 +104,20 @@ impl Actor for QbitActor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
-            Message::NewDownload(job) => {
+            Message::NewDownload(mut job) => {
+                job.state = DownloadState::Pending;
+                let job = self.manager.download.insert(job).await?;
                 self.download(job, state).await?;
             }
             Message::NewDownloadAdded(id) => {
-                let Some(job) = self.manager.download.get_one(id).await? else {
+                if let Some(job) = self.manager.download.get_one(id).await? {
+                    self.download(job, state).await?;
+                } else {
                     warn!(%id, "Download not found");
-                    return Ok(());
                 };
-                self.manager.update_state(id, DownloadState::Downloading).await?;
-                self.download(job.inner, state).await?;
             }
             Message::Rename => self.rename().await,
+            Message::Check => self.check(state).await?,
         }
         Ok(())
     }
@@ -103,24 +126,91 @@ impl Actor for QbitActor {
         if let Some(ref handle) = state.rename_job {
             handle.abort()
         }
+        state.check_job.abort();
         Ok(())
     }
 }
 
 impl QbitActor {
-    async fn download(&self, job: Download, state: &State) -> Result<(), ActorProcessingErr> {
+    async fn download(&self, job: WithId<Download>, state: &mut State) -> Result<(), ActorProcessingErr> {
+        let (id, job) = job.split();
         let Some(prepared) = self.manager.prepare(job).await? else {
+            self.manager.update_state(id, DownloadState::Failed).await?;
             return Ok(());
         };
+
         let url = prepared.entry.inner.base.torrent;
         let path = state.savepath.join(prepared.path);
 
-        AddTorrentArg::builder()
+        let res = AddTorrentArg::builder()
             .source(TorrentSource::Urls { urls: vec![url].into() })
             .savepath(path.to_string())
             .build()
             .pipe(|arg| self.qbit.add_torrent(arg))
-            .await?;
+            .await;
+
+        if res.is_err() {
+            self.manager.update_state(id, DownloadState::Failed).await?;
+        } else {
+            self.manager.update_state(id, DownloadState::Downloading).await?;
+            state
+                .downloading
+                .insert(prepared.download.name, ActiveDownload::new(id));
+        }
+
+        Ok(())
+    }
+
+    async fn check(&self, state: &mut State) -> Result<(), ActorProcessingErr> {
+        let maindata = self.qbit.sync(state.check_id).await?;
+        state.check_id += 1;
+
+        for hash in maindata.torrents_removed.into_iter().flat_map(|x| x.into_iter()) {
+            if let Some(name) = state.qb_torrents.remove(&hash)
+                && let Some(active) = state.downloading.remove(&name)
+            {
+                self.manager.update_state(active.id, DownloadState::Cancelled).await?;
+            }
+        }
+
+        let iter = maindata.torrents.into_iter().flat_map(|x| x.into_iter());
+
+        for (hash, torrent) in iter {
+            let name = if let Some(name) = torrent.name {
+                state.qb_torrents.entry(hash).or_insert(name)
+            } else {
+                state
+                    .qb_torrents
+                    .get_mut(&hash)
+                    .expect("When we first see a torrent, it should come with its full data")
+            };
+
+            let Some(active) = state.downloading.get(name) else {
+                // Not our download, skip it
+                continue;
+            };
+
+            if let Some(state) = torrent.state {
+                use qbit_rs::model::State::*;
+
+                match state {
+                    // Error state
+                    Error | MissingFiles => {
+                        self.manager.update_state(active.id, DownloadState::Failed).await?;
+                    }
+                    // Finished state
+                    Uploading | PausedUP | QueuedUP | StalledUP | CheckingUP | ForcedUP => {
+                        self.manager.update_state(active.id, DownloadState::Finished).await?;
+                    }
+                    // Downloading state
+                    Allocating | Downloading | MetaDL | PausedDL | QueuedDL | StalledDL | CheckingDL | ForcedDL => {
+                        self.manager.update_state(active.id, DownloadState::Downloading).await?;
+                    }
+                    // No-action state
+                    CheckingResumeData | Moving | Unknown => {}
+                }
+            }
+        }
 
         Ok(())
     }

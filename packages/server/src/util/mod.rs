@@ -2,7 +2,7 @@ use std::{fmt::Display, process::exit};
 
 use tracing::error;
 
-mod_use::mod_use![string, tmdb, time, actor];
+mod_use::mod_use![string, tmdb, time, actor, torrent];
 
 pub trait ToCore {
     type Core;

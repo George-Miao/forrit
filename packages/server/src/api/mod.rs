@@ -5,6 +5,7 @@ use salvo::{
     cors::{Any, Cors},
     prelude::*,
 };
+use tap::Pipe;
 use tracing::info;
 
 use crate::{
@@ -94,7 +95,7 @@ pub async fn run(col: Collections) {
     let service = Service::new(router)
         .hoop(col)
         .hoop(cors)
-        .hoop(Logger::new())
+        .pipe(|s| if config.log { s.hoop(Logger::new()) } else { s })
         .hoop(DebugHoop { debug: config.debug });
 
     let acceptor = TcpListener::new(config.bind).bind().await;
