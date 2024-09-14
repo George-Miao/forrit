@@ -49,7 +49,6 @@ pub fn api() -> Router {
     let download_api = build_crud!(Storage<Job>, "download", on_create = job_added)
         .list()
         .read()
-        .create()
         .build();
 
     Router::new()

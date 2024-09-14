@@ -8,7 +8,7 @@ use salvo::{
 use thiserror::Error;
 use tracing::warn;
 
-use crate::db::{CrudError, CrudResult};
+use crate::db::{CrudError, CrudResult, MongoResult};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -131,6 +131,16 @@ pub trait CrudResultExt {
 }
 
 impl<T> CrudResultExt for CrudResult<Option<T>> {
+    type T = T;
+
+    fn unwrap_not_found(self, resource: impl Into<Cow<'static, str>>) -> ApiResult<T> {
+        self?.ok_or_else(|| ApiError::DoesNotExist {
+            resource: resource.into(),
+        })
+    }
+}
+
+impl<T> CrudResultExt for MongoResult<Option<T>> {
     type T = T;
 
     fn unwrap_not_found(self, resource: impl Into<Cow<'static, str>>) -> ApiResult<T> {

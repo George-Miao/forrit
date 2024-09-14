@@ -24,9 +24,9 @@ fn actor() -> ActorCell {
 }
 
 /// Manually trigger a download job for an entry
-pub async fn download_entry(id: ObjectId) -> Option<WithId<Job>> {
+pub async fn download_entry(entry: WithId<PartialEntry>) -> WithId<Job> {
     actor()
-        .call(|port| Message::DownloadEntry { entry_id: id, port }, None)
+        .call(|port| Message::DownloadEntry { entry, port }, None)
         .await
         .expect(SEND_ERR)
         .expect(RECV_ERR)
@@ -61,8 +61,8 @@ pub enum Message {
         meta_id: ObjectId,
     },
     DownloadEntry {
-        entry_id: ObjectId,
-        port: ractor::RpcReplyPort<Option<WithId<Job>>>,
+        entry: WithId<PartialEntry>,
+        port: ractor::RpcReplyPort<WithId<Job>>,
     },
 }
 
@@ -111,7 +111,7 @@ impl SubscriptionActor {
         &self,
         entry: WithId<PartialEntry>,
         sub: Option<&Subscription>,
-    ) -> Result<Option<WithId<Job>>, ActorProcessingErr> {
+    ) -> Result<WithId<Job>, ActorProcessingErr> {
         let (subscription_id, directory_override) = sub
             .map(|sub| (entry.meta_id, sub.directory.clone()))
             .unwrap_or((None, None));
@@ -140,7 +140,7 @@ impl SubscriptionActor {
 
         downloader::job_added(downloaded.id);
 
-        Ok(Some(downloaded))
+        Ok(downloaded)
     }
 }
 
@@ -190,10 +190,7 @@ impl Actor for SubscriptionActor {
 
                 self.download_one(entry.into(), Some(&sub)).await.expect("db error");
             }
-            Message::DownloadEntry { entry_id, port } => {
-                let Some(entry) = self.entry.get(entry_id).await.expect("db error") else {
-                    return Ok(());
-                };
+            Message::DownloadEntry { entry, port } => {
                 let res = self.download_one(entry, None).await.expect("db error");
                 port.send(res).ok();
             }
