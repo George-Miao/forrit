@@ -27,9 +27,9 @@ ts-rs                     = { version = "8.0.0", features = ["no-serde-warnings"
 futures                   = { version = "0.3.30", default-features = false, features = ["async-await", "std"] }
 bson                      = { version = "2.9.0", features = ["chrono"] }
 salvo-oapi                = { version = "0.67.0", features = ["chrono"] }
-tmdb-api                  = { version = "0.7", git = "https://github.com/George-Miao/tmdb-api.git", rev = "af274c0" }
+tmdb-api                  = { version = "0.7", git = "https://github.com/George-Miao/tmdb-api.git", rev = "4935376" }
 iso8601                   = { version = "0.6.1", features = ["chrono"] }
 camino                    = { version = "1.1.6", features = ["serde", "serde1"] }
 url                       = { version = "2.5.0", features = ["serde"] }
-reqwest                   = { version = "0.11.23", features = ["json"] }
+reqwest                   = { version = "0.12.7", features = ["json"] }
 mongodb-cursor-pagination = { version = "1.0.0-rc.1", git = "https://github.com/George-Miao/mongodb-cursor-pagination.git" }

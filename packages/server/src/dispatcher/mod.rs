@@ -136,11 +136,11 @@ impl SubscriptionActor {
             download,
         };
 
-        let downloaded = self.job.insert(job.clone()).await?;
+        let job = self.job.insert(job).await?;
 
-        downloader::job_added(downloaded.id);
+        downloader::job_added(job.id);
 
-        Ok(downloaded)
+        Ok(job)
     }
 }
 

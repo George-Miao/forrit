@@ -103,6 +103,7 @@ pub async fn start(db: &Collections) {
     }
 }
 
+#[derive(Debug)]
 pub enum Message {
     /// A new  download job is added
     NewDownloadAdded(ObjectId),

@@ -80,6 +80,7 @@ impl Actor for QbitActor {
         let savepath = if let Some(savepath) = self.config.savepath.clone() {
             savepath
         } else {
+            info!("No save path provided, using default save path");
             self.qbit
                 .get_default_save_path()
                 .await?
@@ -123,6 +124,7 @@ impl Actor for QbitActor {
     }
 
     async fn post_stop(&self, _: ActorRef<Self::Msg>, state: &mut Self::State) -> Result<(), ActorProcessingErr> {
+        info!("QBit actor stopping");
         if let Some(ref handle) = state.rename_job {
             handle.abort()
         }

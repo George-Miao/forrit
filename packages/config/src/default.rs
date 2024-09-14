@@ -92,7 +92,7 @@ pub mod downloader {
         use std::time::Duration;
 
         pub fn check_interval() -> Duration {
-            Duration::from_secs(1)
+            Duration::from_secs(3)
         }
 
         pub fn url() -> url::Url {

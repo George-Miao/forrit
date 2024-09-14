@@ -61,6 +61,7 @@ async fn prepare(jail: &mut Jail) -> Env {
 
         [downloader]
         type     = "qbittorrent"
+        url      = "http://bt"
 
         [downloader.rename]
         enable = false

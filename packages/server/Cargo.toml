@@ -45,7 +45,7 @@ tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
 anitomy    = "0.2.0"
 humantime  = "2.1.0"
 mod_use    = "0.2.1"
-qbit-rs    = "0.4.1"
+qbit-rs    = "0.4.4"
 rss        = "2.0.6"
 thiserror  = "1.0.58"
 camelpaste = "0.1.0"
