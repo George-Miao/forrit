@@ -5,7 +5,7 @@ use std::{process::exit, str::FromStr};
 use camino::Utf8PathBuf;
 use forrit_config::init_config;
 use forrit_server::{db::Collections, util::Boom, *};
-use futures::future::{join4, join5};
+use futures::future::join5;
 use mongodb::Client;
 use tap::Conv;
 use tracing::{error, info, level_filters::LevelFilter};

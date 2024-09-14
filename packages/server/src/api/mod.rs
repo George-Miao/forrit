@@ -1,5 +1,5 @@
 use forrit_config::get_config;
-use forrit_core::model::Download;
+use forrit_core::model::Job;
 use mongodb::bson::oid::ObjectId;
 use salvo::{
     cors::{Any, Cors},
@@ -11,7 +11,7 @@ use tracing::info;
 use crate::{
     db::{Collections, Storage},
     dispatcher::dispatcher_api,
-    downloader::download_added,
+    downloader::job_added,
     resolver::{resolver_api, AliasKV, MetaStorage},
     sourcer::EntryStorage,
 };
@@ -37,7 +37,7 @@ impl Handler for Collections {
     async fn handle(&self, _: &mut Request, depot: &mut Depot, _: &mut Response, _: &mut FlowCtrl) {
         depot.inject(self.meta.clone());
         depot.inject(self.entry.clone());
-        depot.inject(self.download.clone());
+        depot.inject(self.jobs.clone());
         depot.inject(self.alias.clone());
     }
 }
@@ -46,7 +46,7 @@ pub fn api() -> Router {
     let entry_api = build_crud!(EntryStorage, "entry").without_create();
     let meta_api = build_crud!(MetaStorage, "meta").list().read().update().build();
     let alias_api = build_crud!(AliasKV, "alias").all();
-    let download_api = build_crud!(Storage<Download>, "download", on_create = download_added)
+    let download_api = build_crud!(Storage<Job>, "download", on_create = job_added)
         .list()
         .read()
         .create()

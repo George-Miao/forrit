@@ -18,7 +18,7 @@ use tap::Pipe;
 use tracing::{debug, info, warn};
 
 use crate::{
-    downloader::{Download, DownloadManager, Message},
+    downloader::{DownloadManager, Job, Message},
     util::{normalize_title, timestamp},
 };
 
@@ -109,16 +109,11 @@ impl Actor for QbitActor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
-            Message::NewDownload(mut job) => {
-                job.state = DownloadState::Pending;
-                let job = self.manager.download.insert(job).await?;
-                self.download(job, state).await?;
-            }
             Message::NewDownloadAdded(id) => {
-                if let Some(job) = self.manager.download.get_one(id).await? {
+                if let Some(job) = self.manager.jobs.get_one(id).await? {
                     self.download(job, state).await?;
                 } else {
-                    warn!(%id, "Download not found");
+                    warn!(%id, "Job not found");
                 };
             }
             Message::Rename => self.rename().await,
@@ -137,7 +132,7 @@ impl Actor for QbitActor {
 }
 
 impl QbitActor {
-    async fn download(&self, job: WithId<Download>, state: &mut State) -> Result<(), ActorProcessingErr> {
+    async fn download(&self, job: WithId<Job>, state: &mut State) -> Result<(), ActorProcessingErr> {
         let (id, job) = job.split();
         let Some(prepared) = self.manager.prepare(job).await? else {
             self.manager.update_state(id, DownloadState::Failed).await?;

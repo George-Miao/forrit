@@ -458,7 +458,22 @@ impl PartialEntry {
         })
     }
 }
-impl Download {
+
+impl Deref for Job {
+    type Target = Download;
+
+    fn deref(&self) -> &Self::Target {
+        &self.download
+    }
+}
+
+impl DerefMut for Job {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.download
+    }
+}
+
+impl Job {
     pub fn get_path(&self, meta: &WithId<Meta>) -> Utf8PathBuf {
         let name = self
             .directory_override

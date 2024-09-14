@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, fmt::Debug};
 
-use forrit_core::model::{BsonMeta, Download, ListParam, ListResult, Meta, Record, WithId};
+use forrit_core::model::{BsonMeta, Job, ListParam, ListResult, Meta, Record, WithId};
 use mongodb::{
     bson::{self, doc, oid::ObjectId, Bson, Document},
     options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
@@ -10,10 +10,9 @@ use mongodb_cursor_pagination::{CursorError, Pagination};
 use serde::{de::DeserializeOwned, Serialize};
 use tap::Pipe;
 use thiserror::Error;
-use url::Url;
 
 use crate::{
-    downloader::DownloadIdx,
+    downloader::JobIdx,
     resolver::{AliasKV, MetaStorage},
     sourcer::EntryStorage,
     util::ToCore,
@@ -28,7 +27,7 @@ pub type MongoResult<T> = mongodb::error::Result<T>;
 pub struct Collections {
     pub meta: MetaStorage,
     pub entry: EntryStorage,
-    pub download: Storage<Download>,
+    pub jobs: Storage<Job>,
     pub alias: AliasKV,
 }
 
@@ -42,7 +41,7 @@ impl Collections {
         Ok(Self {
             meta,
             entry,
-            download,
+            jobs: download,
             alias,
         })
     }
@@ -109,7 +108,7 @@ where
     where
         WithId<R>: DeserializeOwned + Send + Sync + Unpin,
     {
-        self.get.find_one(doc! { DownloadIdx::NAME: name }, None).await
+        self.get.find_one(doc! { JobIdx::NAME: name }, None).await
     }
 
     pub async fn insert(&self, data: R) -> MongoResult<WithId<R>>

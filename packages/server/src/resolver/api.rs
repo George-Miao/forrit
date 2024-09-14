@@ -1,8 +1,7 @@
 use forrit_core::{
     date::{Season, YearSeason},
     model::{
-        Alias, Download, IndexArg, IndexStat, ListParam, ListResult, Meta, PartialEntry, Subscription, UpdateResult,
-        WithId,
+        Alias, IndexArg, IndexStat, Job, ListParam, ListResult, Meta, PartialEntry, Subscription, UpdateResult, WithId,
     },
 };
 use mongodb::bson::{doc, to_bson};
@@ -17,7 +16,7 @@ use crate::{
     api::{ApiResult, CrudResultExt, OidParam},
     db::{CrudError, Storage},
     dispatcher::refresh_subscription,
-    downloader::DownloadIdx,
+    downloader::JobIdx,
     resolver::{AliasKV, MetaStorage},
     sourcer::EntryStorage,
 };
@@ -166,10 +165,10 @@ async fn delete_subscription(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Up
 }
 
 #[endpoint]
-async fn list_download(pod: &Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Download>>>> {
-    pod.obtain::<Storage<Download>>()
+async fn list_download(pod: &Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Job>>>> {
+    pod.obtain::<Storage<Job>>()
         .expect("missing GetSet<Download>")
-        .list_by(doc! { DownloadIdx::META_ID : id.id }, param)
+        .list_by(doc! { JobIdx::META_ID : id.id }, param)
         .await?
         .pipe(Json)
         .pipe(Ok)

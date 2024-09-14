@@ -260,11 +260,23 @@ impl DownloadState {
     }
 }
 
+/// A resolved and started download job
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
+pub struct Job {
+    /// Name of the torrent file
+    pub name: String,
+
+    pub state: DownloadState,
+
+    #[serde(flatten)]
+    pub download: Download,
+}
+
+/// A request to download an entry
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
 pub struct Download {
-    pub name: String,
-
     #[salvo(schema(value_type = Option<ObjectIdSchema>))]
     #[ts(as = "Option<OidExtJson>")]
     pub meta_id: Option<ObjectId>,
@@ -276,8 +288,6 @@ pub struct Download {
     #[salvo(schema(value_type = ObjectIdSchema))]
     #[ts(as = "OidExtJson")]
     pub entry_id: ObjectId,
-
-    pub state: DownloadState,
 
     #[salvo(schema(value_type = Option<String>))]
     #[ts(as = "Option<String>")]
