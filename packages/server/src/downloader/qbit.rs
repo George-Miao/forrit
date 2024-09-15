@@ -6,7 +6,7 @@ use forrit_core::{
     model::{DownloadState, WithId},
     IntoStream,
 };
-use futures::{future::try_join_all, StreamExt};
+use futures::{future::try_join_all, StreamExt, TryStreamExt};
 use mongodb::bson::oid::ObjectId;
 use qbit_rs::{
     model::{AddTorrentArg, Credential, GetTorrentListArg, Torrent, TorrentSource},
@@ -98,8 +98,14 @@ impl Actor for QbitActor {
         })
     }
 
-    async fn post_start(&self, _: ActorRef<Message>, _: &mut Self::State) -> Result<(), ActorProcessingErr> {
+    async fn post_start(&self, _: ActorRef<Message>, state: &mut Self::State) -> Result<(), ActorProcessingErr> {
         info!("QBit actor started");
+        let mut pending_jobs = self.manager.pending_jobs().await?;
+
+        while let Some(job) = pending_jobs.try_next().await? {
+            self.download(job, state).await?;
+        }
+
         Ok(())
     }
 

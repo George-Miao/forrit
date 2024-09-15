@@ -5,6 +5,7 @@
 use camino::Utf8PathBuf;
 use forrit_config::{get_config, DownloaderConfig, DownloaderType};
 use forrit_core::model::{DownloadState, Job, Meta, PartialEntry, WithId};
+use futures::TryStream;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     results::UpdateResult,
@@ -54,6 +55,14 @@ impl DownloadManager {
             jobs: db.jobs.clone(),
             config,
         }
+    }
+
+    async fn pending_jobs(&self) -> MongoResult<impl TryStream<Ok = WithId<Job>, Error = mongodb::error::Error>> {
+        self.jobs
+            .get
+            .find(doc! { "state": DownloadState::Pending.to_str() }, None)
+            .await?
+            .pipe(Ok)
     }
 
     async fn update_state(&self, job_id: ObjectId, state: DownloadState) -> MongoResult<UpdateResult> {
@@ -107,7 +116,7 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
 
 #[derive(Debug)]
 pub enum Message {
-    /// A new  download job is added
+    /// A new download job is added
     NewDownloadAdded(ObjectId),
 
     /// Periodically rename files
