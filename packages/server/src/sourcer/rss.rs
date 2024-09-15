@@ -155,8 +155,8 @@ impl Actor for RssActor {
                         let Some(partial) = self.handle_item(item).await else {
                             return;
                         };
-                        self.entry.upsert(&partial).await.expect("db error");
-                        if let Some(entry) = partial.into_entry() {
+                        let partial = self.entry.upsert(partial).await.expect("db error");
+                        if let Some(entry) = partial.inner.into_entry() {
                             new_entry(entry);
                         }
                     })

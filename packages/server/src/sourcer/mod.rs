@@ -107,19 +107,9 @@ impl EntryStorage {
         self.get.find_one(query, None).await?.is_some().pipe(Ok)
     }
 
-    // pub async fn set_download_id(&self, id: ObjectId, download_id: ObjectId) ->
-    // MongoResult<()> {     self.set
-    //         .update_one(
-    //             doc! { "_id": id },
-    //             doc! { "$set": doc! { BsonEntryIdx::DOWNLOAD_ID: download_id } },
-    //             None,
-    //         )
-    //         .await
-    //         .map(|_| ())
-    // }
-
-    pub async fn upsert(&self, entry: &PartialEntry) -> MongoResult<Option<ObjectId>> {
-        let doc = mongodb::bson::to_document(entry).expect("Failed to convert Meta to bson Document");
+    pub async fn upsert(&self, entry: PartialEntry) -> MongoResult<BsonEntry> {
+        let entry = BsonEntry::from(entry);
+        let doc = mongodb::bson::to_document(&entry).expect("Failed to convert entry to bson Document");
 
         self.set
             .update_one(
@@ -127,10 +117,9 @@ impl EntryStorage {
                 UpdateModifications::Document(doc! { "$set": doc }),
                 UpdateOptions::builder().upsert(true).build(),
             )
-            .await?
-            .upserted_id
-            .and_then(|x| x.as_object_id())
-            .pipe(Ok)
+            .await?;
+
+        Ok(entry)
     }
 }
 
