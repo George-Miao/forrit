@@ -65,6 +65,14 @@ impl DownloadManager {
             .pipe(Ok)
     }
 
+    async fn downloading_jobs(&self) -> MongoResult<impl TryStream<Ok = WithId<Job>, Error = mongodb::error::Error>> {
+        self.jobs
+            .get
+            .find(doc! { "state": DownloadState::Downloading.to_str() }, None)
+            .await?
+            .pipe(Ok)
+    }
+
     async fn update_state(&self, job_id: ObjectId, state: DownloadState) -> MongoResult<UpdateResult> {
         self.jobs
             .set

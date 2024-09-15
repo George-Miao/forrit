@@ -106,6 +106,12 @@ impl Actor for QbitActor {
             self.download(job, state).await?;
         }
 
+        let mut downloading_jobs = self.manager.downloading_jobs().await?;
+
+        while let Some(job) = downloading_jobs.try_next().await? {
+            state.downloading.insert(job.inner.name, ActiveDownload::new(job.id));
+        }
+
         Ok(())
     }
 
