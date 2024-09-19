@@ -22,7 +22,6 @@ import {
 } from '@douyinfe/semi-ui'
 import WidthLimit from './components/width_limit'
 import { get_endpoint } from './util'
-import type { LinksFunction } from '@remix-run/node'
 
 const { Header, Content, Footer } = SemiLayout
 const { Text, Paragraph } = Typography
@@ -35,9 +34,6 @@ export async function loader() {
   return json({ api })
 }
 
-export const links: LinksFunction = () => {
-  return []
-}
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang='en'>
@@ -64,23 +60,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </NavLink>
                 )
               }}
+              items={[
+                { itemKey: '/', icon: <icons.IconHome /> },
+                {
+                  itemKey: '/entry',
+                  icon: <icons.IconActivity />,
+                },
+                {
+                  itemKey: '/subscription',
+                  icon: <icons.IconFavoriteList />,
+                },
+                {
+                  itemKey: '/download',
+                  icon: <icons.IconDownload />,
+                },
+              ]}
             >
-              <Nav.Item itemKey='/' link='/' icon={<icons.IconHome />} />
-              <Nav.Item
-                itemKey='/entry'
-                link='/entry'
-                icon={<icons.IconActivity />}
-              />
-              <Nav.Item
-                itemKey='/subscription'
-                link='/subscription'
-                icon={<icons.IconFavoriteList />}
-              />
-              <Nav.Item
-                itemKey='/download'
-                link='/download'
-                icon={<icons.IconDownload />}
-              />
               <Nav.Footer>
                 <Button
                   theme='borderless'
