@@ -1,4 +1,4 @@
-import type { DirectedCursor, Meta, PartialEntry, WithId } from 'forrit-client'
+import type { Meta, PartialEntry, WithId } from 'forrit-client'
 import { useState } from 'react'
 import { useMediaQuery } from 'react-responsive'
 
@@ -12,10 +12,25 @@ export type ExtractedInfo = {
   tooltip?: string
 }
 
-export type ExtractedMeta = ReturnType<typeof extract>
+export type ExtractedEntry = ReturnType<typeof extract_entry>
+export type ExtractedMeta = ReturnType<typeof extract_meta>
+
+export const get_date_from_id = (oid: string) => {
+  return new Date(Number.parseInt(oid.substring(0, 8), 16) * 1000)
+}
+
+export const extract_entry = (entry: WithId<PartialEntry>) => {
+  return {
+    ...entry,
+    id: entry._id.$oid,
+    episode: entry.elements.EpisodeNumber,
+    pub_date: entry.pub_date ? new Date(entry.pub_date) : null,
+    elements: entry.elements,
+  }
+}
 
 // TODO: Show styled information instead of plain text
-export const extract = (meta: WithId<Meta>) => {
+export const extract_meta = (meta: WithId<Meta>) => {
   const id = meta._id.$oid
   const title = get_title(meta)
   const year = meta.begin ? new Date(meta.begin).getFullYear() : null

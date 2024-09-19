@@ -7,28 +7,6 @@ id = "process1"
 name = "To Do"
 
   [[processes.tasks]]
-  id = "d4gpgwlqtueg7zjufj2c0q2a"
-  title = "FE: implement subscription add"
-  description = ""
-  tag = "backlog"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
-  id = "gt1z8uh3fucd1jpjtwqrlnx4"
-  title = "FE: implement downloads list"
-  description = ""
-  tag = "backlog"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
   id = "ihyvyhpl3lo8yae0kzavuiw9"
   title = "FE: Input path when manually download"
   description = "<p></p>"
@@ -73,30 +51,8 @@ name = "To Do"
   linkCommits = [ ]
 
   [[processes.tasks]]
-  id = "tm4nnk0xbjv0muq77cebkmyy"
-  title = "FE: implement entry detail"
-  description = ""
-  tag = "backlog"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
   id = "nvjeytgpa1kaad9iqnon8xiy"
-  title = "FE: implement notifications"
-  description = ""
-  tag = "backlog"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
-  id = "hc5e4226eamgw1u0ne4umynz"
-  title = "FE: Add subscription in meta dropdown"
+  title = "FE: notifications"
   description = ""
   tag = "backlog"
   linkFiles = [ ]
@@ -116,14 +72,58 @@ name = "To Do"
   priority = ""
   linkCommits = [ ]
 
+  [[processes.tasks]]
+  id = "uzoohny9734wejidugy1t1fl"
+  title = "FE: Customize subscription"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "vcg4mkp5t0gz8gc7s82go0n5"
+  title = "BE: Notification"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "ukc958q2mvs4e4c8le7dj8qa"
+  title = "BE: Actor early quit without warning"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "nxj9je0cbl3jod3ynxod0iwu"
+  title = "BE: Oneshot sourcer"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
 [[processes]]
 id = "process2"
 name = "In Progress"
 
   [[processes.tasks]]
-  id = "o7im59eki4sgpykbi09uscta"
-  title = "BE: Refactor & simplify subscription"
-  description = "<p></p>"
+  id = "tm4nnk0xbjv0muq77cebkmyy"
+  title = "FE: entry detail"
+  description = ""
   tag = "backlog"
   linkFiles = [ ]
   dueDate = ""
@@ -171,6 +171,39 @@ name = "Done"
   [[processes.tasks]]
   id = "kol37d499u391v6vluzjbh5x"
   title = "BE: get list of groups by meta"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "o7im59eki4sgpykbi09uscta"
+  title = "BE: Refactor & simplify subscription"
+  description = "<p></p>"
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "hc5e4226eamgw1u0ne4umynz"
+  title = "FE: Add subscription in meta dropdown"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
+  [[processes.tasks]]
+  id = "gt1z8uh3fucd1jpjtwqrlnx4"
+  title = "FE: downloads list"
   description = ""
   tag = "backlog"
   linkFiles = [ ]

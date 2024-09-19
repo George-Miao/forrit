@@ -1,5 +1,6 @@
 import { Space, Tooltip, Typography } from '@douyinfe/semi-ui'
 import { use_is_xs, type ExtractedMeta } from 'app/util'
+import SubscribeButton from './meta_card/subscription'
 
 export const width = '(min(max(100dvw * 0.3, 150px), 300px))'
 export const header_height = `calc(60px + 2em + ${width} * 1.5)`
@@ -88,6 +89,21 @@ export default function MetaDetailHeader({ meta }: { meta: ExtractedMeta }) {
             {overview as string}
           </Text>
         ) : null}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'flex-end',
+            width: '100%',
+          }}
+        >
+          <SubscribeButton
+            show_text
+            meta_id={meta.id}
+            subscription={meta.subscription ?? null}
+          />
+        </div>
       </Space>
     </Space>
   )

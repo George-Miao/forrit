@@ -18,7 +18,7 @@
       "quoteProperties": "preserve",
       "jsxQuoteStyle": "single",
       "semicolons": "asNeeded",
-      "trailingComma": "all"
+      "trailingCommas": "all"
     }
   },
   "json": {
@@ -28,5 +28,8 @@
   },
   "organizeImports": {
     "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+  },
+  "files": {
+    "ignore": ["**/node_modules/**/*"]
   }
 }

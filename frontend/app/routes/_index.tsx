@@ -9,7 +9,7 @@ import {
 import type { Meta, WithId } from 'forrit-client'
 import { Col, Divider, Row, Typography } from '@douyinfe/semi-ui'
 import MetaCard from 'app/components/meta_card'
-import {useMetaSeason} from 'app/client'
+import { useMetaSeason } from 'app/client'
 import Loading from 'app/components/loading'
 import WidthLimit from 'app/components/width_limit'
 import PageHeader from 'app/components/page_header'
@@ -57,7 +57,7 @@ function Loaded(data: WithId<Meta>[]) {
       <WidthLimit maxWidth={230 * 6 + 20 * 5}>
         {by_day.map(([day, bangumis]) => (
           <>
-            <Row key={day}>
+            <Row key={`header-${day}`}>
               <Divider
                 style={{
                   marginTop: '2em',
@@ -75,7 +75,7 @@ function Loaded(data: WithId<Meta>[]) {
               </Divider>
             </Row>
             <Row
-              key={day}
+              key={`content-${day}`}
               gutter={{
                 xs: 8,
                 sm: 12,

@@ -1,23 +1,19 @@
 /* eslint-disable import/no-unresolved */
 /* eslint-disable react-hooks/rules-of-hooks */
-import { Breadcrumb, Space, Typography } from '@douyinfe/semi-ui'
+import { List, Space, Typography } from '@douyinfe/semi-ui'
 import { json, type LoaderFunctionArgs } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
-import { useRerender, type ExtractedMeta } from 'app/util'
+import { extract_entry, useRerender, type ExtractedMeta } from 'app/util'
 import { useMetaEntries, useExtractedMeta, useMetaSubs } from 'app/client'
 import Loading from 'app/components/loading'
-import MetaEntryList from 'app/components/entry_list'
 import MetaDetailHeader, {
   header_height,
 } from 'app/components/meta_detail_header'
 import WidthLimit from 'app/components/width_limit'
 import PageHeader from 'app/components/page_header'
-import SubscriptionItem from 'app/components/subscription_list/item'
-import { useState } from 'react'
-import type { Subscription, WithId } from 'forrit-client'
 import LoadingInfinite from 'app/components/loading_infinite'
-
-const { Title } = Typography
+import Text from '@douyinfe/semi-ui/lib/es/typography/text'
+import EntryListItem from 'app/components/entry_list/item'
 
 export async function loader({ params }: LoaderFunctionArgs) {
   return json({
@@ -38,8 +34,6 @@ export default function MetaDetail() {
 }
 
 export function Loaded({ meta }: { meta: ExtractedMeta }) {
-  const rerender = useRerender()
-  const subs = useMetaSubs(meta.id)
   return (
     <>
       <PageHeader
@@ -52,23 +46,36 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
         <MetaDetailHeader meta={meta} />
       </PageHeader>
 
-      <WidthLimit top>
+      <WidthLimit>
         <Space vertical align='start' spacing='loose' style={{ width: '100%' }}>
-          {/* <LoadingInfinite useData={subs}>
-            {data => (
-              <SubscriptionItem
-                no_padding
-                meta_id={meta.id}
-                subs={data}
-                onAdd={() => alert('NOT IMPLEMENTED')}
-                onDelete={() => {}}
-              />
-            )}
-          </LoadingInfinite> */}
-
-          <LoadingInfinite useData={useMetaEntries(meta.id)}>
-            {data => <MetaEntryList data={data} />}
-          </LoadingInfinite>
+          <List
+            style={{ width: '100%' }}
+            emptyContent={
+              <Text
+                type='tertiary'
+                style={{
+                  display: 'block',
+                  marginTop: '2em',
+                }}
+              >
+                暂无资源
+              </Text>
+            }
+          >
+            <LoadingInfinite useData={useMetaEntries(meta.id)}>
+              {data => (
+                <>
+                  {data.map(entry => (
+                    <EntryListItem
+                      key={entry._id.$oid}
+                      item={extract_entry(entry)}
+                      show_meta={false}
+                    />
+                  ))}
+                </>
+              )}
+            </LoadingInfinite>
+          </List>
         </Space>
       </WidthLimit>
     </>

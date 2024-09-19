@@ -12,15 +12,18 @@ export default defineConfig({
     cjsInterop({
       dependencies: ['date-fns-tz'],
     }),
-    remix(),
+    remix({
+      future: {
+        v3_fetcherPersist: true,
+        v3_relativeSplatPath: true,
+        v3_throwAbortReason: true,
+      },
+    }),
     tsconfigPaths(),
     SemiTheme({
       theme: '@semi-bot/semi-theme-forrit',
     }),
   ],
-  build: {
-    cssCodeSplit: false,
-  },
   ssr: {
     noExternal: [
       '@douyinfe/semi-ui',

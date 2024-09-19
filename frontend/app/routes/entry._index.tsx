@@ -1,9 +1,12 @@
 import { useEntryList } from 'app/client'
-import EntryList from 'app/components/entry_list'
 import WidthLimit from 'app/components/width_limit'
 import LoadingInfinite from 'app/components/loading_infinite'
 import PageHeader from 'app/components/page_header'
-import { Typography } from '@douyinfe/semi-ui'
+import { List, Typography } from '@douyinfe/semi-ui'
+import Text from '@douyinfe/semi-ui/lib/es/typography/text'
+import EntryListItem from 'app/components/entry_list/item'
+import { extract_entry, use_is_md } from 'app/util'
+import type { PartialEntry, WithId } from 'forrit-client'
 
 const { Title } = Typography
 
@@ -15,10 +18,35 @@ export default function Entry() {
           更新
         </Title>
       </PageHeader>
-      <WidthLimit top>
-        <LoadingInfinite useData={useEntryList()}>
-          {data => <EntryList data={data} show_meta />}
-        </LoadingInfinite>
+      <WidthLimit>
+        <List
+          style={{ width: '100%' }}
+          emptyContent={
+            <Text
+              type='tertiary'
+              style={{
+                display: 'block',
+                marginTop: '2em',
+              }}
+            >
+              暂无资源
+            </Text>
+          }
+        >
+          <LoadingInfinite useData={useEntryList()}>
+            {data => (
+              <>
+                {(data as WithId<PartialEntry>[]).map(item => (
+                  <EntryListItem
+                    key={item._id.$oid}
+                    item={extract_entry(item)}
+                    show_meta
+                  />
+                ))}
+              </>
+            )}
+          </LoadingInfinite>
+        </List>
       </WidthLimit>
     </>
   )

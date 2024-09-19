@@ -1,17 +1,14 @@
-import { Button, Card, Dropdown, Space, Typography } from '@douyinfe/semi-ui'
+import { Card, Space, Typography } from '@douyinfe/semi-ui'
 import {
   get_title,
   format_broadcast,
   parse_broadcast,
   use_is_xs,
-} from '../../util'
+} from 'app/util'
 import type { Meta, WithId } from 'forrit-client'
 
 import './index.css'
-import { IconPlus } from '@douyinfe/semi-icons'
-import { useMetaGroup } from 'app/client'
-import Loading from '../loading'
-import { useState } from 'react'
+
 import SubscribeButton from './subscription'
 
 const xs_width = '47dvw - 8px'
@@ -80,7 +77,11 @@ export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
         }
       />
 
-      <SubscribeButton meta_id={meta._id.$oid} />
+      <SubscribeButton
+        show_text={false}
+        meta_id={meta._id.$oid}
+        subscription={meta.subscription ?? null}
+      />
     </Card>
   )
 }

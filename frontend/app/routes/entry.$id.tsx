@@ -1,5 +1,9 @@
 import { type LoaderFunctionArgs, json } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
+import { useExtractedEntry } from 'app/client'
+import Loading from 'app/components/loading'
+import PageHeader from 'app/components/page_header'
+import type { ExtractedEntry } from 'app/util'
 
 export async function loader({ params }: LoaderFunctionArgs) {
   return json({
@@ -8,6 +12,29 @@ export async function loader({ params }: LoaderFunctionArgs) {
 }
 
 export default function EntryDetail() {
-  const id = useLoaderData<typeof loader>().id
-  return <div>Entry: {id}</div>
+  function useData() {
+    const id = useLoaderData<typeof loader>().id
+    return useExtractedEntry(id)
+  }
+  return (
+    <Loading size='large' useData={useData}>
+      {data => <Loaded entry={data} />}
+    </Loading>
+  )
+}
+
+function Loaded({ entry }: { entry: ExtractedEntry }) {
+  return (
+    <>
+      <PageHeader
+        routes={[
+          { href: '/', name: '首页' },
+          { href: '/entry', name: '更新' },
+          { name: entry.title },
+        ]}
+      >
+        {entry.title}
+      </PageHeader>
+    </>
+  )
 }

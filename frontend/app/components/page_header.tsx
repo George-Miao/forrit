@@ -17,7 +17,15 @@ export default function PageHeader({ children, routes }: PageHeaderProps) {
     >
       <WidthLimit>
         <Space vertical align='start' spacing='loose'>
-          <Breadcrumb showTooltip={{ width: 114514 }} routes={routes} />
+          <Breadcrumb
+            showTooltip={{
+              width: '24em',
+              opts: {
+                position: 'bottom',
+              },
+            }}
+            routes={routes}
+          />
           {children}
         </Space>
       </WidthLimit>

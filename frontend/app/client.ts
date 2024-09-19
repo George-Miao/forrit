@@ -1,7 +1,7 @@
 import type { paths, ListResult, DirectedCursor, Season } from 'forrit-client'
 import create_client, { type FetchResponse } from 'openapi-fetch'
 import useSWR, { type KeyedMutator, type SWRResponse } from 'swr'
-import { type ExtractedMeta, extract } from './util'
+import { type ExtractedEntry, type ExtractedMeta, extract_entry, extract_meta } from './util'
 import useSWRInfinite from 'swr/infinite'
 
 type JsonMedia = 'application/json'
@@ -143,16 +143,10 @@ export const useMetaSeason = (year?: number, season?: Season) =>
   )
 
 export const useExtractedMeta = (id: string): Ret<ExtractedMeta> =>
-  map(useMeta(id), extract)
+  map(useMeta(id), extract_meta)
 
-
-export const useSub = make_get('subscription', id =>
-  useClient().GET('/subscription/{id}', { params: { path: { id } } })
-)
-
-export const useSubList = make_inf('subscription', ([, cursor]) =>
-  useClient().GET('/subscription', { params: { query: { cursor } } })
-)
+export const useExtractedEntry = (id: string): Ret<ExtractedEntry> =>
+  map(useEntry(id), extract_entry)
 
 export const useDownload = make_get('download', id =>
   useClient().GET('/download/{id}', { params: { path: { id } } })

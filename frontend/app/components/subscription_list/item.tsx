@@ -51,66 +51,6 @@ export default function SubscriptionItem({
   const onAddHandler = () => {
     alert('NOT IMPLEMENTED')
   }
-  const onEditHandler = () =>
-    has_subs &&
-    set_state(val => ({
-      ...val,
-      [active]: ItemState.Editing,
-    }))
-  const onDeleteHandler = () => {
-    if (!has_subs) return
-    c.DELETE('/subscription/{id}', { params: { path: { id: active } } })
-    subs = subs.filter(({ _id }) => _id.$oid !== active)
-    mutate('/subscription')
-    mutate(`/subscription/${active}`)
-    set_forms(({ [active]: _, ...rest }) => rest)
-    set_active(subs[0]?._id.$oid ?? '')
-    onDelete(active)
-  }
-  const on_save = () => {
-    const form = forms[active]
-    form
-      .validate()
-      .then(sub => {
-        const current = state[active]
-        set_state(val => {
-          return {
-            ...val,
-            [active]: ItemState.Normal,
-          }
-        })
-
-        if (current === ItemState.New) {
-          mutate('/subscription')
-          return c.POST('/subscription', { body: sub }).then(() => {})
-        }
-
-        if (_.isEqual(form.getInitValues(), sub)) {
-          return
-        }
-        mutate('/subscription')
-        mutate(`/subscription/${active}`, sub)
-        return c
-          .PUT('/subscription/{id}', {
-            params: {
-              path: {
-                id: active,
-              },
-            },
-            body: sub,
-          })
-          .then(() => {})
-      })
-      .catch(x => {
-        const error_field = Object.getOwnPropertyNames(x)[0]
-        form.reset()
-        Notification.error({
-          title: '修改订阅失败',
-          content: x[error_field],
-          duration: 3,
-        })
-      })
-  }
 
   no_padding = no_padding ?? false
 
@@ -125,18 +65,18 @@ export default function SubscriptionItem({
       tabBarExtraContent={
         <ButtonGroup theme='borderless'>
           {active_editing ? (
-            <Button icon={<IconSave />} onClick={on_save} />
+            <Button icon={<IconSave />} />
           ) : (
             <Button
               icon={<IconEdit />}
               disabled={!has_subs}
-              onClick={onEditHandler}
+              onClick={() => alert('NOT IMPLEMENTED')}
             />
           )}
           <Button
             icon={<IconDelete />}
             disabled={!has_subs}
-            onClick={onDeleteHandler}
+            onClick={() => alert('NOT IMPLEMENTED')}
           />
           <Button icon={<IconPlus onClick={onAddHandler} />} />
         </ButtonGroup>

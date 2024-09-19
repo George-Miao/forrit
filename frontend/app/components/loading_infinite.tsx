@@ -9,15 +9,15 @@ export interface LoadingInfiniteProps<T> {
 }
 
 export default function LoadingInfinite<T>({
-  useData,
+  useData: data,
   children,
 }: LoadingInfiniteProps<T>) {
   const has_next_page =
-    useData.data?.[useData.data.length - 1]?.page_info.has_next_page
+    data.data?.[data.data.length - 1]?.page_info.has_next_page
 
   return (
     <InfiniteLoader<ListResult<T> | undefined>
-      swr={useData}
+      swr={data}
       isReachingEnd={has_next_page === false}
       loadingIndicator={
         <Spin

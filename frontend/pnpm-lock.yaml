@@ -9,29 +9,35 @@ importers:
   .:
     dependencies:
       '@douyinfe/semi-icons':
-        specifier: ^2.65.0
-        version: 2.65.0(react@18.3.1)
+        specifier: ^2.66.1
+        version: 2.66.1(react@18.3.1)
       '@douyinfe/semi-ui':
-        specifier: ^2.65.0
-        version: 2.65.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^2.66.1
+        version: 2.66.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@fontsource/geist-sans':
+        specifier: ^5.1.0
+        version: 5.1.0
       '@kousum/vite-plugin-semi-theme':
-        specifier: ^0.9.2
-        version: 0.9.2(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))(vue@3.4.38(typescript@5.5.4))
+        specifier: ^0.20
+        version: 0.20.0(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))(vue@3.4.38(typescript@5.5.4))
       '@remix-run/node':
-        specifier: ^2.11.2
-        version: 2.11.2(typescript@5.5.4)
+        specifier: ^2.12.0
+        version: 2.12.0(typescript@5.5.4)
       '@remix-run/react':
-        specifier: ^2.11.2
-        version: 2.11.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4)
+        specifier: ^2.12.0
+        version: 2.12.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4)
       '@remix-run/serve':
-        specifier: ^2.11.2
-        version: 2.11.2(typescript@5.5.4)
+        specifier: ^2.12.0
+        version: 2.12.0(typescript@5.5.4)
       '@semi-bot/semi-theme-forrit':
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: ^1.0.6
+        version: 1.0.6
       forrit-client:
         specifier: file:../clients/typescript
         version: file:../clients/typescript
+      immutable:
+        specifier: ^4.3.7
+        version: 4.3.7
       isbot:
         specifier: ^4.4.0
         version: 4.4.0
@@ -50,6 +56,9 @@ importers:
       react-responsive:
         specifier: ^10.0.0
         version: 10.0.0(react@18.3.1)
+      react-string-replace:
+        specifier: ^1.1.1
+        version: 1.1.1
       react-swr-infinite-scroll:
         specifier: ^1.0.1
         version: 1.0.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -68,7 +77,7 @@ importers:
     devDependencies:
       '@remix-run/dev':
         specifier: ^2.11.2
-        version: 2.11.2(@remix-run/react@2.11.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.11.2(typescript@5.5.4))(@types/node@22.5.1)(sass@1.77.8)(typescript@5.5.4)(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))
+        version: 2.11.2(@remix-run/react@2.12.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.12.0(typescript@5.5.4))(@types/node@22.5.1)(sass@1.77.8)(typescript@5.5.4)(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))
       '@types/react':
         specifier: ^18.3.4
         version: 18.3.4
@@ -262,33 +271,33 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
 
-  '@douyinfe/semi-animation-react@2.65.0':
-    resolution: {integrity: sha512-zP5xkKc+2qkT483J2WdHOsuD0+IkwB3lWF0a1wWCxI/OMqB9b4WKiooUs5CtAIkZTvSpyyyihRT0s80SG35vnA==}
+  '@douyinfe/semi-animation-react@2.66.1':
+    resolution: {integrity: sha512-3QNVmOIzLGeQY0jlfrrrdQGmhMjUjF4yizufCpIKvNUzchfOOey62zioA39w16IjV7Mi2gxWr2/QCM+3ak/Orw==}
 
-  '@douyinfe/semi-animation-styled@2.65.0':
-    resolution: {integrity: sha512-YFF8Ptcz/jwS0phm28XZV7ROqMQ233sjVR0Uy33FImCITr6EAPe5wcCeEmzVZoYS7x3tUFR30SF+0hSO01rQUg==}
+  '@douyinfe/semi-animation-styled@2.66.1':
+    resolution: {integrity: sha512-HHtAd2bdx5myiz7jKChEjXlLoTT2+Sh0Xi9M7ZCRyzGtE/tZx77s9h5srHoxyx1bbFzAffHe0e387jcdQFpZXQ==}
 
-  '@douyinfe/semi-animation@2.65.0':
-    resolution: {integrity: sha512-NXgRJVOcz+cpyu5H5MRzhELlUAJaBgUOSgZAoJM3r8jxV08FJSCNgo3zTZzQ6AwgRg8fmWRsxykGaE/RKtm7Uw==}
+  '@douyinfe/semi-animation@2.66.1':
+    resolution: {integrity: sha512-lbl4rKb8aCvf/xL4mntBYEfd7eBTSXgqSKIQWbyFBvdRsb4NpMxue1HoQhyT5QiFWHgaMcI7OjbzlCOgfBAGKg==}
 
-  '@douyinfe/semi-foundation@2.65.0':
-    resolution: {integrity: sha512-uePR02H/orWeg3UUVLbRJXeyokgJCHf1GIuPtjKei5G4zTa6ls+jdJoLExVc6JvHJAmTaq+BOQUe8xOlOLYblg==}
+  '@douyinfe/semi-foundation@2.66.1':
+    resolution: {integrity: sha512-1XmEFy6qCanJDuQIGFvfRMSs23RTUgQKNuGnZgjdMUg9i48e6CilBRyAJJ145h0hFUxFuUkA6znPjT+x4SHPuA==}
 
-  '@douyinfe/semi-icons@2.65.0':
-    resolution: {integrity: sha512-FGPOgG0V/tOZ/dRZWwf9CG+IWLMS76H7HKxgIL/bK086BJ5aleuTPWgtSENOU7zsz+BR0lCL/f2NiRoHxarD4A==}
+  '@douyinfe/semi-icons@2.66.1':
+    resolution: {integrity: sha512-zQtBKg8hXA3f7Gp6UFWsudFjpdCYE9rxTzM84HpTyd/rvKd3v9p6MD4rBPNbuFV2dS90eXajgsvroPz3S+ss/A==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0
 
-  '@douyinfe/semi-illustrations@2.65.0':
-    resolution: {integrity: sha512-1IhOztyBYiSu8WrcvN+oWWtcJTC9+x6zbnYtufx4ToISs5UO1te1PQofABpkDzIJYFtW9yYLxg4uoL4wGjqYMA==}
+  '@douyinfe/semi-illustrations@2.66.1':
+    resolution: {integrity: sha512-Oc2rRZ+t05eptkxtKXY2GkcTlJNkEfgRABuoVjOWbarbntokn+6bJi3HHKg7OuSUpjuz4PNqhGWSDcHnDjFO2A==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0
 
   '@douyinfe/semi-theme-default@2.61.0':
     resolution: {integrity: sha512-obn/DOw4vZyKFAlWvZxHTpBLAK9FO9kygTSm2GROgvi+UDB2PPU6l20cuUCsdGUNWJRSqYlTTVZ1tNYIyFZ5Sg==}
 
-  '@douyinfe/semi-ui@2.65.0':
-    resolution: {integrity: sha512-6AZhnZCAlMsf6Zg0Z10+JV5KEkuyWTsbzC0/Dlm7T6Xy/z9fOJS0LFgSUs6g5k1L/hs4y/1RM3KUrww3R+CRLw==}
+  '@douyinfe/semi-ui@2.66.1':
+    resolution: {integrity: sha512-5w5F1Q8pdhxU/XCJFIu9VVQk7kQeHQC83RaUNIpFK6oQ0smDmtJGPOO4x1RVtDzoXgmv6cbEokJd6h4pbe7j5A==}
     peerDependencies:
       react: '>=16.0.0'
       react-dom: '>=16.0.0'
@@ -584,6 +593,9 @@ packages:
     resolution: {integrity: sha512-Ys+3g2TaW7gADOJzPt83SJtCDhMjndcDMFVQ/Tj9iA1BfJzFKD9mAUXT3OenpuPHbI6P/myECxRJrofUsDx/5g==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
+  '@fontsource/geist-sans@5.1.0':
+    resolution: {integrity: sha512-4AI/UxIcZiYgK6/cTo4R9oM4VHHLcFdHVv7m2+M42VyY16hhKJADrGe4HPjTxvolmce2IZX/jc6sFJ+GkLB64w==}
+
   '@humanwhocodes/config-array@0.11.14':
     resolution: {integrity: sha512-3T8LkOmg45BV5FICb15QQMsyUSWrQ8AygVfC7ZG32zOalnqrilm018ZVCw0eapXux8FtA33q8PSRSstjee3jSg==}
     engines: {node: '>=10.10.0'}
@@ -622,8 +634,8 @@ packages:
   '@jspm/core@2.0.1':
     resolution: {integrity: sha512-Lg3PnLp0QXpxwLIAuuJboLeRaIhrgJjeuh797QADg3xz8wGLugQOS5DpsE8A6i6Adgzf+bacllkKZG3J0tGfDw==}
 
-  '@kousum/vite-plugin-semi-theme@0.9.2':
-    resolution: {integrity: sha512-3hiPivpj3dkzfmJCBet5dRRHJJFyL80W8903PAIYfD2TaBTMBgtYFCJXqG4glL7EuS1yFxUN62K3kj5z/Nasfw==}
+  '@kousum/vite-plugin-semi-theme@0.20.0':
+    resolution: {integrity: sha512-SahPdQ+2oo1z4ycTNtBoXFjDw9BLo//cG2sCOX5AZJrkghpw5FmQmiTj1SlS9uUpsQ6mxcM6PLx18yISG5W1RQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
       vite: ^5.0.0
@@ -687,8 +699,8 @@ packages:
       wrangler:
         optional: true
 
-  '@remix-run/express@2.11.2':
-    resolution: {integrity: sha512-ebyvHJKRBDgQGNBMxsILt21IwMTjGxQxlr0VNxRJo5rNd5CcuULpx/PPmsBc1gsc/Jx9aUXpT7a9l0UEOc6+jw==}
+  '@remix-run/express@2.12.0':
+    resolution: {integrity: sha512-8RmF0TITWxEW20HU5YPreuN0H8rPeShPCQUoMKN1b5zfcQ3E/tD5VWwwXicguQS8ffloc+ejhtQjnWA3drlsgw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       express: ^4.19.2
@@ -706,8 +718,17 @@ packages:
       typescript:
         optional: true
 
-  '@remix-run/react@2.11.2':
-    resolution: {integrity: sha512-SjjuK3aD/9wnIC5r0ZBNCpVSwEwt67YOQM7DCXhHiS8BtCvAxWEC4k4t8CvO9IwBG0gczqxzSqASH7U1RVtWqw==}
+  '@remix-run/node@2.12.0':
+    resolution: {integrity: sha512-83Jaoc6gpSuD4e6rCk7N5ZHAXNmDw4fJC+kPeDCsd6+wLtTLSi7u9Zo9/Q7moLZ3oyH+aR+LGdkxLULYv+Q6Og==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      typescript: ^5.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@remix-run/react@2.12.0':
+    resolution: {integrity: sha512-Y109tI37Icr0BSU8sWSo8jDPkXaErJ/e1h0fkPvq6LZ0DrlcmHWBxzWJKID431I/KJvhVvBgVCuDamZTRVOZ5Q==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^18.0.0
@@ -721,13 +742,26 @@ packages:
     resolution: {integrity: sha512-S45oynt/WH19bHbIXjtli6QmwNYvaz+vtnubvNpNDvUOoA/OWh6j1OikIP3G+v5GHdxyC6EXoChG3HgYGEUfcg==}
     engines: {node: '>=14.0.0'}
 
-  '@remix-run/serve@2.11.2':
-    resolution: {integrity: sha512-f1ETbCAlkSO3kg1zcQyLVHxI2r1TXqV2nfPgX/5+7QmA1dEHJD3OhvSmbvopwSMSfi1jzuyRbJo04yK4aJ8ztg==}
+  '@remix-run/router@1.19.2':
+    resolution: {integrity: sha512-baiMx18+IMuD1yyvOGaHM9QrVUPGGG0jC+z+IPHnRJWUAUvaKuWKyE8gjDj2rzv3sz9zOGoRSPgeBVHRhZnBlA==}
+    engines: {node: '>=14.0.0'}
+
+  '@remix-run/serve@2.12.0':
+    resolution: {integrity: sha512-QRWn2prUQXrygiXPl93QCk/xxmnSPMJ/vRZtI6FDYjznyWnroNmyF9MBbg7q/6NbgPfuKBc5QoQzvm1IP1W2pw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
   '@remix-run/server-runtime@2.11.2':
     resolution: {integrity: sha512-abG6ENj0X3eHqDxqO2thWM2NSEiPnqyt58z1BbiQCv+t8g0Zuqd5QHbB4wzdNvfS0vKhg+jJiigcJneAc4sZzw==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      typescript: ^5.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@remix-run/server-runtime@2.12.0':
+    resolution: {integrity: sha512-o9ukOr3XKmyY8UufTrDdkgD3fiy+z+f4qEzvCQnvC0+EasCyN9hb1Vbui6Koo/5HKvahC4Ga8RcWyvhykKrG3g==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -831,8 +865,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@semi-bot/semi-theme-forrit@1.0.0':
-    resolution: {integrity: sha512-wBSfEeoBDqjpnBanjxrJqjQ10KrG0aBvBoJfH/MYZ3LAHF9EY5dkr3WiCY02ERsU7AaNLWLv2EYogKwwlCk+Pw==}
+  '@semi-bot/semi-theme-forrit@1.0.6':
+    resolution: {integrity: sha512-UzqPx24+p94Uzh5B1yulU20SYBC1cC/RTmwzCjjhmNWxoII/sFspfI9hlVx+lEwbk2PIuzAJOZAmyzlTPgDGjw==}
 
   '@types/acorn@4.0.6':
     resolution: {integrity: sha512-veQTnWP+1D/xbxVrPC3zHnCZRjSrKfhbMUlEA43iMZLu7EsnTtkJklIuwrCPbOi8YkvDQAiW05VQQFvvz9oieQ==}
@@ -2797,18 +2831,22 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
 
-  react-router-dom@6.26.1:
-    resolution: {integrity: sha512-veut7m41S1fLql4pLhxeSW3jlqs+4MtjRLj0xvuCEXsxusJCbs6I8yn9BxzzDX2XDgafrccY6hwjmd/bL54tFw==}
+  react-router-dom@6.26.2:
+    resolution: {integrity: sha512-z7YkaEW0Dy35T3/QKPYB1LjMK2R1fxnHO8kWpUMTBdfVzZrWOiY9a7CtN8HqdWtDUWd5FY6Dl8HFsqVwH4uOtQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
 
-  react-router@6.26.1:
-    resolution: {integrity: sha512-kIwJveZNwp7teQRI5QmwWo39A5bXRyqpH0COKKmPnyD2vBvDwgFXSqDUYtt1h+FEyfnE8eXr7oe0MxRzVwCcvQ==}
+  react-router@6.26.2:
+    resolution: {integrity: sha512-tvN1iuT03kHgOFnLPfLJ8V95eijteveqdOSk+srqfePtQvqCExB8eHOYnlilbOcyJyKnYkr1vJvf7YqotAJu1A==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
+
+  react-string-replace@1.1.1:
+    resolution: {integrity: sha512-26TUbLzLfHQ5jO5N7y3Mx88eeKo0Ml0UjCQuX4BMfOd/JX+enQqlKpL1CZnmjeBRvQE8TR+ds9j1rqx9CxhKHQ==}
+    engines: {node: '>=0.12.0'}
 
   react-swr-infinite-scroll@1.0.1:
     resolution: {integrity: sha512-i22ZrN5ZJvx4JM1AiopLfcIoVRr0xJIqtmbGv0lMMTXq3DdpvIbvgpcvo7YVtZZvKmQ6NTVZrsFlFffuvoY8bA==}
@@ -3163,6 +3201,9 @@ packages:
 
   turbo-stream@2.3.0:
     resolution: {integrity: sha512-PhEr9mdexoVv+rJkQ3c8TjrN3DUghX37GNJkSMksoPR4KrXIPnM2MnqRt07sViIqX9IdlhrgtTSyjoVOASq6cg==}
+
+  turbo-stream@2.4.0:
+    resolution: {integrity: sha512-FHncC10WpBd2eOmGwpmQsWLDoK4cqsA/UT/GqNoaKOQnT8uzhtCbg3EoUDMvqpOSAI0S26mr0rkjzbOO6S3v1g==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -3676,21 +3717,21 @@ snapshots:
       react: 18.3.1
       tslib: 2.7.0
 
-  '@douyinfe/semi-animation-react@2.65.0':
+  '@douyinfe/semi-animation-react@2.66.1':
     dependencies:
-      '@douyinfe/semi-animation': 2.65.0
-      '@douyinfe/semi-animation-styled': 2.65.0
+      '@douyinfe/semi-animation': 2.66.1
+      '@douyinfe/semi-animation-styled': 2.66.1
       classnames: 2.5.1
 
-  '@douyinfe/semi-animation-styled@2.65.0': {}
+  '@douyinfe/semi-animation-styled@2.66.1': {}
 
-  '@douyinfe/semi-animation@2.65.0':
+  '@douyinfe/semi-animation@2.66.1':
     dependencies:
       bezier-easing: 2.1.0
 
-  '@douyinfe/semi-foundation@2.65.0':
+  '@douyinfe/semi-foundation@2.66.1':
     dependencies:
-      '@douyinfe/semi-animation': 2.65.0
+      '@douyinfe/semi-animation': 2.66.1
       '@mdx-js/mdx': 3.0.1
       async-validator: 3.5.2
       classnames: 2.5.1
@@ -3706,27 +3747,27 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@douyinfe/semi-icons@2.65.0(react@18.3.1)':
+  '@douyinfe/semi-icons@2.66.1(react@18.3.1)':
     dependencies:
       classnames: 2.5.1
       react: 18.3.1
 
-  '@douyinfe/semi-illustrations@2.65.0(react@18.3.1)':
+  '@douyinfe/semi-illustrations@2.66.1(react@18.3.1)':
     dependencies:
       react: 18.3.1
 
   '@douyinfe/semi-theme-default@2.61.0': {}
 
-  '@douyinfe/semi-ui@2.65.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@douyinfe/semi-ui@2.66.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@dnd-kit/core': 6.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@dnd-kit/sortable': 7.0.2(@dnd-kit/core@6.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@dnd-kit/utilities': 3.2.2(react@18.3.1)
-      '@douyinfe/semi-animation': 2.65.0
-      '@douyinfe/semi-animation-react': 2.65.0
-      '@douyinfe/semi-foundation': 2.65.0
-      '@douyinfe/semi-icons': 2.65.0(react@18.3.1)
-      '@douyinfe/semi-illustrations': 2.65.0(react@18.3.1)
+      '@douyinfe/semi-animation': 2.66.1
+      '@douyinfe/semi-animation-react': 2.66.1
+      '@douyinfe/semi-foundation': 2.66.1
+      '@douyinfe/semi-icons': 2.66.1(react@18.3.1)
+      '@douyinfe/semi-illustrations': 2.66.1(react@18.3.1)
       '@douyinfe/semi-theme-default': 2.61.0
       async-validator: 3.5.2
       classnames: 2.5.1
@@ -3905,6 +3946,8 @@ snapshots:
 
   '@eslint/js@8.57.0': {}
 
+  '@fontsource/geist-sans@5.1.0': {}
+
   '@humanwhocodes/config-array@0.11.14':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
@@ -3945,7 +3988,7 @@ snapshots:
 
   '@jspm/core@2.0.1': {}
 
-  '@kousum/vite-plugin-semi-theme@0.9.2(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))(vue@3.4.38(typescript@5.5.4))':
+  '@kousum/vite-plugin-semi-theme@0.20.0(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))(vue@3.4.38(typescript@5.5.4))':
     dependencies:
       sass: 1.77.8
       vite: 5.1.7(@types/node@22.5.1)(sass@1.77.8)
@@ -4049,7 +4092,7 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@remix-run/dev@2.11.2(@remix-run/react@2.11.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.11.2(typescript@5.5.4))(@types/node@22.5.1)(sass@1.77.8)(typescript@5.5.4)(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))':
+  '@remix-run/dev@2.11.2(@remix-run/react@2.12.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.12.0(typescript@5.5.4))(@types/node@22.5.1)(sass@1.77.8)(typescript@5.5.4)(vite@5.1.7(@types/node@22.5.1)(sass@1.77.8))':
     dependencies:
       '@babel/core': 7.25.2
       '@babel/generator': 7.25.6
@@ -4062,7 +4105,7 @@ snapshots:
       '@mdx-js/mdx': 2.3.0
       '@npmcli/package-json': 4.0.1
       '@remix-run/node': 2.11.2(typescript@5.5.4)
-      '@remix-run/react': 2.11.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4)
+      '@remix-run/react': 2.12.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4)
       '@remix-run/router': 1.19.1
       '@remix-run/server-runtime': 2.11.2(typescript@5.5.4)
       '@types/mdx': 2.0.13
@@ -4106,7 +4149,7 @@ snapshots:
       tsconfig-paths: 4.2.0
       ws: 7.5.10
     optionalDependencies:
-      '@remix-run/serve': 2.11.2(typescript@5.5.4)
+      '@remix-run/serve': 2.12.0(typescript@5.5.4)
       typescript: 5.5.4
       vite: 5.1.7(@types/node@22.5.1)(sass@1.77.8)
     transitivePeerDependencies:
@@ -4124,9 +4167,9 @@ snapshots:
       - ts-node
       - utf-8-validate
 
-  '@remix-run/express@2.11.2(express@4.19.2)(typescript@5.5.4)':
+  '@remix-run/express@2.12.0(express@4.19.2)(typescript@5.5.4)':
     dependencies:
-      '@remix-run/node': 2.11.2(typescript@5.5.4)
+      '@remix-run/node': 2.12.0(typescript@5.5.4)
       express: 4.19.2
     optionalDependencies:
       typescript: 5.5.4
@@ -4143,24 +4186,38 @@ snapshots:
     optionalDependencies:
       typescript: 5.5.4
 
-  '@remix-run/react@2.11.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4)':
+  '@remix-run/node@2.12.0(typescript@5.5.4)':
     dependencies:
-      '@remix-run/router': 1.19.1
-      '@remix-run/server-runtime': 2.11.2(typescript@5.5.4)
+      '@remix-run/server-runtime': 2.12.0(typescript@5.5.4)
+      '@remix-run/web-fetch': 4.4.2
+      '@web3-storage/multipart-parser': 1.0.0
+      cookie-signature: 1.2.1
+      source-map-support: 0.5.21
+      stream-slice: 0.1.2
+      undici: 6.19.8
+    optionalDependencies:
+      typescript: 5.5.4
+
+  '@remix-run/react@2.12.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4)':
+    dependencies:
+      '@remix-run/router': 1.19.2
+      '@remix-run/server-runtime': 2.12.0(typescript@5.5.4)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-router: 6.26.1(react@18.3.1)
-      react-router-dom: 6.26.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      turbo-stream: 2.3.0
+      react-router: 6.26.2(react@18.3.1)
+      react-router-dom: 6.26.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      turbo-stream: 2.4.0
     optionalDependencies:
       typescript: 5.5.4
 
   '@remix-run/router@1.19.1': {}
 
-  '@remix-run/serve@2.11.2(typescript@5.5.4)':
+  '@remix-run/router@1.19.2': {}
+
+  '@remix-run/serve@2.12.0(typescript@5.5.4)':
     dependencies:
-      '@remix-run/express': 2.11.2(express@4.19.2)(typescript@5.5.4)
-      '@remix-run/node': 2.11.2(typescript@5.5.4)
+      '@remix-run/express': 2.12.0(express@4.19.2)(typescript@5.5.4)
+      '@remix-run/node': 2.12.0(typescript@5.5.4)
       chokidar: 3.6.0
       compression: 1.7.4
       express: 4.19.2
@@ -4180,6 +4237,18 @@ snapshots:
       set-cookie-parser: 2.7.0
       source-map: 0.7.4
       turbo-stream: 2.3.0
+    optionalDependencies:
+      typescript: 5.5.4
+
+  '@remix-run/server-runtime@2.12.0(typescript@5.5.4)':
+    dependencies:
+      '@remix-run/router': 1.19.2
+      '@types/cookie': 0.6.0
+      '@web3-storage/multipart-parser': 1.0.0
+      cookie: 0.6.0
+      set-cookie-parser: 2.7.0
+      source-map: 0.7.4
+      turbo-stream: 2.4.0
     optionalDependencies:
       typescript: 5.5.4
 
@@ -4259,7 +4328,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.21.1':
     optional: true
 
-  '@semi-bot/semi-theme-forrit@1.0.0': {}
+  '@semi-bot/semi-theme-forrit@1.0.6': {}
 
   '@types/acorn@4.0.6':
     dependencies:
@@ -6836,17 +6905,19 @@ snapshots:
       react: 18.3.1
       shallow-equal: 3.1.0
 
-  react-router-dom@6.26.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  react-router-dom@6.26.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@remix-run/router': 1.19.1
+      '@remix-run/router': 1.19.2
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-router: 6.26.1(react@18.3.1)
+      react-router: 6.26.2(react@18.3.1)
 
-  react-router@6.26.1(react@18.3.1):
+  react-router@6.26.2(react@18.3.1):
     dependencies:
-      '@remix-run/router': 1.19.1
+      '@remix-run/router': 1.19.2
       react: 18.3.1
+
+  react-string-replace@1.1.1: {}
 
   react-swr-infinite-scroll@1.0.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
@@ -7270,6 +7341,8 @@ snapshots:
   tslib@2.7.0: {}
 
   turbo-stream@2.3.0: {}
+
+  turbo-stream@2.4.0: {}
 
   type-check@0.4.0:
     dependencies:

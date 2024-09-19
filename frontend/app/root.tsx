@@ -1,3 +1,8 @@
+import '@fontsource/geist-sans'
+import '@fontsource/geist-sans/300.css'
+import '@fontsource/geist-sans/400.css'
+import '@fontsource/geist-sans/500.css'
+import '@fontsource/geist-sans/600.css'
 import {
   Links,
   Meta,
@@ -6,7 +11,6 @@ import {
   Scripts,
   ScrollRestoration,
   json,
-  useLoaderData,
 } from '@remix-run/react'
 import * as icons from '@douyinfe/semi-icons'
 import 'reset-css'
@@ -18,6 +22,7 @@ import {
 } from '@douyinfe/semi-ui'
 import WidthLimit from './components/width_limit'
 import { get_endpoint } from './util'
+import type { LinksFunction } from '@remix-run/node'
 
 const { Header, Content, Footer } = SemiLayout
 const { Text, Paragraph } = Typography
@@ -30,9 +35,10 @@ export async function loader() {
   return json({ api })
 }
 
+export const links: LinksFunction = () => {
+  return []
+}
 export function Layout({ children }: { children: React.ReactNode }) {
-  const data = useLoaderData<typeof loader>()
-
   return (
     <html lang='en'>
       <head>

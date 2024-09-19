@@ -19,14 +19,22 @@ const width = 200
 
 function Loaded({ meta }: { meta: ExtractedMeta }) {
   const cover = meta.tv?.poster_path ? (
-    <img
+    <a
       style={{
         width: width,
         height: width * 1.5,
       }}
-      alt='poster'
-      src={`https://image.tmdb.org/t/p/original/${meta.tv.poster_path}`}
-    />
+      href={`/meta/${meta.id}`}
+    >
+      <img
+        style={{
+          width: '100%',
+          height: '100%',
+        }}
+        alt='poster'
+        src={`https://image.tmdb.org/t/p/original/${meta.tv.poster_path}`}
+      />
+    </a>
   ) : null
   const interval = meta.broadcast ? parse_broadcast(meta.broadcast) : {}
 
