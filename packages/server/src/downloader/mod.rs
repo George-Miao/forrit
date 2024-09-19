@@ -5,7 +5,7 @@
 use camino::Utf8PathBuf;
 use forrit_config::{get_config, DownloaderConfig, DownloaderType};
 use forrit_core::model::{DownloadState, Job, Meta, PartialEntry, WithId};
-use futures::TryStream;
+use futures::{TryStream, TryStreamExt};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     results::UpdateResult,
@@ -26,10 +26,20 @@ pub const NAME: &str = "downloader";
 
 mod qbit;
 
-impl_resource!(Job, field(subscription_id, meta_id, entry_id, state, name));
+impl_resource!(Job, field(subscription_id, meta_id, entry_id, state, name),);
 
 pub fn job_added(job_id: ObjectId) {
     ractor::registry::where_is(NAME.to_owned()).map(|sub| sub.send_message(Message::NewDownloadAdded(job_id)));
+}
+
+impl Storage<Job> {
+    pub async fn get_by_entry(&self, entry_id: ObjectId) -> MongoResult<Vec<WithId<Job>>> {
+        self.get
+            .find(doc! { JobIdx::ENTRY_ID: entry_id }, None)
+            .await?
+            .try_collect()
+            .await
+    }
 }
 
 /// A prepared download job
