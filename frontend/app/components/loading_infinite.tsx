@@ -1,15 +1,14 @@
-import { Spin } from '@douyinfe/semi-ui'
 import type { ListResult } from 'forrit-client'
-import type { SWRInfiniteResponse } from 'swr/infinite'
 import InfiniteLoader from 'react-swr-infinite-scroll'
+import type { SWRInfiniteResponse } from 'swr/infinite'
 
 export interface LoadingInfiniteProps<T> {
-  useData: SWRInfiniteResponse<ListResult<T> | undefined, unknown>
+  data: SWRInfiniteResponse<ListResult<T> | undefined, unknown>
   children: (data: T[]) => JSX.Element
 }
 
 export default function LoadingInfinite<T>({
-  useData: data,
+  data,
   children,
 }: LoadingInfiniteProps<T>) {
   const has_next_page =
@@ -19,14 +18,14 @@ export default function LoadingInfinite<T>({
     <InfiniteLoader<ListResult<T> | undefined>
       swr={data}
       isReachingEnd={has_next_page === false}
-      loadingIndicator={
-        <Spin
-          style={{
-            display: 'block',
-            margin: '4em auto',
-          }}
-        />
-      }
+      // loadingIndicator={
+      //   <Spin
+      //     style={{
+      //       display: 'block',
+      //       margin: '4em auto',
+      //     }}
+      //   />
+      // }
       offset={-300}
     >
       {data => data && children(data.items)}

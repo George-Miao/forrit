@@ -1,18 +1,13 @@
-import { json, type MetaFunction } from '@remix-run/node'
-import {
-  format_day,
-  get_endpoint,
-  group_by,
-  parse_broadcast,
-  sort_day,
-} from '../util'
-import type { Meta, WithId } from 'forrit-client'
 import { Col, Divider, Row, Typography } from '@douyinfe/semi-ui'
-import MetaCard from 'app/components/meta_card'
+import { type MetaFunction, json } from '@remix-run/node'
 import { useMetaSeason } from 'app/client'
 import Loading from 'app/components/loading'
-import WidthLimit from 'app/components/width_limit'
+import MetaCard from 'app/components/meta_card'
 import PageHeader from 'app/components/page_header'
+import WidthLimit from 'app/components/width_limit'
+import type { Meta, WithId } from 'forrit-client'
+import { group, listify } from 'radash'
+import { format_day, get_endpoint, parse_broadcast, sort_day } from '../util'
 
 export const meta: MetaFunction = () => {
   return [
@@ -43,9 +38,10 @@ function Loaded(data: WithId<Meta>[]) {
       parsed_broadcast: parse_broadcast(m.broadcast as string),
     }))
 
-  const by_day = [
-    ...group_by(bangumi, m => m.parsed_broadcast.begin.getDay()),
-  ].sort(([a], [b]) => sort_day(a, b))
+  const by_day = listify(
+    group(bangumi, m => m.parsed_broadcast.begin.getDay()),
+    (k, v) => ({ day: k, ...v }),
+  ).sort((a, b) => sort_day(a.day, b.day))
 
   return (
     <>

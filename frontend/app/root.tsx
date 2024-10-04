@@ -1,3 +1,10 @@
+import * as icons from '@douyinfe/semi-icons'
+import {
+  Button,
+  Nav,
+  Layout as SemiLayout,
+  Typography,
+} from '@douyinfe/semi-ui'
 import '@fontsource/geist-sans'
 import '@fontsource/geist-sans/300.css'
 import '@fontsource/geist-sans/400.css'
@@ -12,14 +19,7 @@ import {
   ScrollRestoration,
   json,
 } from '@remix-run/react'
-import * as icons from '@douyinfe/semi-icons'
 import 'reset-css'
-import {
-  Button,
-  Nav,
-  Layout as SemiLayout,
-  Typography,
-} from '@douyinfe/semi-ui'
 import WidthLimit from './components/width_limit'
 import { get_endpoint } from './util'
 

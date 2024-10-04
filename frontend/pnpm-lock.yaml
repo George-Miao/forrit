@@ -32,6 +32,9 @@ importers:
       '@semi-bot/semi-theme-forrit':
         specifier: ^1.0.6
         version: 1.0.6
+      bytes:
+        specifier: ^3.1.2
+        version: 3.1.2
       forrit-client:
         specifier: file:../clients/typescript
         version: file:../clients/typescript
@@ -78,6 +81,9 @@ importers:
       '@remix-run/dev':
         specifier: ^2.12.1
         version: 2.12.1(@remix-run/react@2.12.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.6.2))(@remix-run/serve@2.12.1(typescript@5.6.2))(@types/node@22.5.5)(sass@1.79.1)(typescript@5.6.2)(vite@5.4.6(@types/node@22.5.5)(sass@1.79.1))
+      '@types/bytes':
+        specifier: ^3.1.4
+        version: 3.1.4
       '@types/react':
         specifier: ^18.3.8
         version: 18.3.8
@@ -855,6 +861,9 @@ packages:
 
   '@types/acorn@4.0.6':
     resolution: {integrity: sha512-veQTnWP+1D/xbxVrPC3zHnCZRjSrKfhbMUlEA43iMZLu7EsnTtkJklIuwrCPbOi8YkvDQAiW05VQQFvvz9oieQ==}
+
+  '@types/bytes@3.1.4':
+    resolution: {integrity: sha512-A0uYgOj3zNc4hNjHc5lYUfJQ/HVyBXiUMKdXd7ysclaE6k9oJdavQzODHuwjpUu2/boCP8afjQYi8z/GtvNCWA==}
 
   '@types/cookie@0.6.0':
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
@@ -4261,6 +4270,8 @@ snapshots:
   '@types/acorn@4.0.6':
     dependencies:
       '@types/estree': 1.0.6
+
+  '@types/bytes@3.1.4': {}
 
   '@types/cookie@0.6.0': {}
 

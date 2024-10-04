@@ -1,8 +1,8 @@
-import type { paths, ListResult, DirectedCursor, Season } from 'forrit-client'
+import type { DirectedCursor, ListResult, Season, paths } from 'forrit-client'
 import create_client, { type FetchResponse } from 'openapi-fetch'
 import useSWR, { type KeyedMutator, type SWRResponse } from 'swr'
-import { type ExtractedEntry, type ExtractedMeta, extract_entry, extract_meta } from './util'
 import useSWRInfinite from 'swr/infinite'
+import { type ExtractedEntry, type ExtractedMeta, extract_entry, extract_meta } from './util'
 
 type JsonMedia = 'application/json'
 
@@ -41,7 +41,7 @@ export const map = <T, U>(x: Ret<T>, f: (x: T) => U): Ret<U> => {
 }
 
 export const useClient = () => {
-  const api = 'http://10.0.1.69:8080'
+  const api = 'http://forrit.syr.vec.sh'
   return create_client<paths>({ baseUrl: api })
 }
 

@@ -24,13 +24,14 @@ export default function EntryDetail() {
 }
 
 function Loaded({ entry }: { entry: ExtractedEntry }) {
+  const episode = entry.episode ? `第${entry.episode}集` : ''
   return (
     <>
       <PageHeader
         routes={[
           { href: '/', name: '首页' },
           { href: '/entry', name: '更新' },
-          { name: entry.title },
+          { name: `${entry.meta_title ?? ''} ${episode}` },
         ]}
       >
         {entry.title}

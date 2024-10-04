@@ -99,7 +99,7 @@ export const group_by = <K, T>(list: T[], keyGetter: (item: T) => K) => {
 }
 
 export const get_endpoint = () => {
-  return process.env.API_ENDPOINT ?? 'http://10.0.1.69:8080'
+  return process.env.API_ENDPOINT ?? 'http://forrit.syr.vec.sh'
 }
 
 export const get_title = (m: Meta) => {
@@ -189,6 +189,11 @@ export const use_is_xs = () =>
 export const use_is_md = () =>
   useMediaQuery({
     query: '(max-width: 1000px)',
+  })
+
+export const use_is_big = () =>
+  useMediaQuery({
+    query: '(min-width: 1000px)',
   })
 
 export const format_time_relative = (t: Date) => {

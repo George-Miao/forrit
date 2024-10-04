@@ -19,6 +19,7 @@
     "@remix-run/react": "^2.12.1",
     "@remix-run/serve": "^2.12.1",
     "@semi-bot/semi-theme-forrit": "^1.0.6",
+    "bytes": "^3.1.2",
     "forrit-client": "file:../clients/typescript",
     "immutable": "^4.3.7",
     "isbot": "^5.1.17",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^2.12.1",
+    "@types/bytes": "^3.1.4",
     "@types/react": "^18.3.8",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^8.6.0",

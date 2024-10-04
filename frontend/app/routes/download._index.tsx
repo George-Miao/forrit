@@ -30,7 +30,7 @@ export default function Download() {
             </Text>
           }
         >
-          <LoadingInfinite useData={useDownloadList()}>
+          <LoadingInfinite data={useDownloadList()}>
             {data => (
               <>
                 {data.map(item => (

@@ -1,4 +1,4 @@
-import { Banner, Notification, Spin } from '@douyinfe/semi-ui'
+import { Notification, Spin } from '@douyinfe/semi-ui'
 import type { Ret } from 'app/client'
 import { useState } from 'react'
 

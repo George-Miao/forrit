@@ -13,7 +13,7 @@ import useClipboard from 'react-use-clipboard'
 import MetaPreview from '../meta_preview'
 import { useClient } from 'app/client'
 import { type CSSProperties, useState } from 'react'
-import './index.css'
+import './item.css'
 import reactStringReplace from 'react-string-replace'
 
 const { Text } = Typography
@@ -119,6 +119,7 @@ export default function EntryListItem({
       <Popover
         content={<MetaPreview id={item.meta_id?.$oid} />}
         trigger='hover'
+        position='right'
       >
         {meta_text}
       </Popover>
