@@ -1,16 +1,19 @@
+import SemiTheme from '@kousum/vite-plugin-semi-theme'
 import { vitePlugin as remix } from '@remix-run/dev'
 import { installGlobals } from '@remix-run/node'
 import { defineConfig } from 'vite'
-import tsconfigPaths from 'vite-tsconfig-paths'
 import { cjsInterop } from 'vite-plugin-cjs-interop'
-import SemiTheme from '@kousum/vite-plugin-semi-theme'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 installGlobals()
 
 export default defineConfig({
+  optimizeDeps: {
+    include: ['forrit-client'],
+  },
   plugins: [
     cjsInterop({
-      dependencies: ['date-fns-tz'],
+      dependencies: ['data-fns', 'date-fns-tz'],
     }),
     remix({
       future: {
@@ -32,6 +35,21 @@ export default defineConfig({
       '@douyinfe/semi-animation-styled',
       'scroll-into-view-if-needed',
       '@douyinfe/semi-icons',
+      'data-fns',
     ],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          // if (id.includes('node_modules')) {
+          //   return 'vendor'
+          // }
+          if (id.includes('forrit')) {
+            return 'vendor'
+          }
+        },
+      },
+    },
   },
 })
