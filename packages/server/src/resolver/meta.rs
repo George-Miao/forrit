@@ -9,6 +9,7 @@ use mongodb::{
     IndexModel,
 };
 use tap::Pipe;
+use tracing_subscriber::filter;
 
 use crate::db::{impl_resource, MongoResult, Storage};
 
@@ -48,18 +49,17 @@ impl MetaStorage {
         let season_end = bson::DateTime::from(season.end());
         let before_season = doc! { "$lt": season_begin };
         let after_season = doc! { "$gte": season_begin };
-        let within_season = doc! { "$gte": &season_begin,"$lt": &season_end,};
+        let within_season = doc! { "$gte": &season_begin, "$lt": &season_end,};
+
+        let filter = doc! {
+          "$or": [
+            { BsonMetaIdx::BSON_BEGIN : &within_season },
+            { BsonMetaIdx::BSON_BEGIN : &before_season, BsonMetaIdx::BSON_END:
+        &after_season },   ],
+        };
 
         self.get
-            .find(
-                doc! {
-                  "$or": [
-                    { BsonMetaIdx::BSON_BEGIN : &within_season },
-                    { BsonMetaIdx::BSON_BEGIN : &before_season, BsonMetaIdx::BSON_END: &after_season },
-                  ],
-                },
-                None,
-            )
+            .find(filter, None)
             .await?
             .map(|x| Ok(x?.into()))
             .try_collect::<Vec<_>>()

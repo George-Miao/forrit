@@ -151,7 +151,7 @@ impl Season {
             Self::Winter => NaiveDate::from_ymd_opt(year, 1, 1),
             Self::Spring => NaiveDate::from_ymd_opt(year, 4, 1),
             Self::Summer => NaiveDate::from_ymd_opt(year, 7, 1),
-            Self::Fall => NaiveDate::from_ymd_opt(year, 12, 1),
+            Self::Fall => NaiveDate::from_ymd_opt(year, 10, 1),
         }
         .expect("Invalid year")
     }
