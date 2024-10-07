@@ -1,8 +1,11 @@
 use forrit_core::model::{
     Download, DownloadState, Entry, EntryBase, Job, PartialEntry, SubscribeGroups, Subscription, WithId,
 };
-use futures::{future::ready, TryStreamExt};
-use mongodb::bson::{doc, oid::ObjectId};
+use futures::{future::ready, Stream, TryStreamExt};
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    options::FindOneOptions,
+};
 use ractor::{Actor, ActorCell, ActorProcessingErr};
 use regex::Regex;
 use tracing::{debug, info, warn};
@@ -110,6 +113,63 @@ impl SubscriptionActor {
         true
     }
 
+    /// Find entries of a given meta_id that are subscribed. By subscribed, we
+    /// mean that the entry is
+    /// 1. wanted by the subscription, and
+    /// 2. has not been downloaded _successfully_ before.
+    async fn find_subscribed<'a>(
+        &'a self,
+        meta_id: ObjectId,
+        sub: &'a Subscription,
+    ) -> impl Stream<Item = Result<WithId<PartialEntry>, ActorProcessingErr>> + 'a {
+        self.entry
+            .get
+            .find(doc! { BsonEntryIdx::META_ID: meta_id }, None)
+            .await
+            .expect("db error")
+            // Only keep entries that are "wanted" by the subscription
+            .try_filter(move |entry| ready(Self::sub_wants_entry(sub, entry)))
+            .try_filter(|entry| {
+                let entry_id = entry.id;
+                let job = &self.job;
+                async move {
+                    // Filter out successfully downloaded entries
+                    job.get
+                        .find_one(
+                            doc! { JobIdx::ENTRY_ID: entry_id },
+                            FindOneOptions::builder().sort(doc! { "_id": -1 }).build(),
+                        )
+                        .await
+                        .expect("db error")
+                        // Check if the most recent download job of entry is successful. If it is, ignore it.
+                        .filter(|x| x.state.not_error())
+                        // Keep if recent job is erroneous or if there is no job
+                        .is_none()
+                }
+            })
+            .map_err(ActorProcessingErr::from)
+    }
+
+    async fn refresh_subscription(&self, meta_id: ObjectId) -> Result<(), ActorProcessingErr> {
+        let Some(sub) = self
+            .meta
+            .get(meta_id)
+            .await
+            .expect("db error")
+            .and_then(|x| x.inner.subscription)
+        else {
+            warn!(%meta_id, "Subscription not found when refreshing subscription");
+            return Ok(());
+        };
+        self.find_subscribed(meta_id, &sub)
+            .await
+            .try_for_each_concurrent(None, |entry| async {
+                self.download_one(entry, Some(&sub)).await?;
+                Ok(())
+            })
+            .await
+    }
+
     async fn download_one(
         &self,
         entry: WithId<PartialEntry>,
@@ -198,49 +258,9 @@ impl Actor for SubscriptionActor {
                 port.send(res).ok();
             }
             Message::RefreshSubscription { meta_id } => {
-                let Some(sub) = self
-                    .meta
-                    .get(meta_id)
-                    .await
-                    .expect("db error")
-                    .and_then(|x| x.inner.subscription)
-                else {
-                    warn!(%meta_id, "Subscription not found when refreshing subscription");
-                    return Ok(());
-                };
-
                 tokio::spawn({
                     let this = self.clone();
-
-                    async move {
-                        this.entry
-                            .get
-                            .find(doc! { BsonEntryIdx::META_ID: meta_id }, None)
-                            .await
-                            .expect("db error")
-                            // Only keep entries that are "wanted" by the subscription
-                            .try_filter(|entry| ready(Self::sub_wants_entry(&sub, entry)))
-                            .try_filter(|entry| {
-                                let get = this.job.get.clone();
-                                let entry_id = entry.id;
-                                async move {
-                                    get.find_one(doc! { JobIdx::ENTRY_ID: entry_id,}, None)
-                                        .await
-                                        .expect("db error")
-                                        // If it's not erroneous, recognize it so it's not downloaded again
-                                        .filter(|x| x.state.not_error())
-                                        // If it's not recognized, download it
-                                        .is_some()
-                                }
-                            })
-                            .map_err(ActorProcessingErr::from)
-                            .try_for_each_concurrent(None, |entry| async {
-                                this.download_one(entry, Some(&sub)).await?;
-                                Ok(())
-                            })
-                            .await
-                            .expect("db error");
-                    }
+                    async move { this.refresh_subscription(meta_id).await }
                 });
             }
         };
