@@ -9,7 +9,6 @@ use mongodb::{
     IndexModel,
 };
 use tap::Pipe;
-use tracing_subscriber::filter;
 
 use crate::db::{impl_resource, MongoResult, Storage};
 

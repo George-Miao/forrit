@@ -229,7 +229,7 @@ impl Actor for SubscriptionActor {
                                         .expect("db error")
                                         // If it's not erroneous, recognize it so it's not downloaded again
                                         .filter(|x| x.state.not_error())
-                                        // It it's not recognized, download it
+                                        // If it's not recognized, download it
                                         .is_some()
                                 }
                             })
