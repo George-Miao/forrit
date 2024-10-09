@@ -292,6 +292,7 @@ impl ResolverInner {
             .tap_none(|| debug!(tmdb_id, "failed to locate meta"))
     }
 
+    /// Resolve some filename and match it to a meta entry
     #[instrument(skip(self))]
     async fn resolve(&self, filename: &str) -> ExtractResult {
         let mut titles = filename.match_title().map(|(l, r)| vec![l, r]).unwrap_or_default();

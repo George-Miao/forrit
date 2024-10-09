@@ -68,7 +68,7 @@ impl MetaStorage {
     pub async fn get_latest(&self, tmdb_id: u64) -> MongoResult<Option<WithId<Meta>>> {
         self.get
             .find_one(
-                doc! { BsonMetaIdx::TV_ID: tmdb_id as u32 },
+                doc! { BsonMetaIdx::TV_ID: tmdb_id as i64 },
                 FindOneOptions::builder()
                     .sort(doc! { BsonMetaIdx::BSON_BEGIN: -1 })
                     .build(),
