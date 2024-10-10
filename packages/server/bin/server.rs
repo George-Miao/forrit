@@ -40,7 +40,7 @@ async fn main() -> Result<(), ractor::SpawnErr> {
         path
     };
 
-    let config = init_config(path).boom("Failed to load config");
+    let config = init_config(path.as_ref()).boom("Failed to load config");
 
     Forrit::new(config).await.boom("Failed to start Forrit").run().await
 }

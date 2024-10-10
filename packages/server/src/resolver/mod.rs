@@ -403,11 +403,6 @@ impl Actor for Resolver {
         })
     }
 
-    async fn post_start(&self, _: ActorRef<Self::Msg>, _: &mut Self::State) -> Result<(), ActorProcessingErr> {
-        info!("Resolver started");
-        Ok(())
-    }
-
     async fn post_stop(&self, _: ActorRef<Self::Msg>, state: &mut Self::State) -> Result<(), ActorProcessingErr> {
         if let Some(job) = state.index_job.take() {
             job.stop();
@@ -486,7 +481,8 @@ impl Actor for Resolver {
 #[cfg(test)]
 mod test {
 
-    use bangumi_data::get_by_month;
+    use futures::StreamExt;
+    use mongodb::bson::doc;
     use tracing::info;
 
     use crate::test::run;
@@ -495,34 +491,52 @@ mod test {
     #[rustfmt::skip]
     const PROBLEM: &[&str] = &[
         "【喵萌奶茶屋】★02月新番★[忍者神威 / Ninja Kamui][06][1080p][简体][招募翻译]", // bangumi data doesn't have this
-        "【極影字幕·毀片黨】北海道辣妹兒賊招人稀罕 第09集 BIG5 AVC 720p" // Just couldn't find it
+        "【極影字幕·毀片黨】北海道辣妹兒賊招人稀罕 第09集 BIG5 AVC 720p", // Just couldn't find it
+        "[LoliHouse] 去参加联谊，却发现完全没有女生在场 / Goukon ni Ittara Onna ga Inakatta Hanashi - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
     ];
 
     #[test]
     fn test_match() {
         run(|env| async move {
-            let a = env
-                .resolver
-                .resolve(
-                    "[LoliHouse] 为美好的世界献上祝福！3 / Kono Subarashii Sekai ni Shukufuku wo! S3 - 01 [WebRip \
-                     1080p HEVC-10bit AAC][简繁内封字幕]",
-                )
-                .await;
+            info!(?env.config);
+            let a = env.resolver.resolve(PROBLEM[2]).await;
+            // let a = env.resolver.meta.get_latest(236530).await.unwrap();
             info!(?a);
         })
     }
 
     #[test]
-    fn test_one() {
+    fn test_rematch() {
         run(|env| async move {
-            let item = get_by_month(2022, 7)
-                .await
-                .unwrap()
-                .into_iter()
-                .find(|x| x.title == "iiiあいすくりん2")
-                .unwrap();
-            let a = env.resolver.match_item(&item).await;
-            info!("{:#?}", a);
+            let mut entries = env.col.entry.get.find(None, None).await.unwrap();
+            while let Some(entry) = entries.next().await {
+                let entry = entry.unwrap();
+
+                let Some(meta) = env.resolver.resolve(&entry.inner.title).await.meta else {
+                    continue;
+                };
+
+                let meta_id = meta.id;
+                let proper_title = meta.inner.into_proper_title();
+
+                if Some(meta_id) == entry.meta_id && Some(&proper_title) == entry.meta_title.as_ref() {
+                    continue;
+                }
+
+                info!(title = entry.title, new = &proper_title, old = ?entry.meta_title, "New match");
+
+                env.col
+                    .entry
+                    .set
+                    .update_one(
+                        doc! { "_id": entry.id },
+                        doc! { "$set": doc! { "meta_id": meta.id,
+                        "meta_title": &proper_title }},
+                        None,
+                    )
+                    .await
+                    .unwrap();
+            }
         })
     }
 }

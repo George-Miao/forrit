@@ -1,5 +1,5 @@
 #![allow(clippy::large_enum_variant)]
-#![feature(let_chains, try_blocks, type_changing_struct_update)]
+#![feature(let_chains, try_blocks, type_changing_struct_update, never_type)]
 
 pub mod api;
 pub mod db;
@@ -11,12 +11,15 @@ pub mod sourcer;
 pub mod test;
 pub mod util;
 
+#[cfg(feature = "webui")]
+pub mod webui;
+
 use std::{mem::take, sync::LazyLock, time::Duration};
 
 use forrit_config::Config;
-use futures::future::join4;
+use futures::future::join5;
 use mongodb::Client;
-use ractor::{Actor, ActorCell, SpawnErr, SupervisionEvent};
+use ractor::{concurrency::sleep, Actor, ActorCell, SpawnErr, SupervisionEvent};
 use tracing::{info, warn};
 
 use crate::db::Collections;
@@ -58,10 +61,13 @@ pub struct Running {
     downloader: ActorCell,
     sourcer: Vec<ActorCell>,
     dispatcher: ActorCell,
+    #[cfg(feature = "webui")]
+    webui: ActorCell,
 }
 
 impl Running {
     async fn restart(&mut self, this: ActorCell, cell: ActorCell, col: &Collections) {
+        sleep(Duration::from_secs(1)).await;
         let id = cell.get_id();
 
         if self.resolver.get_id() == id {
@@ -75,6 +81,14 @@ impl Running {
                 cell.stop(Some("Restarting".to_owned()));
             });
             self.sourcer = sourcer::start(col, this).await;
+        } else {
+            #[cfg(feature = "webui")]
+            if self.webui.get_id() == id {
+                self.webui = webui::start(col, this).await;
+                return;
+            }
+            #[cfg(not(feature = "webui"))]
+            warn!(actor = ?cell, "Unknown actor terminated");
         }
     }
 }
@@ -91,23 +105,33 @@ impl Actor for Forrit {
     ) -> Result<Self::State, ractor::ActorProcessingErr> {
         info!("Forrit starting");
 
-        let this = this.get_cell();
+        let cell = this.get_cell();
+        let webui_fut = {
+            #[cfg(feature = "webui")]
+            let fut = webui::start(&self.col, cell.clone());
+            #[cfg(not(feature = "webui"))]
+            let fut = std::future::ready(());
+            fut
+        };
 
-        let (resolver, downloader, sourcer, dispatcher) = join4(
-            resolver::start(&self.col, this.clone()),
-            downloader::start(&self.col, this.clone()),
-            sourcer::start(&self.col, this.clone()),
-            dispatcher::start(&self.col, this.clone()),
+        let res = join5(
+            resolver::start(&self.col, cell.clone()),
+            downloader::start(&self.col, cell.clone()),
+            sourcer::start(&self.col, cell.clone()),
+            dispatcher::start(&self.col, cell.clone()),
+            webui_fut,
         )
         .await;
 
-        ractor::time::send_after(Duration::from_secs(3), this, || Message::Check);
+        ractor::time::send_after(Duration::from_secs(3), cell, || Message::Check);
 
         Ok(Running {
-            resolver,
-            downloader,
-            sourcer,
-            dispatcher,
+            resolver: res.0,
+            downloader: res.1,
+            sourcer: res.2,
+            dispatcher: res.3,
+            #[cfg(feature = "webui")]
+            webui: res.4,
         })
     }
 
@@ -129,7 +153,9 @@ impl Actor for Forrit {
     ) -> Result<(), ractor::ActorProcessingErr> {
         use SupervisionEvent::*;
         match message {
-            ActorStarted(_) => {}
+            ActorStarted(cell) => {
+                info!(name=?cell.get_name(), "Actor started");
+            }
             ActorTerminated(cell, _, reason) => {
                 warn!(?reason, name=?cell.get_name(), "Actor terminated, restarting");
                 state.restart(myself.get_cell(), cell, &self.col).await;

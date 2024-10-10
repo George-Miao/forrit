@@ -10,7 +10,7 @@ use tracing::info;
 
 use crate::{
     db::{Collections, Storage},
-    dispatcher::{dispatcher_api, refresh_subscription},
+    dispatcher::dispatcher_api,
     downloader::job_added,
     resolver::{resolver_api, AliasKV, MetaStorage},
     sourcer::EntryStorage,
@@ -69,7 +69,7 @@ pub fn gen_oapi() -> Result<String, serde_json::Error> {
 pub async fn run(col: Collections) {
     let config = &get_config().api;
     if !config.enable {
-        return;
+        std::future::pending().await
     }
     if config.debug {
         info!("Debug mode enabled, this may leak sensitive information and should be disabled in production.");

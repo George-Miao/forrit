@@ -3,7 +3,7 @@
 use std::num::NonZeroU32;
 
 use figment::Jail;
-use forrit_config::init_config;
+use forrit_config::{init_config, Config};
 use futures::Future;
 use governor::{Quota, RateLimiter};
 use mongodb::{Client, Database};
@@ -14,6 +14,7 @@ use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::Subscriber
 use crate::{db::Collections, resolver::Resolver, util::GovernedClient, REQ};
 
 pub struct Env {
+    pub config: &'static Config,
     pub db: Database,
     pub col: Collections,
     pub resolver: Resolver,
@@ -65,23 +66,23 @@ async fn prepare(jail: &mut Jail) -> Env {
 
         [downloader.rename]
         enable = false
-    "#,
+        "#,
     )
     .unwrap();
 
-    let config = init_config(Some(path)).unwrap();
+    let config = init_config(Some(&path)).unwrap();
 
     let fmt_layer = tracing_subscriber::fmt::layer().without_time().with_filter(
         Targets::new()
             .with_default(LevelFilter::INFO)
-            .with_target("forrit_server::resolver", LevelFilter::DEBUG)
+            // .with_target("forrit_server::resolver", LevelFilter::DEBUG)
             .with_target("rustls", LevelFilter::OFF),
     );
 
     tracing_subscriber::registry().with(fmt_layer).init();
 
     let mongo = Client::with_uri_str(&config.database.url).await.unwrap();
-    let db = mongo.database("test");
+    let db = mongo.database("forrit");
     let client = GovernedClient::new(
         tmdb_api::Client::builder()
             .with_api_key(config.resolver.tmdb_api_key.to_owned())
@@ -94,5 +95,10 @@ async fn prepare(jail: &mut Jail) -> Env {
     let col = Collections::new(&db).await.unwrap();
     let resolver = Resolver::new(client, col.meta.clone(), col.alias.clone(), &config.resolver);
 
-    Env { db, col, resolver }
+    Env {
+        config,
+        db,
+        col,
+        resolver,
+    }
 }

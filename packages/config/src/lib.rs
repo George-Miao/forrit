@@ -1,4 +1,6 @@
 #![feature(once_cell_try)]
+#![warn(clippy::pedantic, clippy::nursery)]
+#![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 
 use std::{net::SocketAddr, num::NonZeroU32, sync::OnceLock, time::Duration};
 
@@ -13,9 +15,13 @@ use url::Url;
 
 mod util;
 
+pub use camino;
+pub use figment;
+
 /// Default values for the configuration
 mod default;
 
+#[allow(clippy::wildcard_imports)]
 use default::*;
 use util::MapOrVec;
 
@@ -24,37 +30,45 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 const MINUTE: Duration = Duration::from_secs(60);
 const ENV_PREFIX: &str = "FORRIT.";
 
-pub fn init_config(dir: Option<impl AsRef<Utf8Path>>) -> Result<&'static Config, figment::Error> {
+/// Init the configuration from the given directory or the default config
+pub fn init_config(dir: Option<&impl AsRef<Utf8Path>>) -> Result<&'static Config, figment::Error> {
     CONFIG.get_or_try_init(|| {
-        if let Some(dir) = dir.as_ref().map(AsRef::as_ref) {
-            info!("Loading config from {dir} and environment");
+        dir.as_ref()
+            .map(AsRef::as_ref)
+            .map_or_else(
+                || {
+                    info!("Loading config from config files and environment");
 
-            match dir.extension() {
-                None | Some("toml") => Figment::new().join(Toml::file(dir)),
-                Some("yaml") | Some("yml") => Figment::new().join(Yaml::file(dir)),
-                Some("json") => Figment::new().join(Json::file(dir)),
-                _ => panic!("Unsupported config file format"),
-            }
-        } else {
-            info!("Loading config from config files and environment");
+                    let conf_dir = dirs::config_dir()
+                        .expect("failed to find config directory")
+                        .join("forrit");
+                    Figment::new()
+                        .merge(Toml::file(conf_dir.join("config.toml")))
+                        .merge(Yaml::file(conf_dir.join("config.yaml")))
+                        .merge(Json::file(conf_dir.join("config.json")))
+                },
+                |dir| {
+                    info!("Loading config from {dir} and environment");
 
-            let conf_dir = dirs::config_dir()
-                .expect("failed to find config directory")
-                .join("forrit");
-            Figment::new()
-                .merge(Toml::file(conf_dir.join("config.toml")))
-                .merge(Yaml::file(conf_dir.join("config.yaml")))
-                .merge(Json::file(conf_dir.join("config.json")))
-        }
-        .merge(Env::prefixed(ENV_PREFIX).split('.'))
-        .extract()
+                    match dir.extension() {
+                        None | Some("toml") => Figment::new().join(Toml::file(dir)),
+                        Some("yaml" | "yml") => Figment::new().join(Yaml::file(dir)),
+                        Some("json") => Figment::new().join(Json::file(dir)),
+                        _ => panic!("Unsupported config file format"),
+                    }
+                },
+            )
+            .merge(Env::prefixed(ENV_PREFIX).split('.'))
+            .extract()
     })
 }
 
+/// Get the configuration
 pub fn get_config() -> &'static Config {
     CONFIG.get().expect("config not loaded")
 }
 
+/// All configuration for Forrit
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
     /// Resolver related configuration
@@ -77,8 +91,13 @@ pub struct Config {
     /// API related configuration
     #[serde(default)]
     pub api: ApiConfig,
+
+    /// Web UI related configuration
+    #[serde(default)]
+    pub webui: WebUIConfig,
 }
 
+/// Resolver configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolverConfig {
     /// API key for the TMDB API
@@ -93,13 +112,14 @@ pub struct ResolverConfig {
     pub index: IndexConfig,
 }
 
+/// Resolver indexing configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexConfig {
-    /// Enable the index, default to true
+    /// Enable the index, default to `true`
     #[serde(default = "enable")]
     pub enable: bool,
 
-    /// Start indexing from the beginning, default to true
+    /// Start indexing from the beginning, default to `true`
     #[serde(default = "resolver::index::start_at_begin")]
     pub start_at_begin: bool,
 
@@ -108,6 +128,7 @@ pub struct IndexConfig {
     pub interval: Duration,
 }
 
+/// Database configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DatabaseConfig {
     /// URL of the mongo database, default to `mongodb://localhost:27017`
@@ -119,9 +140,10 @@ pub struct DatabaseConfig {
     pub database: String,
 }
 
+/// Sourcer configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourcerConfig {
-    /// Enable the sourcer, default to true
+    /// Enable the sourcer, default to `true`
     #[serde(default = "enable")]
     pub enable: bool,
 
@@ -129,12 +151,14 @@ pub struct SourcerConfig {
     pub ty: SourcerType,
 }
 
+/// Sourcer types
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum SourcerType {
     Rss(RssConfig),
 }
 
+/// RSS sourcer configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RssConfig {
     /// URL of the RSS feed
@@ -145,11 +169,12 @@ pub struct RssConfig {
     pub update_interval: Duration,
 
     /// Deny items with mime type other than `application/x-bittorrent`, default
-    /// to false
+    /// to `false`
     #[serde(default = "sourcer::rss::deny_non_torrent")]
     pub deny_non_torrent: bool,
 }
 
+/// Subscription related configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SubscriptionConfig {}
 
@@ -163,9 +188,10 @@ pub struct DownloaderConfig {
     pub ty: DownloaderType,
 }
 
+/// Rename configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenameConfig {
-    /// Enable renaming, default to true
+    /// Enable renaming, default to `true`
     #[serde(default = "enable")]
     pub enable: bool,
 
@@ -179,6 +205,7 @@ pub struct RenameConfig {
     pub format: RenameFormat,
 }
 
+/// How should the downloaded torrent be renamed
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Default)]
 #[serde(untagged, rename_all = "lowercase")]
@@ -189,6 +216,7 @@ pub enum RenameFormat {
     // Custom(String),
 }
 
+/// Downloader related configuration
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum DownloaderType {
@@ -196,12 +224,14 @@ pub enum DownloaderType {
     Qbittorrent(QbittorrentConfig),
 }
 
+/// A password and username pair
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Auth {
     pub username: String,
     pub password: String,
 }
 
+/// Transmission downloader configuration
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TransmissionConfig {
     /// Save path for the downloaded torrent, leave it empty to use the default
@@ -216,6 +246,7 @@ pub struct TransmissionConfig {
     pub auth: Option<Auth>,
 }
 
+/// qBittorrent downloader configuration
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct QbittorrentConfig {
     #[serde(with = "humantime_serde", default = "downloader::qbittorrent::check_interval")]
@@ -233,13 +264,14 @@ pub struct QbittorrentConfig {
     pub auth: Auth,
 }
 
+/// API related configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ApiConfig {
-    /// Enable the API, default to true
+    /// Enable the API, default to `true`
     #[serde(default = "enable")]
     pub enable: bool,
 
-    /// Enable the API log, default to false
+    /// Enable the API log, default to `false`
     #[serde(default = "api::log")]
     pub log: bool,
 
@@ -247,24 +279,51 @@ pub struct ApiConfig {
     #[serde(default = "api::bind")]
     pub bind: SocketAddr,
 
-    /// Enable debug mode, default to true in debug build, false in release
+    /// Enable debug mode, default to `true` in debug build, `false` in release
     /// build
     #[serde(default = "api::debug")]
     pub debug: bool,
 
-    /// API doc (OpenAPI spec and scalar) configuration
+    /// API doc (`OpenAPI` spec and scalar) configuration
     #[serde(default)]
     pub doc: ApiDocConfig,
 }
 
-/// API doc (OpenAPI spec and scalar) configuration
+/// API doc (`OpenAPI` spec and scalar) configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ApiDocConfig {
-    /// Enable the API doc, default to true
+    /// Enable the API doc, default to `true`
     #[serde(default = "enable")]
     pub enable: bool,
 
     /// Path the API doc lives, default to `/api-doc`
     #[serde(default = "api::doc::path")]
     pub path: Utf8PathBuf,
+}
+
+/// Web UI (forrit-frontend) configuration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WebUIConfig {
+    /// Enable the Web UI, default to `true`.
+    #[serde(default = "enable")]
+    pub enable: bool,
+
+    /// Socket address to bind the Web UI, default to `0.0.0.0:3000`
+    #[serde(default = "webui::listen")]
+    pub listen: SocketAddr,
+
+    /// Where to put the Web UI files, default to a random directory under
+    /// [temporary directory].
+    ///
+    /// [temporary directory]: https://doc.rust-lang.org/std/env/fn.temp_dir.html
+    #[serde(default)]
+    pub directory: Option<Utf8PathBuf>,
+
+    /// Web UI files are extracted from binary to some temporary directory
+    /// on-the-fly and are removed after the process exits. Set this to `false`
+    /// to remove the extracted files after the process exits.
+    ///
+    /// Default to `true`.
+    #[serde(default = "webui::keep_files")]
+    pub keep_files: bool,
 }

@@ -24,52 +24,69 @@
           inherit system;
           overlays = [(import rust-overlay)];
         };
-        rust = (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override {extensions = ["rust-src"];};
-        shared = with pkgs; {
-          buildInputs = [
-            openssl
-          ];
+        rust =
+          (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
+          .override {
+            extensions = [
+              "rust-src"
+              "rust-analyzer"
+            ];
+          };
 
-          nativeBuildInputs = [
-            pkg-config
-            llvmPackages_latest.bintools
-            llvmPackages_latest.libstdcxxClang
-          ];
-        };
+        buildInputs = with pkgs; [openssl];
+        nativeBuildInputs = with pkgs; [
+          pkg-config
+          llvmPackages_latest.bintools
+          llvmPackages_latest.libstdcxxClang
+        ];
+
         craneLib = (crane.mkLib pkgs).overrideToolchain (p: rust);
+        frontendFilter = path: _: builtins.match ".*frontend.*" path != null;
+        frontendOrCargo = path: type: (frontendFilter path type) || (craneLib.filterCargoSources path type);
+        frontendOrCargoSource = builtins.filterSource frontendOrCargo ./.;
+
         darwinFramework =
           pkgs.lib.lists.optional (pkgs.system == "aarch64-darwin" || pkgs.system == "x86_64-darwin")
           pkgs.darwin.apple_sdk.frameworks.SystemConfiguration;
 
-        forrit-server = craneLib.buildPackage ({
-            src = craneLib.cleanCargoSource ./.;
-            pname = "forrit-server";
-            cargoExtraArgs = "--locked --package forrit-server --bin forrit-server";
-            strictDeps = true;
-            doCheck = false;
-          }
-          // shared);
+        forrit-server = craneLib.buildPackage {
+          inherit buildInputs;
+          src = ./.;
+          pname = "forrit-server";
+          cargoExtraArgs = "--locked --package forrit-server --bin forrit-server";
+          strictDeps = true;
+          doCheck = false;
+          nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [nodejs nodePackages.npm]);
+        };
+        forrit-server-without-webui = craneLib.buildPackage {
+          inherit buildInputs nativeBuildInputs;
+          src = craneLib.cleanCargoSource ./.;
+          pname = "forrit-server";
+          cargoExtraArgs = "--locked --package forrit-server --bin forrit-server --no-default-features";
+          strictDeps = true;
+          doCheck = false;
+        };
       in {
-        inherit forrit-server;
+        inherit forrit-server forrit-server-without-webui;
 
         devShells = with pkgs; {
-          default = mkShell.override {stdenv = stdenvNoLibs;} ({
-              packages =
-                [
-                  rust
-                  just
-                  biome
-                  nodejs
-                  nodePackages.typescript
-                  nodePackages.pnpm
-                  mongosh
-                  openssl
-                ]
-                ++ darwinFramework;
-            }
-            // shared);
+          default = mkShell.override {stdenv = stdenvNoLibs;} {
+            inherit buildInputs nativeBuildInputs;
+            packages =
+              [
+                rust
+                just
+                biome
+                nodejs
+                nodePackages.typescript
+                nodePackages.pnpm
+                mongosh
+                openssl
+              ]
+              ++ darwinFramework;
+          };
         };
-        packages = {inherit forrit-server;};
+        packages = {inherit forrit-server forrit-server-without-webui;};
         apps = rec {
           default = server;
           server = flake-utils.lib.mkApp {

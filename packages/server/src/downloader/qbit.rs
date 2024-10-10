@@ -99,7 +99,6 @@ impl Actor for QbitActor {
     }
 
     async fn post_start(&self, _: ActorRef<Message>, state: &mut Self::State) -> Result<(), ActorProcessingErr> {
-        info!("QBit actor started");
         let mut pending_jobs = self.manager.pending_jobs().await?;
 
         while let Some(job) = pending_jobs.try_next().await? {

@@ -127,11 +127,6 @@ impl Actor for RssActor {
             .pipe(Ok)
     }
 
-    async fn post_start(&self, _: ActorRef<Self::Msg>, _: &mut Self::State) -> Result<(), ActorProcessingErr> {
-        info!("RSS actor started");
-        Ok(())
-    }
-
     async fn post_stop(&self, _: ActorRef<Self::Msg>, state: &mut Self::State) -> Result<(), ActorProcessingErr> {
         state.update_job.abort();
         Ok(())

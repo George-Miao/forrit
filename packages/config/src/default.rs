@@ -1,4 +1,4 @@
-pub fn enable() -> bool {
+pub const fn enable() -> bool {
     true
 }
 pub mod resolver {
@@ -23,11 +23,11 @@ pub mod resolver {
             }
         }
 
-        pub fn start_at_begin() -> bool {
+        pub const fn start_at_begin() -> bool {
             true
         }
 
-        pub fn interval() -> Duration {
+        pub const fn interval() -> Duration {
             Duration::from_secs(7 * 24 * 60 * 60)
         }
     }
@@ -53,14 +53,14 @@ pub mod sourcer {
             5 * MINUTE
         }
 
-        pub fn deny_non_torrent() -> bool {
+        pub const fn deny_non_torrent() -> bool {
             false
         }
     }
 }
 
 pub mod downloader {
-    use crate::RenameConfig;
+    use crate::{RenameConfig, RenameFormat};
 
     pub mod rename {
         use std::time::Duration;
@@ -74,10 +74,10 @@ pub mod downloader {
 
     impl Default for RenameConfig {
         fn default() -> Self {
-            RenameConfig {
+            Self {
                 enable: true,
                 interval: rename::interval(),
-                format: Default::default(),
+                format: RenameFormat::default(),
             }
         }
     }
@@ -91,7 +91,7 @@ pub mod downloader {
     pub mod qbittorrent {
         use std::time::Duration;
 
-        pub fn check_interval() -> Duration {
+        pub const fn check_interval() -> Duration {
             Duration::from_secs(3)
         }
 
@@ -104,7 +104,7 @@ pub mod downloader {
 pub mod api {
     use std::net::SocketAddr;
 
-    use crate::ApiConfig;
+    use crate::{ApiConfig, ApiDocConfig};
 
     impl Default for ApiConfig {
         fn default() -> Self {
@@ -113,12 +113,12 @@ pub mod api {
                 log: log(),
                 bind: bind(),
                 debug: debug(),
-                doc: Default::default(),
+                doc: ApiDocConfig::default(),
             }
         }
     }
 
-    pub fn log() -> bool {
+    pub const fn log() -> bool {
         false
     }
 
@@ -126,7 +126,7 @@ pub mod api {
         "0.0.0.0:8080".parse().expect("invalid address")
     }
 
-    pub fn debug() -> bool {
+    pub const fn debug() -> bool {
         cfg!(debug_assertions)
     }
 
@@ -147,5 +147,37 @@ pub mod api {
         pub fn path() -> Utf8PathBuf {
             "/api-doc".into()
         }
+    }
+}
+
+pub mod webui {
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    use crate::WebUIConfig;
+
+    impl WebUIConfig {
+        #[must_use]
+        pub const fn new() -> Self {
+            Self {
+                enable: super::enable(),
+                listen: listen(),
+                directory: None,
+                keep_files: keep_files(),
+            }
+        }
+    }
+
+    impl Default for WebUIConfig {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    pub const fn keep_files() -> bool {
+        true
+    }
+
+    pub const fn listen() -> SocketAddr {
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 3000)
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name    = "forrit-server"
+name = "forrit-server"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
@@ -12,49 +12,54 @@ path = "bin/gen_api.rs"
 name = "forrit-server"
 path = "bin/server.rs"
 
+[features]
+default = ["webui"]
+webui = ["dep:forrit-webui"]
+
 [dependencies]
-forrit-core   = { workspace = true, features = ["mongodb_pagination"] }
+forrit-core = { workspace = true, features = ["mongodb_pagination"] }
 forrit-config = { workspace = true }
+forrit-webui = { workspace = true, optional = true }
 
-bangumi-data              = { workspace = true }
-camino                    = { workspace = true }
-chrono                    = { workspace = true }
-futures                   = { workspace = true }
-iso8601                   = { workspace = true }
-regex                     = { workspace = true }
-reqwest                   = { workspace = true }
-serde                     = { workspace = true }
-tmdb-api                  = { workspace = true }
-tokio                     = { workspace = true, features = ["macros", "rt-multi-thread"] }
-tracing                   = { workspace = true }
-url                       = { workspace = true }
-tap                       = { workspace = true }
-serde_json                = { workspace = true }
-either                    = { workspace = true }
+tap = { workspace = true }
+url = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+camino = { workspace = true }
+chrono = { workspace = true }
+either = { workspace = true }
+futures = { workspace = true }
+iso8601 = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+tmdb-api = { workspace = true }
+salvo_core = { workspace = true }
+serde_json = { workspace = true }
+bangumi-data = { workspace = true }
 mongodb-cursor-pagination = { workspace = true }
-salvo_core                = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
-figment  = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
-governor = { version = "0.6.0", default-features = false, features = ["futures", "std", "quanta"] }
-mongodb  = { version = "2.8.0", features = ["bson-chrono-0_4"] }
-ractor   = { version = "0.10", default-features = false, features = ["tokio_runtime"] }
-salvo    = { version = "0.67.0", features = ["oapi", "websocket", "cors", "logging"] }
+mongodb = { version = "2.8.0", features = ["bson-chrono-0_4"] }
+figment = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
+salvo = { version = "0.67.0", features = ["cors", "logging", "oapi", "websocket"] }
+ractor = { version = "0.10", default-features = false, features = ["tokio_runtime"] }
+governor = { version = "0.6.0", default-features = false, features = ["futures", "quanta", "std"] }
 
-tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
 
-anitomy    = "0.2.0"
-humantime  = "2.1.0"
-mod_use    = "0.2.1"
-qbit-rs    = "0.4.4"
-rss        = "2.0.6"
-thiserror  = "1.0.58"
+anitomy = "0.2.0"
+humantime = "2.1.0"
+mod_use = "0.2.1"
+qbit-rs = "0.4.4"
+rss = "2.0.6"
+thiserror = "1.0.58"
 camelpaste = "0.1.0"
 bt_bencode = "0.8.1"
 
 [dev-dependencies]
 tracing-appender = "0.2.3"
-tracing-flame    = "0.2.0"
-dotenvy          = "0.15.7"
+tracing-flame = "0.2.0"
+dotenvy = "0.15.7"
 
-figment = { version = "0.10.15", features = ["env", "json", "toml", "yaml", "test"] }
-tokio   = { workspace = true, features = ["full"] }
+figment = { version = "0.10.15", features = ["env", "json", "test", "toml", "yaml"] }
+tokio = { workspace = true, features = ["full"] }

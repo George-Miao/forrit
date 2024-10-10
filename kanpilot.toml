@@ -18,17 +18,6 @@ name = "To Do"
   linkCommits = [ ]
 
   [[processes.tasks]]
-  id = "rq0lkafs5g30v3k7nviyzo82"
-  title = "FE: Advanced subscription"
-  description = ""
-  tag = "backlog"
-  linkFiles = [ ]
-  dueDate = ""
-  checkList = [ ]
-  priority = ""
-  linkCommits = [ ]
-
-  [[processes.tasks]]
   id = "utrgespog8d4ycn40vk6cq8l"
   title = "FE: Filter out unmatched in entry list"
   description = ""
@@ -116,13 +105,24 @@ name = "To Do"
   priority = ""
   linkCommits = [ ]
 
+  [[processes.tasks]]
+  id = "tm4nnk0xbjv0muq77cebkmyy"
+  title = "FE: entry detail"
+  description = ""
+  tag = "backlog"
+  linkFiles = [ ]
+  dueDate = ""
+  checkList = [ ]
+  priority = ""
+  linkCommits = [ ]
+
 [[processes]]
 id = "process2"
 name = "In Progress"
 
   [[processes.tasks]]
-  id = "tm4nnk0xbjv0muq77cebkmyy"
-  title = "FE: entry detail"
+  id = "rq0lkafs5g30v3k7nviyzo82"
+  title = "FE: Advanced subscription"
   description = ""
   tag = "backlog"
   linkFiles = [ ]
