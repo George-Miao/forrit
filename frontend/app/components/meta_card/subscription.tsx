@@ -1,6 +1,4 @@
-import Loading from '../loading'
-import type { Subscription } from 'forrit-client'
-import { useRef, useState } from 'react'
+import { IconDelete, IconEdit, IconPlus, IconTick } from '@douyinfe/semi-icons'
 import {
   Button,
   ButtonGroup,
@@ -12,11 +10,13 @@ import {
   Popconfirm,
 } from '@douyinfe/semi-ui'
 import { useClient, useMetaGroup } from 'app/client'
+import { format } from 'bytes'
+import type { Subscription } from 'forrit-client'
 import { OrderedSet } from 'immutable'
-import { IconDelete, IconEdit, IconPlus, IconTick } from '@douyinfe/semi-icons'
 import { isEqual } from 'radash'
+import { useState } from 'react'
+import Loading from '../loading'
 import './subscription.css'
-import { format, parse } from 'bytes'
 
 const isEmpty = (sub: Subscription | null) => {
   if (sub === null) {
@@ -225,15 +225,15 @@ export default function SubscribeButton({
 // min_size?: number;
 type Advanced = Omit<Subscription, 'groups'>
 type AdvancedDisplay = Omit<Advanced, 'max_size' | 'min_size'> & {
-  max_size: string
-  min_size: string
+  max_size?: string
+  min_size?: string
 }
 
 const display = (sub: Advanced): AdvancedDisplay => {
   return {
     ...sub,
-    max_size: sub.max_size ? format(sub.max_size) : null,
-    min_size: sub.min_size ? format(sub.min_size) : null,
+    max_size: sub.max_size ? format(sub.max_size) : undefined,
+    min_size: sub.min_size ? format(sub.min_size) : undefined,
   }
 }
 

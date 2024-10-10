@@ -1,3 +1,4 @@
+import { IconCheckboxTick, IconCopy, IconDownload } from '@douyinfe/semi-icons'
 import {
   Button,
   ButtonGroup,
@@ -7,14 +8,13 @@ import {
   Tooltip,
   Typography,
 } from '@douyinfe/semi-ui'
+import { useClient } from 'app/client'
 import { type ExtractedEntry, format_time_relative, use_is_xs } from 'app/util'
-import { IconCheckboxTick, IconCopy, IconDownload } from '@douyinfe/semi-icons'
+import { type CSSProperties, useState } from 'react'
+import reactStringReplace from 'react-string-replace'
 import useClipboard from 'react-use-clipboard'
 import MetaPreview from '../meta_preview'
-import { useClient } from 'app/client'
-import { type CSSProperties, useState } from 'react'
 import './item.css'
-import reactStringReplace from 'react-string-replace'
 
 const { Text } = Typography
 
@@ -117,7 +117,7 @@ export default function EntryListItem({
       meta_text
     ) : (
       <Popover
-        content={<MetaPreview id={item.meta_id?.$oid} />}
+        content={<MetaPreview meta_id={item.meta_id?.$oid} />}
         trigger='hover'
         position='right'
       >

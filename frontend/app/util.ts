@@ -161,7 +161,12 @@ export const format_broadcast = ({
 }
 
 export const format_day = (date: Date | number) => {
-  const day = typeof date === 'number' ? date : date.getDay()
+  const day =
+    typeof date === 'string'
+      ? Number(date)
+      : typeof date === 'number'
+        ? date
+        : date.getDay()
   return ['日', '一', '二', '三', '四', '五', '六'][day]
 }
 

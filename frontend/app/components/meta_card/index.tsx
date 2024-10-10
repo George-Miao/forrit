@@ -1,7 +1,7 @@
 import { Card, Space, Typography } from '@douyinfe/semi-ui'
 import {
-  get_title,
   format_broadcast,
+  get_title,
   parse_broadcast,
   use_is_xs,
 } from 'app/util'
@@ -9,8 +9,8 @@ import type { Meta, WithId } from 'forrit-client'
 
 import './index.css'
 
+import Poster from '../blurry_image'
 import SubscribeButton from './subscription'
-
 const xs_width = '47dvw - 8px'
 
 export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
@@ -31,13 +31,11 @@ export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
       role='button'
       href={`/meta/${meta._id.$oid}`}
     >
-      <img
-        alt='backdrop'
-        style={{
-          width,
-          height,
-        }}
-        src={`https://image.tmdb.org/t/p/original/${meta.tv.poster_path}`}
+      <Poster
+        alt='番剧封面'
+        width={width}
+        height={height}
+        poster_path={meta.tv.poster_path as string}
       />
     </a>
   ) : null

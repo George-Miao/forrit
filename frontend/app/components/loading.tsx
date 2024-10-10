@@ -1,10 +1,10 @@
 import { Notification, Spin } from '@douyinfe/semi-ui'
 import type { Ret } from 'app/client'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 export interface LoadingProps<T> {
   useData: () => Ret<T>
-  children: (data: NonNullable<T>) => JSX.Element
+  children: (data: NonNullable<T>) => ReactNode
   size?: 'small' | 'middle' | 'large'
   spin?: boolean
   spinStyle?: React.CSSProperties
