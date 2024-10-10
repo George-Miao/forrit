@@ -4,7 +4,7 @@ import { type ExtractedMeta, format_broadcast, parse_broadcast } from '../util'
 import { useExtractedMeta } from 'app/client'
 import Loading from './loading'
 
-export default function MetaPreview({ id }: { id?: string }) {
+export default function MetaPreview({ meta_id: id }: { meta_id?: string }) {
   if (id) {
     function useData() {
       return useExtractedMeta(id as string)
