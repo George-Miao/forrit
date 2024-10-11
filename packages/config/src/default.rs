@@ -101,15 +101,16 @@ pub mod downloader {
     }
 }
 
-pub mod api {
+pub mod http {
     use std::net::SocketAddr;
 
-    use crate::{ApiConfig, ApiDocConfig};
+    use crate::{ApiDocConfig, HTTPConfig};
 
-    impl Default for ApiConfig {
+    impl Default for HTTPConfig {
         fn default() -> Self {
             Self {
                 enable: super::enable(),
+                webui: super::enable(),
                 log: log(),
                 bind: bind(),
                 debug: debug(),
@@ -130,7 +131,7 @@ pub mod api {
         cfg!(debug_assertions)
     }
 
-    pub mod doc {
+    pub mod apidoc {
         use camino::Utf8PathBuf;
 
         use crate::ApiDocConfig;
@@ -147,37 +148,5 @@ pub mod api {
         pub fn path() -> Utf8PathBuf {
             "/api-doc".into()
         }
-    }
-}
-
-pub mod webui {
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
-    use crate::WebUIConfig;
-
-    impl WebUIConfig {
-        #[must_use]
-        pub const fn new() -> Self {
-            Self {
-                enable: super::enable(),
-                listen: listen(),
-                directory: None,
-                keep_files: keep_files(),
-            }
-        }
-    }
-
-    impl Default for WebUIConfig {
-        fn default() -> Self {
-            Self::new()
-        }
-    }
-
-    pub const fn keep_files() -> bool {
-        true
-    }
-
-    pub const fn listen() -> SocketAddr {
-        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 3000)
     }
 }

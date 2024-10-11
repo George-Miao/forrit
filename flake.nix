@@ -41,9 +41,6 @@
         ];
 
         craneLib = (crane.mkLib pkgs).overrideToolchain (p: rust);
-        frontendFilter = path: _: builtins.match ".*frontend.*" path != null;
-        frontendOrCargo = path: type: (frontendFilter path type) || (craneLib.filterCargoSources path type);
-        frontendOrCargoSource = builtins.filterSource frontendOrCargo ./.;
 
         darwinFramework =
           pkgs.lib.lists.optional (pkgs.system == "aarch64-darwin" || pkgs.system == "x86_64-darwin")
@@ -86,7 +83,9 @@
               ++ darwinFramework;
           };
         };
-        packages = {inherit forrit-server forrit-server-without-webui;};
+        packages = {
+          inherit forrit-server forrit-server-without-webui;
+        };
         apps = rec {
           default = server;
           server = flake-utils.lib.mkApp {

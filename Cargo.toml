@@ -22,7 +22,6 @@ salvo_core = "0.67.0"
 forrit-core = { version = "0.1.0", path = "packages/core" }
 forrit-server = { version = "0.1.0", path = "packages/server" }
 forrit-config = { version = "0.1.0", path = "packages/config" }
-forrit-webui = { version = "0.1.0", path = "packages/webui" }
 forrit-client = { version = "0.1.0", path = "clients/rust" }
 
 ts-rs = { version = "8.0.0", features = ["no-serde-warnings"] }

@@ -1,4 +1,4 @@
-use forrit_config::get_config;
+use forrit_config::Config;
 use forrit_core::model::Job;
 use mongodb::bson::oid::ObjectId;
 use salvo::{
@@ -16,10 +16,8 @@ use crate::{
     sourcer::EntryStorage,
 };
 
-mod crud;
-pub use crud::*;
-mod error;
-pub use error::*;
+mod_use::mod_use![crud, error, dto_impl];
+pub mod dto;
 
 struct DebugHoop {
     debug: bool,
@@ -66,8 +64,8 @@ pub fn gen_oapi() -> Result<String, serde_json::Error> {
         .to_json()
 }
 
-pub async fn run(col: Collections) {
-    let config = &get_config().api;
+pub async fn run(col: Collections, config: &'static Config) {
+    let config = &config.http;
     if !config.enable {
         std::future::pending().await
     }
@@ -81,7 +79,13 @@ pub async fn run(col: Collections) {
         .allow_headers(Any)
         .into_handler();
 
-    let mut router = api();
+    let mut router = Router::new()
+        .push(Router::with_path("api").push(api()))
+        .push(if config.webui {
+            crate::webui::router()
+        } else {
+            Router::new()
+        });
 
     if config.doc.enable {
         let doc = OpenApi::new("Forrit api", env!("CARGO_PKG_VERSION")).merge_router(&router);

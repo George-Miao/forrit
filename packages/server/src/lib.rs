@@ -1,5 +1,11 @@
 #![allow(clippy::large_enum_variant)]
-#![feature(let_chains, try_blocks, type_changing_struct_update, never_type)]
+#![feature(
+    let_chains,
+    try_blocks,
+    type_changing_struct_update,
+    never_type,
+    associated_type_defaults
+)]
 
 pub mod api;
 pub mod db;
@@ -17,7 +23,7 @@ pub mod webui;
 use std::{mem::take, sync::LazyLock, time::Duration};
 
 use forrit_config::Config;
-use futures::future::join5;
+use futures::future::join4;
 use mongodb::Client;
 use ractor::{concurrency::sleep, Actor, ActorCell, SpawnErr, SupervisionEvent};
 use tracing::{info, warn};
@@ -32,6 +38,7 @@ static REQ: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 pub struct Forrit {
     col: Collections,
+    config: &'static Config,
 }
 
 impl Forrit {
@@ -40,13 +47,14 @@ impl Forrit {
         let db = mongo.database(&config.database.database);
         let col = Collections::new(&db).await?;
 
-        Ok(Forrit { col })
+        Ok(Forrit { col, config })
     }
 
     pub async fn run(self) -> Result<(), SpawnErr> {
         let col = self.col.clone();
+        let conf = self.config;
         Actor::spawn(Some("supervisor".to_owned()), self, ()).await?;
-        api::run(col).await;
+        api::run(col, conf).await;
         Ok(())
     }
 }
@@ -61,8 +69,6 @@ pub struct Running {
     downloader: ActorCell,
     sourcer: Vec<ActorCell>,
     dispatcher: ActorCell,
-    #[cfg(feature = "webui")]
-    webui: ActorCell,
 }
 
 impl Running {
@@ -82,12 +88,6 @@ impl Running {
             });
             self.sourcer = sourcer::start(col, this).await;
         } else {
-            #[cfg(feature = "webui")]
-            if self.webui.get_id() == id {
-                self.webui = webui::start(col, this).await;
-                return;
-            }
-            #[cfg(not(feature = "webui"))]
             warn!(actor = ?cell, "Unknown actor terminated");
         }
     }
@@ -106,20 +106,12 @@ impl Actor for Forrit {
         info!("Forrit starting");
 
         let cell = this.get_cell();
-        let webui_fut = {
-            #[cfg(feature = "webui")]
-            let fut = webui::start(&self.col, cell.clone());
-            #[cfg(not(feature = "webui"))]
-            let fut = std::future::ready(());
-            fut
-        };
 
-        let res = join5(
+        let res = join4(
             resolver::start(&self.col, cell.clone()),
             downloader::start(&self.col, cell.clone()),
             sourcer::start(&self.col, cell.clone()),
             dispatcher::start(&self.col, cell.clone()),
-            webui_fut,
         )
         .await;
 
@@ -130,8 +122,6 @@ impl Actor for Forrit {
             downloader: res.1,
             sourcer: res.2,
             dispatcher: res.3,
-            #[cfg(feature = "webui")]
-            webui: res.4,
         })
     }
 

@@ -1,6 +1,10 @@
 #![feature(once_cell_try)]
 #![warn(clippy::pedantic, clippy::nursery)]
-#![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::struct_excessive_bools
+)]
 
 use std::{net::SocketAddr, num::NonZeroU32, sync::OnceLock, time::Duration};
 
@@ -88,13 +92,9 @@ pub struct Config {
     /// Downloader related configuration
     pub downloader: DownloaderConfig,
 
-    /// API related configuration
+    /// HTTP related configuration
     #[serde(default)]
-    pub api: ApiConfig,
-
-    /// Web UI related configuration
-    #[serde(default)]
-    pub webui: WebUIConfig,
+    pub http: HTTPConfig,
 }
 
 /// Resolver configuration
@@ -264,24 +264,28 @@ pub struct QbittorrentConfig {
     pub auth: Auth,
 }
 
-/// API related configuration
+/// HTTP server related configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ApiConfig {
-    /// Enable the API, default to `true`
+pub struct HTTPConfig {
+    /// Enable the HTTP server, default to `true`
     #[serde(default = "enable")]
     pub enable: bool,
 
-    /// Enable the API log, default to `false`
-    #[serde(default = "api::log")]
+    /// Enable the Web UI, default to `true`
+    #[serde(default = "enable")]
+    pub webui: bool,
+
+    /// Enable the HTTP server log, default to `false`
+    #[serde(default = "http::log")]
     pub log: bool,
 
-    /// Socket address to bind the API, default to 0.0.0.0:8080
-    #[serde(default = "api::bind")]
+    /// Socket address to bind the HTTP server, default to 0.0.0.0:8080
+    #[serde(default = "http::bind")]
     pub bind: SocketAddr,
 
     /// Enable debug mode, default to `true` in debug build, `false` in release
     /// build
-    #[serde(default = "api::debug")]
+    #[serde(default = "http::debug")]
     pub debug: bool,
 
     /// API doc (`OpenAPI` spec and scalar) configuration
@@ -297,33 +301,6 @@ pub struct ApiDocConfig {
     pub enable: bool,
 
     /// Path the API doc lives, default to `/api-doc`
-    #[serde(default = "api::doc::path")]
+    #[serde(default = "http::apidoc::path")]
     pub path: Utf8PathBuf,
-}
-
-/// Web UI (forrit-frontend) configuration
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WebUIConfig {
-    /// Enable the Web UI, default to `true`.
-    #[serde(default = "enable")]
-    pub enable: bool,
-
-    /// Socket address to bind the Web UI, default to `0.0.0.0:3000`
-    #[serde(default = "webui::listen")]
-    pub listen: SocketAddr,
-
-    /// Where to put the Web UI files, default to a random directory under
-    /// [temporary directory].
-    ///
-    /// [temporary directory]: https://doc.rust-lang.org/std/env/fn.temp_dir.html
-    #[serde(default)]
-    pub directory: Option<Utf8PathBuf>,
-
-    /// Web UI files are extracted from binary to some temporary directory
-    /// on-the-fly and are removed after the process exits. Set this to `false`
-    /// to remove the extracted files after the process exits.
-    ///
-    /// Default to `true`.
-    #[serde(default = "webui::keep_files")]
-    pub keep_files: bool,
 }
