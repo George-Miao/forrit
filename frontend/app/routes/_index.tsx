@@ -1,6 +1,6 @@
 import { Col, Divider, Row, Select, Typography } from '@douyinfe/semi-ui'
 import type { OptionProps } from '@douyinfe/semi-ui/lib/es/select'
-import { type MetaFunction, json } from '@remix-run/node'
+import type { MetaFunction } from '@remix-run/react'
 import { useMetaSeason } from 'app/client'
 import Loading from 'app/components/loading'
 import MetaCard from 'app/components/meta_card'
@@ -9,19 +9,13 @@ import WidthLimit from 'app/components/width_limit'
 import type { Meta, Season, WithId } from 'forrit-client'
 import { group, listify } from 'radash'
 import { useState } from 'react'
-import { format_day, get_endpoint, parse_broadcast, sort_day } from '../util'
+import { format_day, parse_broadcast, sort_day } from '../util'
 
 export const meta: MetaFunction = () => {
   return [
     { title: 'New Remix App' },
     { name: 'description', content: 'Welcome to Remix!' },
   ]
-}
-
-export const loader = async () => {
-  return json({
-    api: get_endpoint(),
-  })
 }
 
 const seasons: { value: Season; label: string }[] = [

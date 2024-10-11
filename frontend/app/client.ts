@@ -41,7 +41,7 @@ export const map = <T, U>(x: Ret<T>, f: (x: T) => U): Ret<U> => {
 }
 
 export const useClient = () => {
-  const api = 'http://forrit.syr.vec.sh'
+  const api = '/api'
   return create_client<paths>({ baseUrl: api })
 }
 

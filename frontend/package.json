@@ -1,5 +1,5 @@
 {
-  "name": "forrit-client",
+  "name": "forrit-frontend",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -44,6 +44,7 @@
     "@typescript-eslint/parser": "^8.6.0",
     "typescript": "^5.6.2",
     "vite": "5.4.6",
+    "vite-plugin-inspect": "^0.8.7",
     "vite-tsconfig-paths": "^5.0.1"
   },
   "engines": {

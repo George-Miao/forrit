@@ -17,22 +17,12 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  json,
 } from '@remix-run/react'
 import 'reset-css'
 import WidthLimit from './components/width_limit'
-import { get_endpoint } from './util'
 
 const { Header, Content, Footer } = SemiLayout
 const { Text, Paragraph } = Typography
-
-export async function loader() {
-  const api = get_endpoint()
-  if (!api) {
-    throw new Error('API_ENDPOINT not set')
-  }
-  return json({ api })
-}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (

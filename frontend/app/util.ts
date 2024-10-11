@@ -98,10 +98,6 @@ export const group_by = <K, T>(list: T[], keyGetter: (item: T) => K) => {
   return map
 }
 
-export const get_endpoint = () => {
-  return process.env.API_ENDPOINT ?? 'http://forrit.syr.vec.sh'
-}
-
 export const get_title = (m: Meta) => {
   const trans = m.title_translate as Record<string, string[]>
   return (

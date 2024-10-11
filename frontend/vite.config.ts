@@ -8,24 +8,19 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 installGlobals()
 
 export default defineConfig({
-  optimizeDeps: {
-    include: ['forrit-client'],
-  },
+  optimizeDeps: { include: ['forrit-client'] },
   plugins: [
-    cjsInterop({
-      dependencies: ['data-fns', 'date-fns-tz'],
-    }),
+    cjsInterop({ dependencies: ['data-fns', 'date-fns-tz'] }),
     remix({
       future: {
         v3_fetcherPersist: true,
         v3_relativeSplatPath: true,
         v3_throwAbortReason: true,
       },
+      ssr: false,
     }),
     tsconfigPaths(),
-    SemiTheme({
-      theme: '@semi-bot/semi-theme-forrit',
-    }),
+    SemiTheme({ theme: '@semi-bot/semi-theme-forrit' }),
   ],
   ssr: {
     noExternal: [
@@ -38,18 +33,18 @@ export default defineConfig({
       'data-fns',
     ],
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id: string) {
-          // if (id.includes('node_modules')) {
-          //   return 'vendor'
-          // }
-          if (id.includes('forrit')) {
-            return 'vendor'
-          }
-        },
-      },
-    },
-  },
+  // build: {
+  //   rollupOptions: {
+  //     output: {
+  //       manualChunks(id: string) {
+  //         // if (id.includes('node_modules')) {
+  //         //   return 'vendor'
+  //         // }
+  //         if (id.includes('forrit')) {
+  //           return 'vendor'
+  //         }
+  //       },
+  //     },
+  //   },
+  // },
 })

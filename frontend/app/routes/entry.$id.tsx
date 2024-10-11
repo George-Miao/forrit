@@ -1,11 +1,14 @@
-import { type LoaderFunctionArgs, json } from '@remix-run/node'
-import { useLoaderData } from '@remix-run/react'
+import {
+  type ClientLoaderFunctionArgs,
+  json,
+  useLoaderData,
+} from '@remix-run/react'
 import { useExtractedEntry } from 'app/client'
 import Loading from 'app/components/loading'
 import PageHeader from 'app/components/page_header'
 import type { ExtractedEntry } from 'app/util'
 
-export async function loader({ params }: LoaderFunctionArgs) {
+export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   return json({
     id: params.id as string,
   })
@@ -13,7 +16,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 
 export default function EntryDetail() {
   function useData() {
-    const id = useLoaderData<typeof loader>().id
+    const id = useLoaderData<typeof clientLoader>().id
     return useExtractedEntry(id)
   }
   return (
