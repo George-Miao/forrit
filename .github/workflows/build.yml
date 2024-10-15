@@ -1,0 +1,50 @@
+name: build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            frontend
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.0.0
+        with:
+          version: 9.7.0
+
+      - name: Build
+        run: |
+          cd frontend
+          pnpm i
+          pnpm run build
+
+      - name: Detech file change
+        id: files-changes
+        run: |
+          set +e
+          git diff --quiet --exit-code frontend/build
+          changed=$?
+          echo "changed=$changed" >> $GITHUB_OUTPUT
+          [[ $changed = 0 ]] && echo "Nothing changed, early exiting" && exit
+          echo "Changed, commit & push"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add frontend/build
+          git commit -m "chore(frontend): rebuild"
+
+      - name: Push changes
+        if: '${{ steps.files-changes.outputs.changed == 1 }}'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
