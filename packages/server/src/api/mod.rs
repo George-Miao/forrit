@@ -16,8 +16,8 @@ use crate::{
     sourcer::EntryStorage,
 };
 
-mod_use::mod_use![crud, error, dto_impl];
-pub mod dto;
+mod_use::mod_use![crud, error];
+// pub mod dto;
 
 struct DebugHoop {
     debug: bool,
