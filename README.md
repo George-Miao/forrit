@@ -35,7 +35,7 @@ Or you can also compose with your own system config:
         # other forrit settings
       };
       cfg = builtins.toFile "forrit.json" (builtins.toJSON settings);
-      forrit-server = flake.self.inputs.forrit.outputs.forrit-server."x86_64-linux";
+      forrit-server = forrit.forrit-server."${system}";
       forrit-module = {
         systemd.services.forrit-server = {
           description = "Bangumi tracker and downloader";
