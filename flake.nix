@@ -63,7 +63,7 @@
           strictDeps = true;
           doCheck = false;
         };
-      in {
+      in rec {
         inherit forrit-server forrit-server-without-webui;
 
         devShells = with pkgs; {
@@ -85,6 +85,7 @@
         };
         packages = {
           inherit forrit-server forrit-server-without-webui;
+          shell = devShells.default;
         };
         apps = rec {
           default = server;

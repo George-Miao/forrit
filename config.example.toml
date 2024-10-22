@@ -1,44 +1,38 @@
 [resolver]
-tmdb_api_key    = "AAAAABBBBBCCCCCDDDDDEEEEEFFFFF"
+tmdb_api_key = "AAAAABBBBBCCCCCDDDDDEEEEEFFFFF"
 tmdb_rate_limit = 40
 
 [resolver.index]
-enable         = true
+enable = true
 start_at_begin = true
-interval       = "7d" # Re-index every 7 days
+interval = "7d"       # Re-index every 7 days
 
 [database]
-url      = "mongodb://localhost:27017"
+url = "mongodb://localhost:27017"
 database = "forrit"
 
 [sourcer.acg_rip]
-type             = "rss"
-url              = "https://acg.rip/.xml"
-update_interval  = "1m"
+type = "rss"
+url = "https://acg.rip/.xml"
+update_interval = "1m"
 deny_non_torrent = false
 
 [downloader]
-type = "qbittorrent"           # Supported: "qbittorrent", "transmission"
-url  = "http://localhost:8080" # Default to "http://localhost:9091/transmission/rpc" for Transmission
+type = "qbittorrent"          # Supported: "qbittorrent", "transmission"
+url = "http://localhost:8080" # Default to "http://localhost:9091/transmission/rpc" for Transmission
 
 [downloader.rename]
-enable   = true
+enable = true
 interval = "5m"
-format   = "full" # Supported: "full", "short"
+format = "full" # Supported: "full", "short"
 
-[api]
+[http]
 enable = true
-log    = true
-debug  = false          # Default to true for release build and false for debug build
-bind   = "0.0.0.0:8080"
+log = true
+debug = false         # Default to true for release build and false for debug build
+bind = "0.0.0.0:8080"
+api_path = "/api"
 
-[api.doc]
+[http.api_doc]
 enable = true
-path   = "/api-doc"
-
-# This section is optional
-[webui]
-enable     = true
-bind       = "0.0.0.0:3000"
-directory  = "/www/forrit-webui" # Default random dir under system temp directory
-keep_files = true
+path = "/doc"
