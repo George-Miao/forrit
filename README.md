@@ -65,8 +65,8 @@ You well need
 - `node.js` with `pnpm`
 - [`just`](https://github.com/casey/just)
 
-1. Install required dependencies (if you're using nix, you can do this by simply running `direnv allow` or `nix shell ".#shell"`)
-2. Clone this repo and `cd` into it
+1. Clone this repo and `cd` into it
+2. Install required dependencies (if you're using nix, you can do this by simply running `direnv allow` or `nix shell ".#shell"`)
 3. Run `just build_frontend` to build the frontend (optional, since the frontend is already built with CI and included in the repo)
 4. Run `just build_server` and copy the binary `./target/release/forrit-server` to your desired location
 
