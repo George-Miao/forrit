@@ -24,7 +24,7 @@ jobs:
           pnpm i
           pnpm run build
 
-      - name: Detech file change
+      - name: Detect file change
         id: files-changes
         run: |
           set +e
