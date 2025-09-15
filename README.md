@@ -10,11 +10,15 @@ Bangumi tracker, subscription manager and downloader with an elegant web UI and 
 
 ### Docker
 
-TODO
+A pre-built docker image is hosted on github registry. Pull the image with:
+
+```sh
+docker pull ghcr.io/george-miao/forrit:latest
+```
 
 ### Nix Flake
 
-You can use `github:George-Miao/flake` as a flake to run `forrit`:
+You can use `github:George-Miao/forrit` as a flake to run `forrit`:
 
 ```sh
 nix run 'github:George-Miao/forrit' -- $MY_CONFIG_PATH
