@@ -24,14 +24,13 @@
           inherit system;
           overlays = [(import rust-overlay)];
         };
-        rust =
-          (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
+        rust = (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
           .override {
-            extensions = [
-              "rust-src"
-              "rust-analyzer"
-            ];
-          };
+          extensions = [
+            "rust-src"
+            "rust-analyzer"
+          ];
+        };
 
         buildInputs = with pkgs; [openssl];
         nativeBuildInputs = with pkgs; [
@@ -48,7 +47,7 @@
 
         forrit-server = craneLib.buildPackage {
           inherit buildInputs;
-          src = ./.;
+          src = craneLib.cleanCargoSource ./.;
           pname = "forrit-server";
           cargoExtraArgs = "--locked --package forrit-server --bin forrit-server";
           strictDeps = true;
@@ -62,6 +61,18 @@
           cargoExtraArgs = "--locked --package forrit-server --bin forrit-server --no-default-features";
           strictDeps = true;
           doCheck = false;
+        };
+        forrit-server-docker = pkgs.dockerTools.buildImage {
+          name = "forrit-server-docker";
+          config = {
+            Cmd = ["${forrit-server}/bin/forrit-server"];
+          };
+        };
+        forrit-server-without-webui-docker = pkgs.dockerTools.buildImage {
+          name = "forrit-server-without-webui-docker";
+          config = {
+            Cmd = ["${forrit-server-without-webui}/bin/forrit-server"];
+          };
         };
       in rec {
         inherit forrit-server forrit-server-without-webui;
@@ -84,7 +95,7 @@
           };
         };
         packages = {
-          inherit forrit-server forrit-server-without-webui;
+          inherit forrit-server forrit-server-without-webui forrit-server-docker forrit-server-without-webui-docker;
           shell = devShells.default;
         };
         apps = rec {

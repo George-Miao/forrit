@@ -69,22 +69,22 @@ impl<'a> ResourceClient<'a, IndexStat> {
             .map_err(Into::into)
     }
 
-    pub async fn subscribe(&self) -> Result<impl Stream<Item = Result<IndexStat>>> {
-        self.client
-            .client
-            .get(self.ws_url())
-            .upgrade()
-            .send()
-            .await?
-            .into_websocket()
-            .await?
-            .map(|x| {
-                match x? {
-                    Message::Text(text) => serde_json::from_str::<IndexStat>(&text),
-                    Message::Binary(bytes) => serde_json::from_slice(&bytes),
-                }
-                .map_err(Into::into)
-            })
-            .pipe(Ok)
-    }
+    // pub async fn subscribe(&self) -> Result<impl Stream<Item =
+    // Result<IndexStat>>> {     self.client
+    //         .client
+    //         .get(self.ws_url())
+    //         .upgrade()
+    //         .send()
+    //         .await?
+    //         .into_websocket()
+    //         .await?
+    //         .map(|x| {
+    //             match x? {
+    //                 Message::Text(text) =>
+    // serde_json::from_str::<IndexStat>(&text),                 
+    // Message::Binary(bytes) => serde_json::from_slice(&bytes),             }
+    //             .map_err(Into::into)
+    //         })
+    //         .pipe(Ok)
+    // }
 }
