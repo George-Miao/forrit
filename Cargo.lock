@@ -234,9 +234,9 @@ dependencies = [
 
 [[package]]
 name = "bangumi-data"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "200c3a6e9a8ec67837246f66d2dfdcad803f59725848dd8a5386b0010d2a0079"
+checksum = "1baa40e1b296b10385555f8a6a219105199d41393d726f7be1268ec4d1f22a7f"
 dependencies = [
  "iso8601",
  "nom",
