@@ -29,7 +29,7 @@ macro_rules! impl_resource {
     ) => {
         ::camelpaste::paste!{
             const _: () = {
-                fn has_field(input: $r) {
+                fn _has_field(input: $r) {
                     $(
                         let _ = input.$sort;
                     )?

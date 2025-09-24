@@ -1,5 +1,5 @@
 use rust_embed::RustEmbed;
-use salvo::{serve_static::static_embed, Router};
+use salvo::{Router, serve_static::static_embed};
 
 #[derive(RustEmbed)]
 #[folder = "../../frontend/build/client"]

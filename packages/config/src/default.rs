@@ -1,17 +1,18 @@
 pub const fn enable() -> bool {
     true
 }
+
 pub mod resolver {
     use std::num::NonZeroU32;
 
-    pub fn tmdb_rate_limit() -> NonZeroU32 {
+    pub const fn tmdb_rate_limit() -> NonZeroU32 {
         NonZeroU32::new(40).unwrap()
     }
 
     pub mod index {
         use std::time::Duration;
 
-        use crate::{default::enable, IndexConfig};
+        use crate::{IndexConfig, default::enable};
 
         impl Default for IndexConfig {
             fn default() -> Self {

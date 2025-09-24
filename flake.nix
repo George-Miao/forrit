@@ -47,7 +47,7 @@
 
         forrit-server = craneLib.buildPackage {
           inherit buildInputs;
-          src = craneLib.cleanCargoSource ./.;
+          src = ./.;
           pname = "forrit-server";
           cargoExtraArgs = "--locked --package forrit-server --bin forrit-server";
           strictDeps = true;
@@ -56,7 +56,7 @@
         };
         forrit-server-without-webui = craneLib.buildPackage {
           inherit buildInputs nativeBuildInputs;
-          src = craneLib.cleanCargoSource ./.;
+          src = ./.;
           pname = "forrit-server";
           cargoExtraArgs = "--locked --package forrit-server --bin forrit-server --no-default-features";
           strictDeps = true;

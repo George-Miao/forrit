@@ -1,11 +1,5 @@
 #![allow(clippy::large_enum_variant)]
-#![feature(
-    let_chains,
-    try_blocks,
-    type_changing_struct_update,
-    never_type,
-    associated_type_defaults
-)]
+#![feature(try_blocks, type_changing_struct_update, never_type, associated_type_defaults)]
 
 pub mod api;
 pub mod db;
@@ -25,7 +19,7 @@ use std::{mem::take, sync::LazyLock, time::Duration};
 use forrit_config::Config;
 use futures::future::join4;
 use mongodb::Client;
-use ractor::{concurrency::sleep, Actor, ActorCell, SpawnErr, SupervisionEvent};
+use ractor::{Actor, ActorCell, SpawnErr, SupervisionEvent, concurrency::sleep};
 use tracing::{info, warn};
 
 use crate::db::Collections;
