@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use chrono::DateTime;
 use forrit_config::RssConfig;
-use forrit_core::{model::EntryBase, IntoStream};
+use forrit_core::{IntoStream, model::EntryBase};
 use futures::StreamExt;
-use ractor::{concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef};
+use ractor::{Actor, ActorProcessingErr, ActorRef, concurrency::JoinHandle};
 use reqwest::Client;
 use tap::Pipe;
 use tracing::{debug, info, instrument};
@@ -12,6 +14,7 @@ use crate::{
     sourcer::{EntryStorage, PartialEntry, SourcerMessage},
 };
 
+#[derive(Clone)]
 pub struct RssActor {
     client: Client,
     config: &'static RssConfig,
@@ -31,6 +34,26 @@ impl RssActor {
             entry,
             name,
         }
+    }
+
+    pub async fn load_url(&self, url: &str) -> Result<(), ActorProcessingErr> {
+        let bytes = self.client.get(url).send().await?.bytes().await?;
+
+        rss::Channel::read_from(&bytes[..])?
+            .into_items()
+            .into_stream()
+            .for_each_concurrent(None, |item| async {
+                let Some(partial) = self.handle_item(item).await else {
+                    return;
+                };
+                let partial = self.entry.upsert(partial).await.expect("db error");
+                if let Some(entry) = partial.inner.into_entry() {
+                    new_entry(entry);
+                }
+            })
+            .await;
+
+        Ok(())
     }
 
     #[instrument(skip_all, fields(title = &item.title, guid = item.guid.as_ref().map(|x| &x.value)))]
@@ -141,21 +164,10 @@ impl Actor for RssActor {
         match msg {
             SourcerMessage::Update => {
                 debug!(actor = self.name, "Updating RSS");
-                let bytes = self.client.get(self.config.url.clone()).send().await?.bytes().await?;
-
-                rss::Channel::read_from(&bytes[..])?
-                    .into_items()
-                    .into_stream()
-                    .for_each_concurrent(None, |item| async {
-                        let Some(partial) = self.handle_item(item).await else {
-                            return;
-                        };
-                        let partial = self.entry.upsert(partial).await.expect("db error");
-                        if let Some(entry) = partial.inner.into_entry() {
-                            new_entry(entry);
-                        }
-                    })
-                    .await;
+                self.load_url(self.config.url.as_str()).await?;
+            }
+            SourcerMessage::LoadHistory => {
+                // No-op
             }
         }
 

@@ -6,7 +6,12 @@
     clippy::struct_excessive_bools
 )]
 
-use std::{net::SocketAddr, num::NonZeroU32, sync::OnceLock, time::Duration};
+use std::{
+    net::SocketAddr,
+    num::{NonZeroU8, NonZeroU32},
+    sync::OnceLock,
+    time::Duration,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use figment::{
@@ -153,9 +158,10 @@ pub struct SourcerConfig {
 
 /// Sourcer types
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum SourcerType {
     Rss(RssConfig),
+    AcgRip(AcgRipConfig),
 }
 
 /// RSS sourcer configuration
@@ -172,6 +178,41 @@ pub struct RssConfig {
     /// to `false`
     #[serde(default = "sourcer::rss::deny_non_torrent")]
     pub deny_non_torrent: bool,
+}
+
+/// acg.rip configuration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AcgRipConfig {
+    /// Interval to fetch the ACG, default to 5 minutes
+    #[serde(with = "humantime_serde", default = "sourcer::rss::update_interval")]
+    pub update_interval: Duration,
+
+    /// Zone of the ACG, default to `None`
+    ///
+    /// Possible values:
+    /// - `None`: all zones
+    /// - `1`: Anime
+    /// - `2`: Shows
+    /// - `3`: Variety shows
+    /// - `4`: Music
+    /// - `5`: Collections
+    /// - `9`: Other
+    #[serde(default)]
+    pub zone: Option<NonZeroU8>,
+
+    #[serde(default)]
+    pub page: Option<NonZeroU8>,
+
+    /// Deny items with mime type other than `application/x-bittorrent`, default
+    /// to `false`
+    #[serde(default = "sourcer::rss::deny_non_torrent")]
+    pub deny_non_torrent: bool,
+
+    /// If set, upon startup, the worker will fetch all pages until the page
+    /// number is reached or no new items are found. Default to `None`,
+    /// meaning disabled.
+    #[serde(default)]
+    pub load_history_pages: Option<NonZeroU32>,
 }
 
 /// Subscription related configuration
@@ -208,7 +249,7 @@ pub struct RenameConfig {
 /// How should the downloaded torrent be renamed
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Default)]
-#[serde(untagged, rename_all = "lowercase")]
+#[serde(untagged, rename_all = "snake_case")]
 pub enum RenameFormat {
     #[default]
     Full,
@@ -218,7 +259,7 @@ pub enum RenameFormat {
 
 /// Downloader related configuration
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum DownloaderType {
     Transmission(TransmissionConfig),
     Qbittorrent(QbittorrentConfig),
@@ -313,7 +354,7 @@ pub struct ApiDocConfig {
 // TODO: OIDC
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum HTTPAuthConfig {
     #[default]
     None,

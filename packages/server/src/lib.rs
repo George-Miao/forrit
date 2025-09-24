@@ -1,5 +1,11 @@
 #![allow(clippy::large_enum_variant)]
-#![feature(try_blocks, type_changing_struct_update, never_type, associated_type_defaults)]
+#![feature(
+    try_blocks,
+    type_changing_struct_update,
+    never_type,
+    associated_type_defaults,
+    result_option_map_or_default
+)]
 
 pub mod api;
 pub mod db;

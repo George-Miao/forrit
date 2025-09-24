@@ -2,10 +2,10 @@
 //!
 //! Used to fetch updates of subtitle groups from source websites/feeds.
 
-use forrit_config::{get_config, SourcerType};
+use forrit_config::{RssConfig, SourcerType, get_config};
 use forrit_core::model::{BsonEntry, ListParam, ListResult, PartialEntry, WithId};
 use mongodb::{
-    bson::{doc, oid::ObjectId, Bson},
+    bson::{Bson, doc, oid::ObjectId},
     options::{UpdateModifications, UpdateOptions},
 };
 use ractor::{Actor, ActorCell};
@@ -13,11 +13,12 @@ use tap::Pipe;
 use tracing::warn;
 
 use crate::{
-    db::{impl_resource, Collections, CrudResult, MongoResult, Storage, Wrapping},
-    util::Boom,
     REQ,
+    db::{Collections, CrudResult, MongoResult, Storage, Wrapping, impl_resource},
+    util::Boom,
 };
 
+mod acg_rip;
 mod rss;
 
 pub type EntryStorage = Storage<PartialEntry, BsonEntry>;
@@ -45,6 +46,24 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
                         .boom("Failed to spawn rss actor");
                 ret.push(actor_ref.get_cell());
             }
+            SourcerType::AcgRip(config) => {
+                let rss_url = config.rss_url().to_url();
+                tracing::info!("Starting acg-rip sourcer with RSS feed: {rss_url}");
+                let rss_config = RssConfig {
+                    url: rss_url,
+                    update_interval: config.update_interval,
+                    deny_non_torrent: config.deny_non_torrent,
+                }
+                .pipe(Box::new)
+                .pipe(Box::leak);
+                let rss_actor = rss::RssActor::new(rss_config, REQ.clone(), db.entry.clone(), id.clone());
+                let actor = acg_rip::AcgRipActor::new(config, rss_actor);
+                let (actor_ref, _) =
+                    Actor::spawn_linked(format!("sourcer-{id}").pipe(Some), actor, (), supervisor.clone())
+                        .await
+                        .boom("Failed to spawn acg-rip actor");
+                ret.push(actor_ref.get_cell());
+            }
         }
     }
 
@@ -53,6 +72,7 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
 
 #[derive(Debug)]
 pub enum SourcerMessage {
+    LoadHistory,
     Update,
 }
 

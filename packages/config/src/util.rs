@@ -1,7 +1,10 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Display};
 
 use either::Either;
 use tap::Pipe;
+use url::Url;
+
+use crate::AcgRipConfig;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde:: Deserialize)]
 #[serde(untagged)]
@@ -40,5 +43,39 @@ impl<T> MapOrVec<T> {
 impl<T> Default for MapOrVec<T> {
     fn default() -> Self {
         Self::Vec(Vec::new())
+    }
+}
+
+impl AcgRipConfig {
+    pub const fn rss_url(&self) -> AcgRipUrl<'_> {
+        AcgRipUrl(self)
+    }
+}
+
+#[must_use]
+pub struct AcgRipUrl<'a>(&'a AcgRipConfig);
+
+impl AcgRipUrl<'_> {
+    pub fn to_url(&self) -> Url {
+        self.to_string().parse().expect("valid URL")
+    }
+}
+
+impl From<AcgRipUrl<'_>> for Url {
+    fn from(value: AcgRipUrl<'_>) -> Self {
+        value.to_url()
+    }
+}
+
+impl Display for AcgRipUrl<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "https://acg.rip")?;
+        if let Some(zone) = self.0.zone {
+            write!(f, "/{zone}")?;
+        }
+        if let Some(page) = self.0.page {
+            write!(f, "/page/{page}")?;
+        }
+        write!(f, ".xml",)
     }
 }
