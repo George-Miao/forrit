@@ -64,13 +64,25 @@
         };
         forrit-server-docker = pkgs.dockerTools.buildImage {
           name = "forrit-server-docker";
+          contents = [pkgs.cacert];
           config = {
+            Env = [
+              "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+              "SSL_CERT_DIR=/etc/ssl/certs"
+              "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+            ];
             Cmd = ["${forrit-server}/bin/forrit-server"];
           };
         };
         forrit-server-without-webui-docker = pkgs.dockerTools.buildImage {
           name = "forrit-server-without-webui-docker";
+          contents = [pkgs.cacert];
           config = {
+            Env = [
+              "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+              "SSL_CERT_DIR=/etc/ssl/certs"
+              "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+            ];
             Cmd = ["${forrit-server-without-webui}/bin/forrit-server"];
           };
         };
