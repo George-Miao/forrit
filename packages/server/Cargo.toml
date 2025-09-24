@@ -40,7 +40,7 @@ tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
 mongodb = { version = "2.8.0", features = ["bson-chrono-0_4"] }
 figment = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
-salvo = { version = "0.67.0", features = ["cors", "logging", "oapi", "serve-static", "websocket"] }
+salvo = { version = "0.67.0", features = ["cors", "logging", "oapi", "serve-static", "websocket", "basic-auth"] }
 ractor = { version = "0.10", default-features = false, features = ["tokio_runtime"] }
 governor = { version = "0.6.0", default-features = false, features = ["futures", "quanta", "std"] }
 

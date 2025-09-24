@@ -10,8 +10,8 @@ use std::{net::SocketAddr, num::NonZeroU32, sync::OnceLock, time::Duration};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use figment::{
-    providers::{Env, Format, Json, Toml, Yaml},
     Figment,
+    providers::{Env, Format, Json, Toml, Yaml},
 };
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -291,6 +291,10 @@ pub struct HTTPConfig {
     /// API doc (`OpenAPI` spec and scalar) configuration
     #[serde(default)]
     pub doc: ApiDocConfig,
+
+    /// HTTP authorization configuration
+    #[serde(default)]
+    pub auth: HTTPAuthConfig,
 }
 
 /// API doc (`OpenAPI` spec and scalar) configuration
@@ -303,4 +307,18 @@ pub struct ApiDocConfig {
     /// Path the API doc lives, default to `/api-doc`
     #[serde(default = "http::apidoc::path")]
     pub path: Utf8PathBuf,
+}
+
+/// HTTP authorization types
+// TODO: OIDC
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum HTTPAuthConfig {
+    #[default]
+    None,
+    Basic {
+        username: String,
+        password: String,
+    },
 }

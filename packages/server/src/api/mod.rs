@@ -1,4 +1,4 @@
-use forrit_config::Config;
+use forrit_config::{Config, HTTPAuthConfig};
 use forrit_core::model::Job;
 use mongodb::bson::oid::ObjectId;
 use salvo::{
@@ -12,7 +12,7 @@ use crate::{
     db::{Collections, Storage},
     dispatcher::dispatcher_api,
     downloader::job_added,
-    resolver::{resolver_api, AliasKV, MetaStorage},
+    resolver::{AliasKV, MetaStorage, resolver_api},
     sourcer::EntryStorage,
 };
 
@@ -37,6 +37,48 @@ impl Handler for Collections {
         depot.inject(self.entry.clone());
         depot.inject(self.jobs.clone());
         depot.inject(self.alias.clone());
+    }
+}
+
+struct AuthHoop(HTTPAuthConfig);
+
+#[async_trait]
+impl Handler for AuthHoop {
+    async fn handle(&self, req: &mut Request, depot: &mut Depot, res: &mut Response, ctrl: &mut FlowCtrl) {
+        match &self.0 {
+            HTTPAuthConfig::None => {}
+            HTTPAuthConfig::Basic { username, password } => {
+                struct Validator<'a> {
+                    username: &'a str,
+                    password: &'a str,
+                }
+
+                impl BasicAuthValidator for Validator<'_> {
+                    async fn validate(&self, username: &str, password: &str, _depot: &mut Depot) -> bool {
+                        username == self.username && password == self.password
+                    }
+                }
+
+                let validator = Validator { username, password };
+                let auth = BasicAuth::new(validator);
+                match auth.parse_credentials(req) {
+                    Ok(input) => {
+                        if &input.0 == username && &input.1 == password {
+                            ctrl.call_next(req, depot, res).await;
+                        } else {
+                            res.status_code(StatusCode::UNAUTHORIZED);
+                            res.render("Unauthorized");
+                            ctrl.skip_rest();
+                        }
+                    }
+                    Err(_) => {
+                        auth.ask_credentials(res);
+                        ctrl.skip_rest();
+                    }
+                }
+            }
+            _ => unimplemented!("Auth type not implemented"),
+        }
     }
 }
 
@@ -96,6 +138,7 @@ pub async fn run(col: Collections, config: &'static Config) {
     }
 
     let service = Service::new(router)
+        .hoop(AuthHoop(config.auth.clone()))
         .hoop(col)
         .hoop(cors)
         .pipe(|s| if config.log { s.hoop(Logger::new()) } else { s })

@@ -105,7 +105,7 @@ pub mod downloader {
 pub mod http {
     use std::net::SocketAddr;
 
-    use crate::{ApiDocConfig, HTTPConfig};
+    use crate::{ApiDocConfig, HTTPAuthConfig, HTTPConfig};
 
     impl Default for HTTPConfig {
         fn default() -> Self {
@@ -116,6 +116,7 @@ pub mod http {
                 bind: bind(),
                 debug: debug(),
                 doc: ApiDocConfig::default(),
+                auth: HTTPAuthConfig::default(),
             }
         }
     }
