@@ -3,15 +3,15 @@
 use std::num::NonZeroU32;
 
 use figment::Jail;
-use forrit_config::{init_config, Config};
+use forrit_config::{Config, init_config};
 use futures::Future;
 use governor::{Quota, RateLimiter};
 use mongodb::{Client, Database};
 use tokio::sync::OnceCell;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing_subscriber::{Layer, filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{db::Collections, resolver::Resolver, util::GovernedClient, REQ};
+use crate::{REQ, db::Collections, resolver::Resolver, util::GovernedClient};
 
 pub struct Env {
     pub config: &'static Config,
@@ -87,7 +87,7 @@ async fn prepare(jail: &mut Jail) -> Env {
         tmdb_api::Client::builder()
             .with_api_key(config.resolver.tmdb_api_key.to_owned())
             .with_base_url("https://api.themoviedb.org/3")
-            .with_reqwest_client(REQ.clone())
+            .with_executor(REQ.clone())
             .build()
             .unwrap(),
         RateLimiter::direct(Quota::per_second(NonZeroU32::new(20).unwrap())),

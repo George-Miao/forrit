@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::DateTime;
 use forrit_config::RssConfig;
 use forrit_core::{IntoStream, model::EntryBase};

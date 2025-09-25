@@ -7,7 +7,7 @@ use std::{cell::RefCell, ops::Deref, sync::Arc};
 use anitomy::{Anitomy, ElementCategory, Elements};
 use bangumi_data::Item;
 use chrono::Days;
-use forrit_config::{get_config, ResolverConfig};
+use forrit_config::{ResolverConfig, get_config};
 use forrit_core::{
     date::YearSeason,
     model::{IndexArg, Meta, WithId},
@@ -16,19 +16,22 @@ use futures::Future;
 use governor::{Quota, RateLimiter};
 // use color_eyre::eyre::Result;
 use mongodb::bson::oid::ObjectId;
-use ractor::{concurrency::JoinHandle, Actor, ActorCell, ActorProcessingErr, ActorRef, RpcReplyPort};
+use ractor::{Actor, ActorCell, ActorProcessingErr, ActorRef, RpcReplyPort, concurrency::JoinHandle};
 use tap::{Pipe, TapFallible, TapOptional};
-use tmdb_api::tvshow::{search::TVShowSearch, SeasonShort, TVShowShort};
+use tmdb_api::{
+    common::LanguageParams,
+    tvshow::{SeasonShort, TVShowShort},
+};
 use tracing::{debug, info, instrument, trace};
 
 use crate::{
+    REQ,
     db::{Collections, KV},
     resolver::{
         index::{IndexJob, IndexStatRecv},
         util::StrExt,
     },
-    util::{Boom, CommandExt, GovernedClient},
-    REQ,
+    util::{Boom, GovernedClient},
 };
 
 mod api;
@@ -55,7 +58,7 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
         tmdb_api::Client::builder()
             .with_api_key(config.tmdb_api_key.clone())
             .with_base_url("https://api.themoviedb.org/3")
-            .with_reqwest_client(REQ.clone())
+            .with_executor(REQ.clone())
             .build()
             .boom("Failed to init TMDB client"),
         RateLimiter::direct(Quota::per_second(config.tmdb_rate_limit)),
@@ -196,8 +199,11 @@ impl ResolverInner {
             return Default::default();
         };
         debug!(id = tv.inner.id, name = tv.inner.original_name, "TV show found");
-        let season = tmdb_api::tvshow::details::TVShowDetails::new(tv.inner.id)
-            .execute_with_governor(&self.tmdb)
+        let season = self
+            .tmdb
+            .get()
+            .await
+            .get_tvshow_details(tv.inner.id, &LanguageParams::default())
             .await
             .tap_err(|_| tracing::error!(id = tv.inner.id, "BOOM"))
             .expect("Failed to get tv show details") // TODO: add backoff
@@ -265,10 +271,15 @@ impl ResolverInner {
             debug!("try search")
         }
 
-        let res = TVShowSearch::new(t.to_owned())
-            .with_include_adult(true)
-            .with_language(Some("zh".to_owned()))
-            .execute_with_governor(&self.tmdb)
+        let params = tmdb_api::tvshow::search::Params::default()
+            .with_language("zh")
+            .with_include_adult(true);
+
+        let res = self
+            .tmdb
+            .get()
+            .await
+            .search_tvshows(t.to_owned(), &params)
             .await
             .expect("Failed to search on TMDB")
             .results

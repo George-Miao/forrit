@@ -1,30 +1,18 @@
-use futures::Future;
 use governor::DefaultDirectRateLimiter;
-use tmdb_api::prelude::Command;
+use tmdb_api::client::ReqwestClient;
 
 pub struct GovernedClient {
-    tmdb: tmdb_api::Client,
+    tmdb: ReqwestClient,
     governor: DefaultDirectRateLimiter,
 }
 
 impl GovernedClient {
-    pub fn new(tmdb: tmdb_api::Client, governor: DefaultDirectRateLimiter) -> Self {
+    pub fn new(tmdb: ReqwestClient, governor: DefaultDirectRateLimiter) -> Self {
         Self { tmdb, governor }
     }
 
-    pub async fn execute<C: Command + ?Sized>(&self, command: &C) -> Result<C::Output, tmdb_api::error::Error> {
+    pub async fn get(&self) -> &ReqwestClient {
         self.governor.until_ready().await;
-        self.tmdb.execute(command.path().as_ref(), command.params()).await
+        &self.tmdb
     }
 }
-
-pub trait CommandExt: Command {
-    fn execute_with_governor(
-        &self,
-        client: &GovernedClient,
-    ) -> impl Future<Output = Result<Self::Output, tmdb_api::error::Error>> + Send {
-        async { client.execute(self).await }
-    }
-}
-
-impl<C: Command + ?Sized> CommandExt for C {}

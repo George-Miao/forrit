@@ -1,13 +1,14 @@
 use std::{
-    any::{type_name, TypeId},
+    any::{TypeId, type_name},
     mem::ManuallyDrop,
     ops::{Deref, DerefMut},
+    path::PathBuf,
 };
 
 use bangumi_data::{Item, Language};
 use bson::oid::ObjectId;
 use camino::Utf8PathBuf;
-use salvo_oapi::{schema, Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema};
+use salvo_oapi::{Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema, schema};
 use tmdb_api::tvshow::{SeasonShort, TVShowShort};
 use ts_rs::TS;
 
@@ -158,6 +159,7 @@ impl<T> ::ts_rs::TS for WithId<T>
 where
     T: ::ts_rs::TS,
 {
+    type OptionInnerType = WithId<T>;
     type WithoutGenerics = WithId<::ts_rs::Dummy>;
 
     fn ident() -> String {
@@ -182,6 +184,7 @@ where
             }
         }
         impl TS for T {
+            type OptionInnerType = T;
             type WithoutGenerics = T;
 
             fn name() -> String {
@@ -221,31 +224,8 @@ where
         Self::inline()
     }
 
-    #[allow(clippy::unused_unit)]
-    fn generics() -> impl ::ts_rs::typelist::TypeList
-    where
-        Self: 'static,
-    {
-        use ::ts_rs::typelist::TypeList;
-        ().push::<T>().extend(<T as ::ts_rs::TS>::generics())
-    }
-
-    fn output_path() -> Option<&'static std::path::Path> {
-        Some(std::path::Path::new("WithId.ts"))
-    }
-
-    #[allow(clippy::unused_unit)]
-    fn dependency_types() -> impl ::ts_rs::typelist::TypeList
-    where
-        Self: 'static,
-    {
-        {
-            use ::ts_rs::typelist::TypeList;
-            ().push::<OidExtJson>()
-                .extend(<OidExtJson as ::ts_rs::TS>::generics())
-                .push::<T>()
-                .extend(<T as ::ts_rs::TS>::generics())
-        }
+    fn output_path() -> Option<PathBuf> {
+        Some(std::path::PathBuf::from("WithId.ts"))
     }
 }
 
