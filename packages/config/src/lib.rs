@@ -263,6 +263,7 @@ pub enum RenameFormat {
 pub enum DownloaderType {
     Transmission(TransmissionConfig),
     Qbittorrent(QbittorrentConfig),
+    Disabled,
 }
 
 /// A password and username pair

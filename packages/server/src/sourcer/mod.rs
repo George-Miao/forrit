@@ -120,7 +120,7 @@ impl EntryStorage {
     }
 
     pub async fn exist(&self, guid: &str, only_resolved: bool) -> MongoResult<bool> {
-        let mut query = doc! { BsonEntryIdx::GUID: guid };
+        let mut query = doc! { BsonEntryIdx::INFO_HASH: torrent_name };
         if only_resolved {
             query.insert(BsonEntryIdx::META_ID, doc! { "$ne": null });
         };

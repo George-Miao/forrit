@@ -3,7 +3,7 @@
 //! Download torrents
 
 use camino::Utf8PathBuf;
-use forrit_config::{get_config, DownloaderConfig, DownloaderType};
+use forrit_config::{DownloaderConfig, DownloaderType, get_config};
 use forrit_core::model::{DownloadState, Job, Meta, PartialEntry, WithId};
 use futures::{TryStream, TryStreamExt};
 use mongodb::{
@@ -15,12 +15,12 @@ use tap::Pipe;
 use tracing::warn;
 
 use crate::{
-    db::{impl_resource, Collections, MongoResult, Storage},
+    REQ,
+    db::{Collections, MongoResult, Storage, impl_resource},
     downloader::qbit::QbitActor,
     resolver,
     sourcer::EntryStorage,
     util::Boom,
-    REQ,
 };
 pub const NAME: &str = "downloader";
 
@@ -120,6 +120,14 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
     let manager = DownloadManager::new(db, config);
 
     match &config.ty {
+        DownloaderType::Disabled => {
+            warn!("Downloader is disabled in the configuration");
+            Actor::spawn_linked(Some(NAME.to_owned()), DummyDownloader {}, (), supervisor)
+                .await
+                .boom("Failed to spawn dummy downloader actor")
+                .0
+                .get_cell()
+        }
         DownloaderType::Transmission(_) => todo!("Transmission downloader is not yet implemented"),
         DownloaderType::Qbittorrent(qb_conf) => {
             let actor = QbitActor::new(REQ.clone(), qb_conf, manager);
@@ -142,4 +150,40 @@ pub enum Message {
 
     /// Periodically check download status
     Check,
+}
+
+struct DummyDownloader;
+
+impl Actor for DummyDownloader {
+    type Arguments = ();
+    type Msg = Message;
+    type State = ();
+
+    async fn pre_start(
+        &self,
+        _: ractor::ActorRef<Self::Msg>,
+        _: Self::Arguments,
+    ) -> Result<Self::State, ractor::ActorProcessingErr> {
+        Ok(())
+    }
+
+    async fn handle(
+        &self,
+        _: ractor::ActorRef<Self::Msg>,
+        message: Self::Msg,
+        _: &mut Self::State,
+    ) -> Result<(), ractor::ActorProcessingErr> {
+        match message {
+            Message::NewDownloadAdded(job_id) => {
+                warn!(job_id=%job_id, "Downloader is disabled, cannot process new download job");
+            }
+            Message::Rename => {
+                // No-op
+            }
+            Message::Check => {
+                // No-op
+            }
+        }
+        Ok(())
+    }
 }
