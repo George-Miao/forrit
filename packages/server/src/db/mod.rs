@@ -2,12 +2,12 @@ use std::{borrow::Borrow, fmt::Debug};
 
 use forrit_core::model::{BsonMeta, Job, ListParam, ListResult, Meta, Record, WithId};
 use mongodb::{
-    bson::{self, doc, oid::ObjectId, Bson, Document},
-    options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
     Collection, IndexModel,
+    bson::{self, Bson, Document, doc, oid::ObjectId},
+    options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
 };
 use mongodb_cursor_pagination::{CursorError, Pagination};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use tap::Pipe;
 use thiserror::Error;
 
@@ -18,13 +18,14 @@ use crate::{
     util::ToCore,
 };
 
-mod_use::mod_use![crud, index, kv];
+mod_use::mod_use![crud, index, kv, migration];
 
 pub type MongoResult<T> = mongodb::error::Result<T>;
 
 /// All collections in the database that we need
 #[derive(Debug, Clone)]
 pub struct Collections {
+    pub migration: KV<String, String>,
     pub meta: MetaStorage,
     pub entry: EntryStorage,
     pub jobs: Storage<Job>,
@@ -33,17 +34,43 @@ pub struct Collections {
 
 impl Collections {
     pub async fn new(db: &mongodb::Database) -> MongoResult<Self> {
+        let migration = KV::new(db.collection("migration")).await?;
         let meta = MetaStorage::new(db.collection("meta")).await?;
         let entry = EntryStorage::new(db.collection("entry")).await?;
         let download = Storage::new(db.collection("job")).await?;
         let alias = AliasKV::new(db.collection("alias")).await?;
 
-        Ok(Self {
+        let this = Self {
+            migration,
             meta,
             entry,
             jobs: download,
             alias,
-        })
+        };
+        this.migrate().await?;
+        Ok(this)
+    }
+
+    async fn migrate(&self) -> MongoResult<()> {
+        tracing::info!("Starting database migration");
+        self.run_one_migration(AddTorrentInfoToEntry).await?;
+        tracing::info!("Database migration completed");
+
+        Ok(())
+    }
+
+    async fn run_one_migration<M: Migration>(&self, m: M) -> MongoResult<()> {
+        let curr = self.migration.get(&"version".into()).await?.unwrap_or_default();
+        let migrate = m.version();
+        if curr.as_str() >= &*migrate {
+            return Ok(());
+        }
+        let description = m.description();
+        tracing::info!("Running migration {}: {}", migrate, description);
+        m.run(self).await?;
+        self.migration.upsert(&"version".into(), &migrate.into_owned()).await?;
+        tracing::info!("Migration {} completed", m.version());
+        Ok(())
     }
 }
 

@@ -1,11 +1,11 @@
 use bangumi_data::{Item, ItemType};
 use chrono::Utc;
 use forrit_core::{
-    model::{IndexArg, IndexStat, Meta},
     DateExt, IntoStream,
+    model::{IndexArg, IndexStat, Meta},
 };
 use futures::StreamExt;
-use tokio::sync::watch::{self, error::RecvError, Receiver, Sender};
+use tokio::sync::watch::{self, Receiver, Sender, error::RecvError};
 use tracing::{debug, info, instrument, trace};
 
 use crate::resolver::Resolver;
@@ -97,17 +97,17 @@ impl Resolver {
                 let Some(date) = item.begin else {
                     return true;
                 };
-                if let Some(after) = arg.after {
-                    if date.date.yearmonth() < after {
-                        stat.send_modify(|x| x.num_filtered += 1);
-                        return false;
-                    }
+                if let Some(after) = arg.after
+                    && date.date.yearmonth() < after
+                {
+                    stat.send_modify(|x| x.num_filtered += 1);
+                    return false;
                 }
-                if let Some(before) = arg.before {
-                    if date.date.yearmonth() > before {
-                        stat.send_modify(|x| x.num_filtered += 1);
-                        return false;
-                    }
+                if let Some(before) = arg.before
+                    && date.date.yearmonth() > before
+                {
+                    stat.send_modify(|x| x.num_filtered += 1);
+                    return false;
                 }
                 true
             })

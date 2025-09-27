@@ -194,6 +194,8 @@ pub struct EntryBase {
     pub title: String,
     pub description: Option<String>,
     pub torrent: Url,
+    pub info_hash: String,
+    pub torrent_name: String,
     pub size: u64,
     pub mime_type: String,
     pub pub_date: Option<DateTime>,

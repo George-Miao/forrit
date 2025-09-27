@@ -86,7 +86,7 @@ impl Wrapping<PartialEntry> for BsonEntry {
     }
 }
 
-impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, meta_id));
+impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, torrent_name, meta_id));
 
 impl EntryStorage {
     pub async fn list_by_meta_id(
@@ -115,12 +115,14 @@ impl EntryStorage {
             .pipe(Ok)
     }
 
-    pub async fn get_by_guid(&self, guid: &str) -> MongoResult<Option<WithId<PartialEntry>>> {
-        self.get.find_one(doc! { BsonEntryIdx::GUID: guid }, None).await
-    }
+    // pub async fn get_by_info_hash(&self, info_hash: &str) ->
+    // MongoResult<Option<WithId<PartialEntry>>> {     self.get
+    //         .find_one(doc! { BsonEntryIdx::INFO_HASH: info_hash }, None)
+    //         .await
+    // }
 
-    pub async fn exist(&self, guid: &str, only_resolved: bool) -> MongoResult<bool> {
-        let mut query = doc! { BsonEntryIdx::INFO_HASH: torrent_name };
+    pub async fn exist(&self, torrent_name: &str, only_resolved: bool) -> MongoResult<bool> {
+        let mut query = doc! { BsonEntryIdx::TORRENT_NAME: torrent_name };
         if only_resolved {
             query.insert(BsonEntryIdx::META_ID, doc! { "$ne": null });
         };

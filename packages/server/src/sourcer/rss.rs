@@ -6,10 +6,12 @@ use ractor::{Actor, ActorProcessingErr, ActorRef, concurrency::JoinHandle};
 use reqwest::Client;
 use tap::Pipe;
 use tracing::{debug, info, instrument};
+use url::Url;
 
 use crate::{
     dispatcher::new_entry,
     sourcer::{EntryStorage, PartialEntry, SourcerMessage},
+    util::get_torrent_info,
 };
 
 #[derive(Clone)]
@@ -57,10 +59,6 @@ impl RssActor {
     #[instrument(skip_all, fields(title = &item.title, guid = item.guid.as_ref().map(|x| &x.value)))]
     async fn handle_item(&self, item: rss::Item) -> Option<PartialEntry> {
         let guid = item.guid?;
-        if self.entry.exist(&guid.value, true).await.expect("db error") {
-            debug!("Entry already exists");
-            return None;
-        }
         let link = if let Some(link) = item.link {
             link.parse().ok()
         } else if guid.permalink {
@@ -70,19 +68,24 @@ impl RssActor {
         };
         let title = item.title?.to_owned();
         let closure = item.enclosure?;
-        let Ok(torrent) = closure.url.parse() else {
+        let Ok(torrent) = Url::parse(&closure.url) else {
             debug!("Failed to parse torrent URL");
             return None;
         };
 
-        // This size is *NOT* reliable.
-        // TODO: decode the torrent file and get the size from there
-        // let Ok(size) = closure.length.parse() else {
-        //     debug!("Failed to parse size");
-        //     return None;
-        // };
+        let info = match get_torrent_info(torrent.as_str()).await {
+            Ok(info) => info,
+            Err(error) => {
+                debug!(%error, "Failed to get torrent info");
+                return None;
+            }
+        };
 
-        let size = 0;
+        if self.entry.exist(&info.name, true).await.expect("db error") {
+            debug!("Entry already exists");
+            return None;
+        }
+
         if closure.mime_type.as_str() != "application/x-bittorrent" {
             info!(
                 guid = guid.value,
@@ -109,8 +112,10 @@ impl RssActor {
             description: item.description,
             title,
             pub_date,
+            info_hash: info.info_hash,
+            torrent_name: info.name,
             torrent,
-            size,
+            size: info.size,
             mime_type: closure.mime_type,
             group: resolved.group,
             elements,

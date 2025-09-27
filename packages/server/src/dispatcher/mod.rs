@@ -1,7 +1,7 @@
 use forrit_core::model::{
     Download, DownloadState, Entry, EntryBase, Job, PartialEntry, SubscribeGroups, Subscription, WithId,
 };
-use futures::{future::ready, Stream, TryStreamExt};
+use futures::{Stream, TryStreamExt, future::ready};
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::FindOneOptions,
@@ -14,12 +14,12 @@ mod api;
 pub use api::dispatcher_api;
 
 use crate::{
+    ACTOR_ERR, RECV_ERR, SEND_ERR,
     db::{Collections, CrudHandler, Storage},
     downloader::{self, JobIdx},
     resolver::MetaStorage,
     sourcer::{BsonEntryIdx, EntryStorage},
-    util::{get_torrent_name, ActorCellExt, Boom},
-    ACTOR_ERR, RECV_ERR, SEND_ERR,
+    util::{ActorCellExt, Boom},
 };
 
 fn actor() -> ActorCell {
@@ -184,8 +184,6 @@ impl SubscriptionActor {
             inner: entry,
         } = entry;
 
-        let name = get_torrent_name(entry.torrent.as_str()).await?;
-
         let download = Download {
             meta_id: entry.meta_id,
             subscription_id,
@@ -194,7 +192,7 @@ impl SubscriptionActor {
         };
 
         let job = Job {
-            name,
+            name: entry.base.torrent_name,
             state: DownloadState::Pending,
             download,
         };
