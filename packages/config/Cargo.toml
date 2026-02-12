@@ -15,3 +15,6 @@ dirs            = "5.0.1"
 humantime-serde = "1.1.1"
 
 figment = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
+
+[dev-dependencies]
+figment = { version = "0.10.15", features = ["test"] }

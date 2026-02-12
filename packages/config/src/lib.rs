@@ -249,7 +249,7 @@ pub struct RenameConfig {
 /// How should the downloaded torrent be renamed
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Default)]
-#[serde(untagged, rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum RenameFormat {
     #[default]
     Full,
@@ -363,4 +363,74 @@ pub enum HTTPAuthConfig {
         username: String,
         password: String,
     },
+}
+
+#[test]
+fn test() {
+    figment::Jail::expect_with(|_| {
+        let config = figment::providers::Toml::from_str::<Config>(
+            r#"
+[resolver]
+tmdb_api_key = "AAAAABBBBBCCCCCDDDDDEEEEEFFFFF"
+tmdb_rate_limit = 40
+
+[resolver.index]
+enable = true
+start_at_begin = true
+interval = "7d"       # Re-index every 7 days
+
+[database]
+url = "mongodb://localhost:27017"
+database = "forrit"
+
+[sourcer.acg_rip]
+type = "rss"
+url = "https://acg.rip/.xml"
+update_interval = "1m"
+deny_non_torrent = false
+
+[downloader]
+type = "qbittorrent"          # Supported: "qbittorrent", "transmission"
+url = "http://localhost:8080" # Default to "http://localhost:9091/transmission/rpc" for Transmission
+username = "admin"
+password = "admin"
+
+[downloader.rename]
+enable = true
+interval = "5m"
+format = "full" # Supported: "full", "short"
+
+[http]
+enable = true
+log = true
+debug = false         # Default to true for release build and false for debug build
+bind = "0.0.0.0:8080"
+api_path = "/api"
+
+[http.doc]
+enable = true
+path = "/doc"
+
+        "#,
+        )
+        .unwrap();
+
+        assert_eq!(config.resolver.tmdb_api_key, "AAAAABBBBBCCCCCDDDDDEEEEEFFFFF");
+        assert_eq!(config.resolver.tmdb_rate_limit.get(), 40);
+        assert!(config.resolver.index.enable);
+        assert!(config.resolver.index.start_at_begin);
+        assert_eq!(config.resolver.index.interval, Duration::from_secs(7 * 24 * 60 * 60));
+        assert_eq!(config.database.url, "mongodb://localhost:27017");
+        assert_eq!(config.database.database, "forrit");
+        assert!(config.downloader.rename.enable);
+        assert_eq!(config.downloader.rename.interval, Duration::from_secs(5 * 60));
+        assert_eq!(config.downloader.rename.format, RenameFormat::Full);
+        assert!(config.http.enable);
+        assert!(config.http.log);
+        assert!(!config.http.debug);
+        assert_eq!(config.http.bind.to_string(), "0.0.0.0:8080");
+        assert!(config.http.doc.enable);
+        assert_eq!(config.http.doc.path.as_str(), "/doc");
+        Ok(())
+    });
 }
