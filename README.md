@@ -63,7 +63,7 @@ Or you can also compose with your own system config:
 
 ### Manual
 
-You well need
+You will need
 
 - `rust` with nightly release
 - `node.js` with `pnpm`
@@ -98,6 +98,10 @@ TODO
 - [ ] Transmission
 - [ ] aria2
 - [ ] rqbit (?)
+
+### Frontend
+
+The `frontend` package is a Remix + Vite app styled with Semi UI. It uses the OpenAPI-generated `forrit-client` SDK to talk to the backend, rendering the seasonal schedule landing page, entry feed, subscription management view, and download job list. The build output is embedded into the server when the `webui` feature is enabled.
 
 ## TODO
 

@@ -78,6 +78,7 @@ export interface paths {
     delete: operations["delete_entry_by_id"];
   };
   "/entry/{id}/download": {
+    get: operations["forrit_server.dispatcher.api.get_download"];
     /**
      * Create a new download job for an entry
      * @description Create a new download job for an entry
@@ -839,6 +840,39 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
+        };
+      };
+      /** @description The requested resource could not be found. */
+      404: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server timed out waiting for the request. */
+      408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server encountered an internal error while processing this request. */
+      500: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+    };
+  };
+  "forrit_server.dispatcher.api.get_download": {
+    parameters: {
+      path: {
+        id: components["schemas"]["ObjectIdString"];
+      };
+    };
+    responses: {
+      /** @description Response with json format data */
+      200: {
+        content: {
+          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"][];
         };
       };
       /** @description The requested resource could not be found. */

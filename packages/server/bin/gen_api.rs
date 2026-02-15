@@ -16,6 +16,9 @@ fn main() {
     let output_path = if dir.is_dir() {
         std::fs::create_dir_all(&dir).expect("failed to create output dir");
         dir.join("openapi.json")
+    } else if let Some(parent) = dir.parent() {
+        std::fs::create_dir_all(parent).expect("failed to create output dir");
+        dir
     } else {
         dir
     };

@@ -39,11 +39,15 @@ export default function Loading<T>({
   }
 
   if (error) {
+    let err = error.toString().substring(0, 100)
+    if (err != error) {
+      err = `${err}...`
+    }
     if (!errorShowed) {
       setShowed(true)
       Notification.open({
         title: '加载失败',
-        content: `${error}`,
+        content: err,
         duration: 3,
       })
     }

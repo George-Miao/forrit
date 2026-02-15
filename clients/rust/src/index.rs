@@ -1,7 +1,7 @@
 use forrit_core::model::IndexStat;
-use futures::{Stream, StreamExt};
-use reqwest_websocket::{Message, RequestBuilderExt};
-use tap::{Pipe, Tap};
+use futures::Stream;
+use reqwest_websocket::Message;
+use tap::Tap;
 use url::Url;
 
 use crate::{error::Result, ForritClient, ResourceClient};

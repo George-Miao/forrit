@@ -10,11 +10,24 @@ import type { Meta, Season, WithId } from 'forrit-client'
 import { group, listify } from 'radash'
 import { useState } from 'react'
 import { format_day, parse_broadcast, sort_day } from '../util'
+import { LinksFunction } from '@remix-run/node'
 
 export const meta: MetaFunction = () => {
   return [
-    { title: 'New Remix App' },
-    { name: 'description', content: 'Welcome to Remix!' },
+    { title: 'Forrit' },
+    { name: 'description', content: 'Elegant bangumi tracker and downloader' },
+  ]
+}
+
+export const link: LinksFunction = () => {
+  return [
+    { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+    { rel: "icon", type: "image/png", sizes: "96x96", href: "/favicon-96x96.png" },
+    { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
+    { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
+    { rel: "shortcut icon", href: "/favicon.ico" },
+    { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+    { rel: "manifest", href: "/site.webmanifest" },
   ]
 }
 

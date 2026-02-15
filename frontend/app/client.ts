@@ -8,20 +8,20 @@ type JsonMedia = 'application/json'
 
 export type Ret<T> =
   | {
-      data: T
-      isLoading: false
-      error: null
-    }
+    data: T
+    isLoading: false
+    error: null
+  }
   | {
-      data: undefined
-      isLoading: true
-      error: null
-    }
+    data: undefined
+    isLoading: true
+    error: null
+  }
   | {
-      data: undefined
-      isLoading: false
-      error: unknown
-    }
+    data: undefined
+    isLoading: false
+    error: unknown
+  }
 
 const get_edge = (cursor: DirectedCursor) =>
   'Backwards' in cursor ? cursor.Backwards : cursor.Forward
@@ -50,12 +50,12 @@ type InfKey = [string, string?]
 
 const get_key =
   <T>(resource: string) =>
-  (i: number, prev: ListResult<T>): InfKey | null =>
-    i === 0
-      ? [resource]
-      : prev.page_info.has_next_page
-      ? [resource, get_edge(prev.page_info.end_cursor as DirectedCursor)]
-      : null
+    (i: number, prev: ListResult<T>): InfKey | null =>
+      i === 0
+        ? [resource]
+        : prev.page_info.has_next_page
+          ? [resource, get_edge(prev.page_info.end_cursor as DirectedCursor)]
+          : null
 
 const throw_it = <T, O>(resp: FetchResponse<T, O, JsonMedia>) => {
   if (resp.error) throw resp.error
@@ -75,12 +75,12 @@ type IdInfKey = [string, string, string?]
 
 const get_key_with_id =
   <T>(id: string, resource: string) =>
-  (i: number, prev: ListResult<T>): IdInfKey | null =>
-    i === 0
-      ? [resource, id]
-      : prev.page_info.has_next_page
-      ? [resource, id, get_edge(prev.page_info.end_cursor as DirectedCursor)]
-      : null
+    (i: number, prev: ListResult<T>): IdInfKey | null =>
+      i === 0
+        ? [resource, id]
+        : prev.page_info.has_next_page
+          ? [resource, id, get_edge(prev.page_info.end_cursor as DirectedCursor)]
+          : null
 
 function make_inf_with_id<O, T>(
   resource: string,
