@@ -24,4 +24,4 @@ build_server:
   cargo build --release --bin forrit-server
 
 build_frontend:
-  cd frontend && pnpm i &&  pnpm build
+  cd frontend && pnpm i && pnpm build
