@@ -11,28 +11,29 @@
     };
   };
 
-  outputs = {
-    self,
-    rust-overlay,
-    nixpkgs,
-    flake-utils,
-    crane,
-  }:
+  outputs =
+    {
+      self,
+      rust-overlay,
+      nixpkgs,
+      flake-utils,
+      crane,
+    }:
     flake-utils.lib.eachDefaultSystem (
-      system: let
+      system:
+      let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [(import rust-overlay)];
+          overlays = [ (import rust-overlay) ];
         };
-        rust = (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
-          .override {
+        rust = (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override {
           extensions = [
             "rust-src"
             "rust-analyzer"
           ];
         };
 
-        buildInputs = with pkgs; [openssl];
+        buildInputs = with pkgs; [ openssl ];
         nativeBuildInputs = with pkgs; [
           pkg-config
           llvmPackages_latest.bintools
@@ -41,10 +42,6 @@
 
         craneLib = (crane.mkLib pkgs).overrideToolchain (p: rust);
 
-        darwinFramework =
-          pkgs.lib.lists.optional (pkgs.system == "aarch64-darwin" || pkgs.system == "x86_64-darwin")
-          pkgs.darwin.apple_sdk.frameworks.SystemConfiguration;
-
         forrit-server = craneLib.buildPackage {
           inherit buildInputs;
           src = ./.;
@@ -52,7 +49,12 @@
           cargoExtraArgs = "--locked --package forrit-server --bin forrit-server";
           strictDeps = true;
           doCheck = false;
-          nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [nodejs nodePackages.npm]);
+          nativeBuildInputs =
+            nativeBuildInputs
+            ++ (with pkgs; [
+              nodejs
+              nodePackages.npm
+            ]);
         };
         forrit-server-without-webui = craneLib.buildPackage {
           inherit buildInputs nativeBuildInputs;
@@ -64,50 +66,54 @@
         };
         forrit-server-docker = pkgs.dockerTools.buildImage {
           name = "forrit-server-docker";
-          contents = [pkgs.cacert];
+          contents = [ pkgs.cacert ];
           config = {
             Env = [
               "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
               "SSL_CERT_DIR=/etc/ssl/certs"
               "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
             ];
-            Cmd = ["${forrit-server}/bin/forrit-server"];
+            Cmd = [ "${forrit-server}/bin/forrit-server" ];
           };
         };
         forrit-server-without-webui-docker = pkgs.dockerTools.buildImage {
           name = "forrit-server-without-webui-docker";
-          contents = [pkgs.cacert];
+          contents = [ pkgs.cacert ];
           config = {
             Env = [
               "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
               "SSL_CERT_DIR=/etc/ssl/certs"
               "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
             ];
-            Cmd = ["${forrit-server-without-webui}/bin/forrit-server"];
+            Cmd = [ "${forrit-server-without-webui}/bin/forrit-server" ];
           };
         };
-      in rec {
+      in
+      rec {
         inherit forrit-server forrit-server-without-webui;
 
         devShells = with pkgs; {
-          default = mkShell.override {stdenv = stdenvNoLibs;} {
+          default = mkShell.override { stdenv = stdenvNoLibs; } {
             inherit buildInputs nativeBuildInputs;
-            packages =
-              [
-                rust
-                just
-                biome
-                nodejs
-                nodePackages.typescript
-                nodePackages.pnpm
-                mongosh
-                openssl
-              ]
-              ++ darwinFramework;
+            packages = [
+              rust
+              just
+              biome
+              nodejs
+              nodePackages.typescript
+              nodePackages.pnpm
+              mongosh
+              openssl
+            ];
           };
         };
         packages = {
-          inherit forrit-server forrit-server-without-webui forrit-server-docker forrit-server-without-webui-docker;
+          inherit
+            forrit-server
+            forrit-server-without-webui
+            forrit-server-docker
+            forrit-server-without-webui-docker
+            ;
           shell = devShells.default;
         };
         apps = rec {
