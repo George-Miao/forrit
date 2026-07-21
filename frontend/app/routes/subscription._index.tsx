@@ -1,7 +1,10 @@
+import type { MetaFunction } from '@remix-run/react'
 import PageHeader from 'app/components/page_header'
 import Button from 'app/ui/button'
 import Icon from 'app/ui/icon'
 import WidthLimit from 'app/components/width_limit'
+
+export const meta: MetaFunction = () => [{ title: '订阅 | Forrit' }]
 
 export default function Subscription() {
   return (

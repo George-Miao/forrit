@@ -19,7 +19,6 @@ import Icon, { type IconName } from './ui/icon'
 import ToastRegion from './ui/toast'
 
 const navigation: Array<{ href: string; icon: IconName; label: string }> = [
-  { href: '/', icon: 'home', label: '首页' },
   { href: '/entry', icon: 'activity', label: '更新' },
   { href: '/subscription', icon: 'heart', label: '订阅' },
   { href: '/download', icon: 'download', label: '下载' },
@@ -42,6 +41,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 aria-label="主要导航"
                 className="flex min-h-15 items-center gap-8 px-4 sm:px-16"
               >
+                  <NavLink
+                    aria-label="返回首页"
+                    className={({ isActive }) =>
+                      `ui-focus flex h-10 w-10 items-center justify-center rounded-md no-underline transition hover:-translate-y-px hover:bg-[rgb(28_31_35/8%)] active:scale-95 ${
+                        isActive ? 'bg-[rgb(28_31_35/5%)]' : ''
+                      }`
+                    }
+                    to="/"
+                  >
+                    <img
+                      alt=""
+                      className="h-8 w-8"
+                      src="/favicon.svg"
+                    />
+                  </NavLink>
                   {navigation.map((item) => (
                     <NavLink
                       aria-label={item.label}

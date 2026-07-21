@@ -1,3 +1,4 @@
+import type { MetaFunction } from '@remix-run/react'
 import { useEntryList } from 'app/client'
 import EntryListItem from 'app/components/entry_list/item'
 import LoadingInfinite from 'app/components/loading_infinite'
@@ -5,6 +6,8 @@ import PageHeader from 'app/components/page_header'
 import WidthLimit from 'app/components/width_limit'
 import { extract_entry } from 'app/util'
 import type { PartialEntry, WithId } from 'forrit-client'
+
+export const meta: MetaFunction = () => [{ title: '更新 | Forrit' }]
 
 export default function Entry() {
   return (

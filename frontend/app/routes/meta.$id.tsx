@@ -1,5 +1,6 @@
 import {
   type ClientLoaderFunctionArgs,
+  type MetaFunction,
   useLoaderData,
 } from '@remix-run/react'
 import { useExtractedMeta, useMetaEntries } from 'app/client'
@@ -10,6 +11,8 @@ import MetaDetailHeader from 'app/components/meta_detail_header'
 import PageHeader from 'app/components/page_header'
 import WidthLimit from 'app/components/width_limit'
 import { type ExtractedMeta, extract_entry, use_is_big } from 'app/util'
+
+export const meta: MetaFunction = () => [{ title: '番剧详情 | Forrit' }]
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   return { id: params.id as string }
