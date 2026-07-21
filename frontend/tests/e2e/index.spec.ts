@@ -1,4 +1,30 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function mockGroups(page: Page) {
+  await page.route('**/api/meta/*/group', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: [
+        { count: 12, name: '测试字幕组' },
+        { count: 3, name: '另一字幕组' },
+      ],
+    }),
+  )
+}
+
+async function mockSubscriptions(
+  page: Page,
+  subscription: Record<string, unknown> | null,
+) {
+  await page.route('**/api/meta/season**', async (route) => {
+    const response = await route.fetch()
+    const data = (await response.json()) as Array<Record<string, unknown>>
+    await route.fulfill({
+      response,
+      json: data.map((meta) => ({ ...meta, subscription })),
+    })
+  })
+}
 
 test('uses the project logo to return home', async ({ page }) => {
   await page.goto('/entry')
@@ -15,6 +41,7 @@ test('uses the project logo to return home', async ({ page }) => {
 test('opens the subscription menu without locking page scrolling', async ({
   page,
 }) => {
+  await mockGroups(page)
   const errors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
@@ -71,6 +98,65 @@ test('opens the subscription menu without locking page scrolling', async ({
     )
     .toBe(true)
   expect(errors).toEqual([])
+})
+
+test('shows subscribed cards in orange and displays group entry counts', async ({
+  page,
+}) => {
+  await mockGroups(page)
+  await mockSubscriptions(page, {
+    directory: null,
+    exclude: null,
+    groups: 'all',
+    include: null,
+    max_size: null,
+    min_size: null,
+  })
+  await page.goto('/')
+
+  const trigger = page.getByRole('button', { name: '编辑订阅' }).first()
+  await expect(trigger).toBeVisible()
+  await expect(trigger.locator('svg')).toHaveCSS('color', 'rgb(249, 57, 32)')
+  await trigger.click()
+
+  await expect(page.getByLabel('12 个资源')).toBeVisible()
+  await expect(page.getByText('测试字幕组', { exact: true })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: '编辑' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: '删除' })).toBeVisible()
+})
+
+test('keeps the subscription menu open when selecting a group', async ({
+  page,
+}) => {
+  await mockGroups(page)
+  await mockSubscriptions(page, null)
+  await page.route('**/api/meta/*/subscription', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: { updated: true },
+    }),
+  )
+  await page.goto('/')
+
+  const trigger = page.getByRole('button', { name: '订阅' }).first()
+  await trigger.click()
+  await page.getByRole('menuitem', { name: /测试字幕组/ }).click()
+
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByRole('menu')).toBeVisible()
+})
+
+test('hides edit and delete actions when there is no subscription', async ({
+  page,
+}) => {
+  await mockGroups(page)
+  await mockSubscriptions(page, null)
+  await page.goto('/')
+
+  await page.getByRole('button', { name: '订阅' }).first().click()
+
+  await expect(page.getByRole('menuitem', { name: '编辑' })).toHaveCount(0)
+  await expect(page.getByRole('menuitem', { name: '删除' })).toHaveCount(0)
 })
 
 test('keeps two mobile cards within the viewport using the fixed gap', async ({

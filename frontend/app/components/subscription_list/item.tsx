@@ -46,24 +46,26 @@ export default function SubscriptionItem({
           )}
         </div>
         <div className="flex p-1">
-          <Button
-            aria-label={editing ? '保存' : '编辑'}
-            className="h-8 w-8 p-0"
-            disabled={!selected}
-            onClick={() => setEditing((value) => !value)}
-            variant="ghost"
-          >
-            <Icon name={editing ? 'save' : 'edit'} />
-          </Button>
-          <Button
-            aria-label="删除"
-            className="h-8 w-8 p-0"
-            disabled={!selected}
-            onClick={() => alert('NOT IMPLEMENTED')}
-            variant="danger"
-          >
-            <Icon name="trash" />
-          </Button>
+          {selected ? (
+            <>
+              <Button
+                aria-label={editing ? '保存' : '编辑'}
+                className="h-8 w-8 p-0"
+                onClick={() => setEditing((value) => !value)}
+                variant="ghost"
+              >
+                <Icon name={editing ? 'save' : 'edit'} />
+              </Button>
+              <Button
+                aria-label="删除"
+                className="h-8 w-8 p-0"
+                onClick={() => alert('NOT IMPLEMENTED')}
+                variant="danger"
+              >
+                <Icon name="trash" />
+              </Button>
+            </>
+          ) : null}
           <Button
             aria-label="添加"
             className="h-8 w-8 p-0"

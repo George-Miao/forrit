@@ -91,7 +91,10 @@ export default function SubscribeButton({
             />
           }
         >
-          <Icon name={current ? 'check' : 'plus'} />
+          <Icon
+            className={!showText && current ? 'text-accent' : ''}
+            name={current ? 'check' : 'plus'}
+          />
           {showText ? (current ? '已订阅' : '订阅') : null}
         </Menu.Trigger>
         <Menu.Portal>
@@ -115,28 +118,37 @@ export default function SubscribeButton({
                         {groups.map((group) => (
                           <Menu.Item
                             className={menuItem}
+                            closeOnClick={false}
                             disabled={subscribesToAll}
-                            key={group}
+                            key={group.name}
                             nativeButton
                             onClick={() =>
                               void update((value) => ({
                                 ...value,
-                                groups: subscribesTo(group)
-                                  ? selected.remove(group).toArray()
-                                  : selected.add(group).toArray(),
+                                groups: subscribesTo(group.name)
+                                  ? selected.remove(group.name).toArray()
+                                  : selected.add(group.name).toArray(),
                                 }))
                             }
                             render={<button type="button" />}
                           >
                             <Icon
                               className={
-                                subscribesTo(group)
+                                subscribesTo(group.name)
                                   ? 'opacity-100'
                                   : 'opacity-0'
                               }
                               name="check"
                             />
-                            {group}
+                            <span className="min-w-0 flex-1 truncate">
+                              {group.name}
+                            </span>
+                            <span
+                              aria-label={`${group.count} 个资源`}
+                              className="text-xs tabular-nums text-muted"
+                            >
+                              {group.count}
+                            </span>
                           </Menu.Item>
                         ))}
                       </Menu.Group>
@@ -146,6 +158,7 @@ export default function SubscribeButton({
                     ) : null}
                     <Menu.Item
                       className={menuItem}
+                      closeOnClick={false}
                       nativeButton
                       onClick={() =>
                         void update((value) => ({
@@ -163,28 +176,31 @@ export default function SubscribeButton({
                       />
                       订阅全部
                     </Menu.Item>
-                    <Menu.Separator className="my-1 h-px bg-edge" />
-                    <div className="grid grid-cols-2 gap-1">
-                      <Menu.Item
-                        className={`${menuItem} justify-center`}
-                        nativeButton
-                        onClick={() => setEditing(true)}
-                        render={<button type="button" />}
-                      >
-                        <Icon name="edit" />
-                        编辑
-                      </Menu.Item>
-                      <Menu.Item
-                        className={`${menuItem} justify-center text-danger`}
-                        disabled={!current}
-                        nativeButton
-                        onClick={() => setConfirming(true)}
-                        render={<button type="button" />}
-                      >
-                        <Icon name="trash" />
-                        删除
-                      </Menu.Item>
-                    </div>
+                    {current ? (
+                      <>
+                        <Menu.Separator className="my-1 h-px bg-edge" />
+                        <div className="grid grid-cols-2 gap-1">
+                          <Menu.Item
+                            className={`${menuItem} justify-center`}
+                            nativeButton
+                            onClick={() => setEditing(true)}
+                            render={<button type="button" />}
+                          >
+                            <Icon name="edit" />
+                            编辑
+                          </Menu.Item>
+                          <Menu.Item
+                            className={`${menuItem} justify-center text-danger`}
+                            nativeButton
+                            onClick={() => setConfirming(true)}
+                            render={<button type="button" />}
+                          >
+                            <Icon name="trash" />
+                            删除
+                          </Menu.Item>
+                        </div>
+                      </>
+                    ) : null}
                   </>
                 )}
               </Loading>
