@@ -1,0 +1,16 @@
+services:
+  mongodb:
+    image: mongo:8.0
+    ports:
+      - 127.0.0.1:27017:27017
+    volumes:
+      - forrit-mongodb:/data/db
+    healthcheck:
+      test: mongosh --quiet --eval "db.adminCommand('ping').ok" localhost:27017/test
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  forrit-mongodb:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Use Obscura"
+  short_description: "Test frontend"
+  default_prompt: "Use $use-obscura to inspect Forrit frontend change."

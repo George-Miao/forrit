@@ -9,12 +9,17 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    george-flakes = {
+      url = "github:George-Miao/flakes";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
     {
       self,
       rust-overlay,
+      george-flakes,
       nixpkgs,
       flake-utils,
       crane,
@@ -104,6 +109,7 @@
               nodePackages.pnpm
               mongosh
               openssl
+              george-flakes.packages.${system}.obscura-browser-bin
             ];
           };
         };

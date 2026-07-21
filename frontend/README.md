@@ -12,18 +12,40 @@ Normally you don't need to deploy this separatedly since it's embedded into the 
 
 - Node.js 18+
 - pnpm
-- A running Forrit backend (see the repository root README)
+- Docker with Docker Compose
+- A local `data/config.toml` for the Forrit server
 
 ### Getting Started
 
-Install dependencies and start the dev server with hot reloading:
+Install the frontend dependencies once:
 
 ```sh
 pnpm install
-pnpm dev -- --host
 ```
 
-By default the dev server proxies API calls to `/api`. Start the backend locally with `just server` or set `VITE_API_BASE_URL` to target a remote instance before running `pnpm dev`.
+Then, from the repository root, start the complete frontend development stack:
+
+```sh
+just frontend
+```
+
+This starts a persistent local MongoDB container, the real Forrit Rust server,
+and the Vite dev server with hot reloading. Vite proxies `/api` to the Rust
+server on `127.0.0.1:8080`. The database URL, HTTP bind, and embedded web UI
+settings in `data/config.toml` are overridden for this workflow; all other
+server settings still come from that file.
+
+The MongoDB container stays running after the frontend exits so subsequent
+starts are fast, and its data is retained in the `forrit-mongodb` Docker volume.
+Stop the container without deleting its data with:
+
+```sh
+just frontend-down
+```
+
+To run only Vite, use `pnpm dev -- --host` from this directory. Set
+`VITE_API_PROXY_TARGET` if the backend is not listening on
+`http://127.0.0.1:8080`.
 
 ### Linting
 
