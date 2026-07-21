@@ -1851,17 +1851,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "integration"
-version = "0.1.0"
-dependencies = [
- "dotenvy",
- "forrit-client",
- "futures",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "inventory"
 version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
