@@ -17,6 +17,17 @@ url = "https://acg.rip/.xml"
 update_interval = "1m"
 deny_non_torrent = false
 
+# Nyaa's RSS endpoint uses `c` for category and `f` for the page number.
+# Category IDs use `<category>_<subcategory>`; `1_3` is
+# "Anime - Non-English-translated" and is the default.
+[sourcer.nyaa]
+enable = false
+type = "nyaa"
+category = "1_3"
+update_interval = "5m"
+# Fetch f=1 through f=10 once at startup. Omit to disable history loading.
+load_history_pages = 10
+
 [downloader]
 type = "qbittorrent"          # Supported: "qbittorrent", "transmission"
 url = "http://localhost:8080" # Default to "http://localhost:9091/transmission/rpc" for Transmission

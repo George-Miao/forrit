@@ -45,6 +45,12 @@ pub mod database {
 }
 
 pub mod sourcer {
+    pub mod nyaa {
+        pub fn category() -> String {
+            "1_3".to_owned()
+        }
+    }
+
     pub mod rss {
         use std::time::Duration;
 

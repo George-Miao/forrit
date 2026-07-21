@@ -162,6 +162,7 @@ pub struct SourcerConfig {
 pub enum SourcerType {
     Rss(RssConfig),
     AcgRip(AcgRipConfig),
+    Nyaa(NyaaConfig),
 }
 
 /// RSS sourcer configuration
@@ -211,6 +212,25 @@ pub struct AcgRipConfig {
     /// If set, upon startup, the worker will fetch all pages until the page
     /// number is reached or no new items are found. Default to `None`,
     /// meaning disabled.
+    #[serde(default)]
+    pub load_history_pages: Option<NonZeroU32>,
+}
+
+/// nyaa.si configuration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NyaaConfig {
+    /// Interval to fetch Nyaa, default to 5 minutes
+    #[serde(with = "humantime_serde", default = "sourcer::rss::update_interval")]
+    pub update_interval: Duration,
+
+    /// Nyaa category in `<category>_<subcategory>` form. Defaults to `1_3`
+    /// (Anime - Non-English-translated).
+    #[serde(default = "sourcer::nyaa::category")]
+    pub category: String,
+
+    /// If set, upon startup, the worker fetches RSS pages by setting Nyaa's
+    /// `f` query parameter to each page number from 1 through this value.
+    /// Default to `None`, meaning disabled.
     #[serde(default)]
     pub load_history_pages: Option<NonZeroU32>,
 }
@@ -433,4 +453,38 @@ path = "/doc"
         assert_eq!(config.http.doc.path.as_str(), "/doc");
         Ok(())
     });
+}
+
+#[test]
+fn nyaa_defaults_and_rss_url() {
+    let config = figment::providers::Toml::from_str::<SourcerConfig>(r#"type = "nyaa""#)
+        .expect("Nyaa configuration should deserialize");
+
+    let SourcerType::Nyaa(nyaa) = config.ty else {
+        panic!("expected Nyaa sourcer configuration");
+    };
+    assert!(config.enable);
+    assert_eq!(nyaa.category, "1_3");
+    assert_eq!(nyaa.update_interval, Duration::from_secs(5 * 60));
+    assert_eq!(nyaa.load_history_pages, None);
+    assert_eq!(
+        nyaa.rss_url(NonZeroU32::new(2).unwrap()).as_str(),
+        "https://nyaa.si/?page=rss&c=1_3&f=2"
+    );
+
+    let custom = figment::providers::Toml::from_str::<SourcerConfig>(
+        r#"
+type = "nyaa"
+category = "1_2"
+update_interval = "1m"
+load_history_pages = 12
+"#,
+    )
+    .expect("custom Nyaa configuration should deserialize");
+    let SourcerType::Nyaa(custom) = custom.ty else {
+        panic!("expected Nyaa sourcer configuration");
+    };
+    assert_eq!(custom.category, "1_2");
+    assert_eq!(custom.update_interval, Duration::from_secs(60));
+    assert_eq!(custom.load_history_pages, NonZeroU32::new(12));
 }

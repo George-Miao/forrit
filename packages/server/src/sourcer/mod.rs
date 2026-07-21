@@ -19,6 +19,7 @@ use crate::{
 };
 
 mod acg_rip;
+mod nyaa;
 mod rss;
 
 pub type EntryStorage = Storage<PartialEntry, BsonEntry>;
@@ -66,6 +67,24 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
                     Actor::spawn_linked(format!("sourcer-{id}").pipe(Some), actor, (), supervisor.clone())
                         .await
                         .boom("Failed to spawn acg-rip actor");
+                ret.push(actor_ref.get_cell());
+            }
+            SourcerType::Nyaa(config) => {
+                let rss_url = config.rss_url(std::num::NonZeroU32::MIN);
+                tracing::info!(%rss_url, "Starting Nyaa sourcer");
+                let rss_config = RssConfig {
+                    url: rss_url,
+                    update_interval: config.update_interval,
+                    deny_non_torrent: false,
+                }
+                .pipe(Box::new)
+                .pipe(Box::leak);
+                let rss_actor = rss::RssActor::new(rss_config, REQ.clone(), db.entry.clone(), id.clone());
+                let actor = nyaa::NyaaActor::new(config, rss_actor);
+                let (actor_ref, _) =
+                    Actor::spawn_linked(format!("sourcer-{id}").pipe(Some), actor, (), supervisor.clone())
+                        .await
+                        .boom("Failed to spawn Nyaa actor");
                 ret.push(actor_ref.get_cell());
             }
         }

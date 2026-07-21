@@ -37,10 +37,20 @@ impl RssActor {
     }
 
     pub async fn load_url(&self, url: &str) -> Result<(), ActorProcessingErr> {
+        self.load_url_with(url, Some).await
+    }
+
+    pub async fn load_url_with(
+        &self,
+        url: &str,
+        prepare_item: impl Fn(rss::Item) -> Option<rss::Item>,
+    ) -> Result<(), ActorProcessingErr> {
         let bytes = self.client.get(url).send().await?.bytes().await?;
 
         rss::Channel::read_from(&bytes[..])?
             .into_items()
+            .into_iter()
+            .filter_map(prepare_item)
             .into_stream()
             .for_each_concurrent(None, |item| async {
                 let Some(partial) = self.handle_item(item).await else {

@@ -4,7 +4,7 @@ use either::Either;
 use tap::Pipe;
 use url::Url;
 
-use crate::AcgRipConfig;
+use crate::{AcgRipConfig, NyaaConfig};
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde:: Deserialize)]
 #[serde(untagged)]
@@ -77,5 +77,19 @@ impl Display for AcgRipUrl<'_> {
             write!(f, "/page/{page}")?;
         }
         write!(f, ".xml",)
+    }
+}
+
+impl NyaaConfig {
+    /// Build the Nyaa RSS URL for `page`. Nyaa carries the page number in the
+    /// `f` query parameter.
+    #[must_use]
+    pub fn rss_url(&self, page: std::num::NonZeroU32) -> Url {
+        let mut url = Url::parse("https://nyaa.si/").expect("valid Nyaa URL");
+        url.query_pairs_mut()
+            .append_pair("page", "rss")
+            .append_pair("c", &self.category)
+            .append_pair("f", &page.to_string());
+        url
     }
 }

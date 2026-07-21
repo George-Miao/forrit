@@ -83,6 +83,7 @@ Uses [TMDB API](https://developers.themoviedb.org/3) and [bangumi-data](https://
 ### Sourcer
 
 - [x] Any RSS feed that contains Bangumi updates (e.g. [Bangumi](https://bangumi.moe), [ACG.RIP](https://acg.rip) or [Mikan Project](https://mikanani.me))
+- [x] [Nyaa](https://nyaa.si) RSS with configurable category and startup history fetching
 
 ### Dispatcher
 
