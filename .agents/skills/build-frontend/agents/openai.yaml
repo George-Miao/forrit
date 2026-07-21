@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Frontend"
+  short_description: "Build and commit embedded frontend assets"
+  default_prompt: "Use $build-frontend to rebuild and commit Forrit's embedded frontend assets."
