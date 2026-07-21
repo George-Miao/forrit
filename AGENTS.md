@@ -1,5 +1,7 @@
 # AGENTS.md
 
+This file should always be updated if any of the factual content in this file has been updated and became obsolete.
+
 ## Project overview
 
 Forrit is a bangumi tracker, subscription manager, and downloader. The repository combines a nightly Rust workspace with a Remix/Vite frontend and generated API clients.
@@ -12,6 +14,8 @@ Forrit is a bangumi tracker, subscription manager, and downloader. The repositor
 - `clients/rust`: Rust API client.
 - `clients/typescript`: TypeScript API types generated from the server OpenAPI schema, plus hand-written exports.
 - `frontend/app`: Remix React application. Route modules live in `routes`; reusable UI lives in `components`.
+- `frontend/app/ui`: application-owned wrappers around Base UI and Iconify primitives.
+- `frontend/tests/e2e`: Playwright browser tests for frontend route and interaction regressions.
 - `frontend/build/client`: generated production frontend assets embedded by `packages/server/src/webui`; these files are intentionally tracked.
 - `integration`: experimental integration executable; much of its current flow is commented out.
 - `justfile`: canonical development and generation shortcuts.
@@ -20,9 +24,10 @@ Forrit is a bangumi tracker, subscription manager, and downloader. The repositor
 ## Toolchain and setup
 
 - Use the pinned Rust nightly from `rust-toolchain.toml`; the code uses unstable features.
-- Node.js 18+ and pnpm are expected for frontend work.
-- `nix develop` provides Rust, Node.js, pnpm, Biome, Just, and native dependencies when Nix is available.
+- Node.js 22.13+ and pnpm are expected for frontend work.
+- `nix develop` provides Rust, Node.js, pnpm, Biome, Just, Playwright's browser binaries, and native dependencies when Nix is available.
 - Install frontend packages with `cd frontend && pnpm install`.
+- Keep `@playwright/test` pinned to the version of `playwright-driver` in the flake's locked nixpkgs input; update them together.
 - The server normally expects MongoDB and may also contact TMDB, RSS feeds, and qBittorrent depending on configuration.
 
 ## Common commands
@@ -32,7 +37,8 @@ Run commands from the repository root unless noted otherwise.
 ```sh
 # Development
 just server                 # server using data/config.toml
-just frontend               # frontend dev server
+just frontend               # MongoDB + real Rust backend + frontend dev server
+just frontend-down          # stop local MongoDB without deleting its data
 
 # Rust validation
 cargo check --workspace
@@ -42,6 +48,7 @@ cargo clippy --workspace --all-targets
 # Frontend validation
 cd frontend && pnpm typecheck
 cd frontend && pnpm lint
+cd frontend && pnpm test:e2e
 cd frontend && pnpm build
 
 # Production builds
@@ -51,6 +58,8 @@ just build_frontend
 
 Prefer the narrowest relevant check while iterating, for example `cargo test -p forrit-core` or `cargo check -p forrit-server`. Before handing off a broad change, expand validation to all affected packages.
 
+`just frontend` starts MongoDB in Docker, the real Rust server on `127.0.0.1:8080`, and Vite on port 5173. Vite proxies `/api` to the Rust server. MongoDB uses the persistent `forrit-mongodb` Docker volume and remains running when the frontend exits.
+
 ## Testing caveats
 
 - Do not assume `cargo test --workspace` is hermetic. Some existing tests require a running MongoDB, a configured TMDB key/network access, or a live Forrit server.
@@ -58,6 +67,8 @@ Prefer the narrowest relevant check while iterating, for example `cargo test -p 
 - `clients/rust`'s client test expects a server at `http://localhost:8080`.
 - Pure unit tests in `forrit-core`, `forrit-config`, and resolver parsing utilities are the safest default. State clearly when environment-dependent tests were not run.
 - Add focused unit tests near the code they cover. Do not make ordinary unit tests depend on external services.
+- Run frontend browser tests from `nix develop` so Playwright uses the Nix-provided browser bundle instead of downloading browsers. `pnpm test:e2e` reuses a frontend already running on port 5173 or starts `just frontend`; set `PLAYWRIGHT_BASE_URL` to target another instance.
+- Add focused Playwright coverage for browser-only failures, route flows, and important interactions. Keep generated `test-results` and Playwright reports untracked.
 
 ## API and generated files
 
@@ -89,6 +100,10 @@ just reload_ts     # regenerate schema, build client, and reinstall it in fronte
 ### TypeScript and React
 
 - TypeScript is strict. Keep API access centralized through `frontend/app/client.ts` and generated `forrit-client` types.
+- Build reusable interactive primitives with Base UI and style them with UnoCSS. Consult Base UI's agent-oriented documentation index at https://base-ui.com/llms.txt before adding or changing Base UI components.
+- Keep application-owned UI wrappers under `frontend/app/ui`; route and feature modules should prefer those wrappers over importing Base UI directly.
+- Use `@iconify/react` through `frontend/app/ui/icon.tsx` for icons; do not add `@iconify-json/*` packages or import Iconify directly in route and feature modules. Consult https://iconify.design/docs/icon-components/react/ when changing the wrapper.
+- When adding a Base UI subpath or a dependency used only by a lazy route, add its exact entry point to `optimizeDeps.include` in `frontend/vite.config.ts`. Keep React and React DOM in `resolve.dedupe` to prevent Vite from producing multiple React runtimes during development.
 - Follow `biome.json`: two spaces, single quotes, no semicolons, trailing commas, and an 80-column target.
 - Keep route-level data and composition in `frontend/app/routes`; move reusable presentation and behavior to `frontend/app/components`.
 - Keep component-specific CSS beside its component when following an existing local pattern.
@@ -99,3 +114,4 @@ just reload_ts     # regenerate schema, build client, and reinstall it in fronte
 - Update `config.example.toml` when adding or changing a user-facing configuration option.
 - Preserve unrelated working-tree changes. Do not modify lockfiles unless dependencies actually changed.
 - Use concise, scoped commit subjects consistent with history, such as `feat(frontend): ...`, `fix: ...`, or `chore(frontend): rebuild`.
+- Split broad work into separate commits by domain (for example dependencies, frontend UI refactoring, tests, and generated UI artifacts). Use Conventional Commit subjects and do not add co-authors unless the user explicitly requests them.

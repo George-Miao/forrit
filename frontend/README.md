@@ -10,7 +10,7 @@ Normally you don't need to deploy this separatedly since it's embedded into the 
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22.13+
 - pnpm
 - Docker with Docker Compose
 - A local `data/config.toml` for the Forrit server
@@ -54,6 +54,22 @@ Run ESLint with:
 ```sh
 pnpm lint
 ```
+
+### Browser tests
+
+The Nix development shell provides Playwright's browser binaries and configures
+Playwright to use them without a separate browser download. Enter the shell and
+run the end-to-end tests from `frontend`:
+
+```sh
+nix develop
+cd frontend
+pnpm test:e2e
+```
+
+The Playwright configuration starts `just frontend` automatically when no
+frontend is already listening on port 5173. Its MongoDB data remains persistent
+in the same Docker volume used during normal frontend development.
 
 ### Building
 
