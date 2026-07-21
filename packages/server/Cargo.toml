@@ -59,6 +59,7 @@ hex = { version = "0.4.3", features = ["serde"] }
 rust-embed = { version = "8.5.0", features = ["salvo"] }
 sha1 = "0.10.6"
 rustc-hex = "2.1.0"
+ammonia = "4.1.3"
 
 [dev-dependencies]
 tracing-appender = "0.2.3"

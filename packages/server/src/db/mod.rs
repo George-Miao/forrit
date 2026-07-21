@@ -54,6 +54,7 @@ impl Collections {
     async fn migrate(&self) -> MongoResult<()> {
         tracing::info!("Starting database migration");
         self.run_one_migration(AddTorrentInfoToEntry).await?;
+        self.run_one_migration(SanitizeEntryDescriptions).await?;
         tracing::info!("Database migration completed");
 
         Ok(())

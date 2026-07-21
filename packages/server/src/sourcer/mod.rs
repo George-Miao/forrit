@@ -23,6 +23,10 @@ mod rss;
 
 pub type EntryStorage = Storage<PartialEntry, BsonEntry>;
 
+pub(crate) fn sanitize_description(description: &str) -> String {
+    ammonia::clean(description)
+}
+
 pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
     let config = &get_config().sourcer;
 
@@ -130,6 +134,12 @@ impl EntryStorage {
     }
 
     pub async fn upsert(&self, entry: PartialEntry) -> MongoResult<BsonEntry> {
+        let mut entry = entry;
+        entry.base.description = entry
+            .base
+            .description
+            .take()
+            .map(|description| sanitize_description(&description));
         let entry = BsonEntry::from(entry);
         let doc = mongodb::bson::to_document(&entry).expect("Failed to convert entry to bson Document");
 
@@ -142,6 +152,23 @@ impl EntryStorage {
             .await?;
 
         Ok(entry)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_description;
+
+    #[test]
+    fn sanitizes_entry_description_html() {
+        let sanitized = sanitize_description(
+            r#"<p onclick="alert('xss')">Safe <strong>content</strong></p><script>alert('xss')</script><a href="javascript:alert('xss')">bad link</a>"#,
+        );
+
+        assert!(sanitized.contains("<p>Safe <strong>content</strong></p>"));
+        assert!(!sanitized.contains("onclick"));
+        assert!(!sanitized.contains("<script"));
+        assert!(!sanitized.contains("javascript:"));
     }
 }
 

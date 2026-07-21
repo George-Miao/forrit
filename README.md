@@ -109,7 +109,7 @@ The `frontend` package is a Remix + Vite app styled with Semi UI. It uses the Op
 - [ ] (Frontend) Entry detail page
 - [ ] (Frontend) Fix wrong matching (entry - meta) and create alias for the fix
 - [ ] (Frontend) Manually override season info (meta)
-- [ ] (Server) RSS html Sanitization (w/ [ammonia](https://github.com/rust-ammonia/ammonia))
+- [x] (Server) RSS html Sanitization (w/ [ammonia](https://github.com/rust-ammonia/ammonia))
 - [ ] (Server) Read torrent info for better resolution and file size
 - [ ] (Server) Transmission API
 - [ ] (Server) Notifier (w/ [pling](https://github.com/EdJoPaTo/pling))

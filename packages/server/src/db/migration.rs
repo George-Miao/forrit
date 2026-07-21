@@ -8,6 +8,7 @@ use mongodb::{
 
 use crate::{
     db::{Collections, MongoResult},
+    sourcer::sanitize_description,
     util::get_torrent_info,
 };
 
@@ -67,6 +68,46 @@ impl Migration for AddTorrentInfoToEntry {
                 })
                 .await?;
             Ok(())
+        })
+    }
+}
+
+pub struct SanitizeEntryDescriptions;
+
+impl Migration for SanitizeEntryDescriptions {
+    fn version(&self) -> Cow<'static, str> {
+        "2026-07-21-01".into()
+    }
+
+    fn description(&self) -> Cow<'static, str> {
+        "Sanitize HTML in entry descriptions".into()
+    }
+
+    fn run(&self, col: &Collections) -> BoxFuture<'_, MongoResult<()>> {
+        let entry = col.entry.set.clone_with_type::<Document>();
+        Box::pin(async move {
+            entry
+                .find(doc! { "description": { "$type": "string" } }, None)
+                .await?
+                .try_for_each_concurrent(50, |doc| {
+                    let entry = entry.clone();
+                    async move {
+                        let id = doc.get_object_id("_id").expect("_id missing");
+                        let description = doc.get_str("description").expect("description must be a string");
+                        let sanitized = sanitize_description(description);
+                        if sanitized != description {
+                            entry
+                                .update_one(
+                                    doc! { "_id": id },
+                                    doc! { "$set": { "description": sanitized } },
+                                    None,
+                                )
+                                .await?;
+                        }
+                        Ok(())
+                    }
+                })
+                .await
         })
     }
 }
