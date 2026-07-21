@@ -1,6 +1,7 @@
 import {
   Link,
   type ClientLoaderFunctionArgs,
+  type MetaFunction,
   useLoaderData,
 } from '@remix-run/react'
 import { useClient, useExtractedEntry } from 'app/client'
@@ -8,10 +9,16 @@ import Loading from 'app/components/loading'
 import PageHeader from 'app/components/page_header'
 import WidthLimit from 'app/components/width_limit'
 import Button from 'app/ui/button'
-import Icon from 'app/ui/icon'
-import { formatBytes, type ExtractedEntry } from 'app/util'
-import { useState } from 'react'
+import Icon, { type IconName } from 'app/ui/icon'
+import {
+  formatBytes,
+  format_time_relative,
+  type ExtractedEntry,
+} from 'app/util'
+import { useEffect, useState } from 'react'
 import useClipboard from 'react-use-clipboard'
+
+export const meta: MetaFunction = () => [{ title: '资源详情 | Forrit' }]
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   return { id: params.id as string }
@@ -41,6 +48,14 @@ const keyedTagLabels: Record<string, string> = {
 }
 
 function Loaded({ entry }: { entry: ExtractedEntry }) {
+  const bangumiTitle = getBangumiTitle(entry)
+  const pageTitle = `${bangumiTitle}${entry.episode ? ` 第${entry.episode}集` : ''
+    } | Forrit`
+
+  useEffect(() => {
+    document.title = pageTitle
+  }, [pageTitle])
+
   return (
     <>
       <EntryHeader entry={entry} />
@@ -86,15 +101,8 @@ function EntryHeader({ entry }: { entry: ExtractedEntry }) {
 }
 
 function EntryTitle({ entry }: { entry: ExtractedEntry }) {
-  const seasonValue = entry.elements.AnimeSeason
-    ? String(entry.elements.AnimeSeason)
-    : null
-  const releaseCode = `${seasonValue ? `S${seasonValue}` : ''}${
-    entry.episode ? `E${entry.episode}` : ''
-  }`
-  const bangumiTitle = String(
-    entry.meta_title ?? entry.elements.AnimeTitle ?? '资源详情',
-  )
+  const episodeTitle = entry.episode ? `第${entry.episode}集` : ''
+  const bangumiTitle = getBangumiTitle(entry)
 
   return (
     <h1 className="m-0 break-words text-2xl font-600 leading-tight tracking-tight sm:text-3xl">
@@ -108,13 +116,19 @@ function EntryTitle({ entry }: { entry: ExtractedEntry }) {
       ) : (
         bangumiTitle
       )}
-      {releaseCode ? (
+      {episodeTitle ? (
         <>
           {' '}
-          <span className="font-300 text-muted">{releaseCode}</span>
+          <span className="font-300 text-muted">{episodeTitle}</span>
         </>
       ) : null}
     </h1>
+  )
+}
+
+function getBangumiTitle(entry: ExtractedEntry) {
+  return String(
+    entry.meta_title ?? entry.elements.AnimeTitle ?? '资源详情',
   )
 }
 
@@ -195,25 +209,27 @@ function EntryInfo({ entry }: { entry: ExtractedEntry }) {
 
   return (
     <section className="ui-panel min-w-0 p-5 sm:p-6" data-entry-file>
-      <h2 className="m-0 mb-5 text-base font-600">资源信息</h2>
-      <dl className="m-0 grid gap-x-8 gap-y-4 text-sm sm:grid-cols-[6rem_minmax(0,1fr)]">
-        <Detail label="发布标题">
+      <dl className="m-0 grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3 gap-y-4 text-sm">
+        <Detail icon="heading" label="发布标题">
           <span className="break-words font-500">{entry.title}</span>
         </Detail>
         {entry.pub_date ? (
-          <Detail label="发布时间">
+          <Detail icon="clock" label="发布时间">
             <time dateTime={entry.pub_date.toISOString()}>
-              {entry.pub_date.toLocaleString()}
+              {entry.pub_date.toLocaleString()} (
+              {format_time_relative(entry.pub_date)})
             </time>
           </Detail>
         ) : null}
         {fileName && fileName !== entry.title ? (
-          <Detail label="文件名">
+          <Detail icon="fileVideo" label="文件名">
             <span className="break-all">{fileName}</span>
           </Detail>
         ) : null}
-        <Detail label="大小">{formatBytes(entry.size)}</Detail>
-        <Detail label="类型">
+        <Detail icon="hardDrive" label="大小">
+          {formatBytes(entry.size)}
+        </Detail>
+        <Detail icon="fileType" label="类型">
           <span
             className={
               entry.mime_type === 'application/x-bittorrent'
@@ -225,14 +241,14 @@ function EntryInfo({ entry }: { entry: ExtractedEntry }) {
           </span>
         </Detail>
         {entry.guid !== entry.title && entry.guid !== fileName ? (
-          <Detail label="GUID">
+          <Detail icon="fingerprint" label="GUID">
             <code className="break-all font-mono text-xs">{entry.guid}</code>
           </Detail>
         ) : null}
       </dl>
       {entry.description ? (
         <div
-          className="mt-5 border-t border-edge pt-5 text-sm"
+          className="border-t border-edge pt-2 text-sm"
           data-entry-body
         >
           <EntryBody html={entry.description} />
@@ -254,14 +270,22 @@ function EntryBody({ html }: { html: string }) {
 
 function Detail({
   children,
+  icon,
   label,
 }: {
   children: React.ReactNode
+  icon: IconName
   label: string
 }) {
   return (
-    <div className="grid gap-1 sm:contents">
-      <dt className="text-muted">{label}</dt>
+    <div className="contents">
+      <dt
+        className="flex h-5 items-center justify-center text-muted"
+        title={label}
+      >
+        <Icon className="text-base" name={icon} />
+        <span className="sr-only">{label}</span>
+      </dt>
       <dd className="m-0 min-w-0">{children}</dd>
     </div>
   )
