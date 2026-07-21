@@ -54,3 +54,38 @@ img {
 ::selection {
   background: var(--color-accent-soft);
 }
+
+.entry-body {
+  overflow-wrap: anywhere;
+}
+
+.entry-body > :first-child {
+  margin-top: 0;
+}
+
+.entry-body > :last-child {
+  margin-bottom: 0;
+}
+
+.entry-body p,
+.entry-body li {
+  line-height: 1.75;
+}
+
+.entry-body a {
+  color: var(--color-accent);
+}
+
+.entry-body img {
+  height: auto;
+  margin: 1rem 0;
+  max-width: 100%;
+  border-radius: 0.375rem;
+}
+
+.entry-body pre {
+  overflow-x: auto;
+  border-radius: 0.375rem;
+  background: var(--color-background);
+  padding: 1rem;
+}

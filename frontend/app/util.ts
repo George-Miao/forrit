@@ -172,6 +172,14 @@ export const format_time = (date: Date) => {
   return `${h}:${m.toString().padStart(2, '0')}`
 }
 
+export const formatBytes = (bytes: number) => {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+  const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), 4)
+  const value = bytes / 1024 ** unit
+  return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`
+}
+
 export const sort_day = (a: number, b: number) => {
   const current = new Date().getDay()
   if (a === b) {
