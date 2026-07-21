@@ -159,6 +159,13 @@ pub enum SubscribeGroups {
     Groups(Vec<String>),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export)]
+pub struct EntryGroup {
+    pub name: String,
+    pub count: u64,
+}
+
 #[test]
 fn test_subscribe_group() {
     let g = SubscribeGroups::All;

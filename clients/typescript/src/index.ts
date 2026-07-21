@@ -5,6 +5,7 @@ type S = components['schemas']
 
 export type DirectedCursor = S['forrit_core.model.DirectedCursor']
 export type EntryBase = S['forrit_core.model.EntryBase']
+export type EntryGroup = S['forrit_core.model.EntryGroup']
 export type IndexArg = S['forrit_core.model.IndexArg']
 export type IndexStat = S['forrit_core.model.IndexStat']
 export type Job = S['forrit_core.model.Job']

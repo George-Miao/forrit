@@ -7,7 +7,7 @@ use mongodb::{
     options::FindOneOptions,
 };
 use ractor::{Actor, ActorCell, ActorProcessingErr};
-use regex::Regex;
+use regex::{Regex, RegexSet};
 use tracing::{debug, info, warn};
 
 mod api;
@@ -24,6 +24,10 @@ use crate::{
 
 fn actor() -> ActorCell {
     ractor::registry::where_is(SubscriptionActor::NAME.to_owned()).expect(ACTOR_ERR)
+}
+
+fn is_globally_excluded(filters: &RegexSet, title: &str) -> bool {
+    filters.is_match(title)
 }
 
 /// Manually trigger a download job for an entry
@@ -46,9 +50,11 @@ pub fn refresh_subscription(meta_id: ObjectId) {
 }
 
 pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
+    let global_exclude = RegexSet::new(&forrit_config::get_config().subscription.exclude)
+        .expect("Invalid global subscription exclude filter");
     Actor::spawn_linked(
         Some(SubscriptionActor::NAME.to_owned()),
-        SubscriptionActor::new(db.meta.clone(), db.entry.clone(), db.jobs.clone()),
+        SubscriptionActor::new(db.meta.clone(), db.entry.clone(), db.jobs.clone(), global_exclude),
         (),
         supervisor,
     )
@@ -77,16 +83,27 @@ struct SubscriptionActor {
     meta: MetaStorage,
     entry: EntryStorage,
     job: Storage<Job>,
+    global_exclude: RegexSet,
 }
 
 impl SubscriptionActor {
     pub const NAME: &'static str = "subscription";
 
-    pub fn new(meta: MetaStorage, entry: EntryStorage, job: Storage<Job>) -> Self {
-        Self { meta, entry, job }
+    pub fn new(meta: MetaStorage, entry: EntryStorage, job: Storage<Job>, global_exclude: RegexSet) -> Self {
+        Self {
+            meta,
+            entry,
+            job,
+            global_exclude,
+        }
     }
 
-    fn sub_wants_entry(sub: &Subscription, entry: &EntryBase) -> bool {
+    fn sub_wants_entry(&self, sub: &Subscription, entry: &EntryBase) -> bool {
+        if is_globally_excluded(&self.global_exclude, &entry.title) {
+            debug!(?entry.title, "Entry matches a global exclude filter");
+            return false;
+        }
+
         if let SubscribeGroups::Groups(vec) = &sub.groups
             && let Some(g) = &entry.group
             && !vec.contains(g)
@@ -96,14 +113,20 @@ impl SubscriptionActor {
 
         // TODO: Implement other filter
         if let Some(include) = &sub.include {
-            let regex = Regex::new(include).expect("Invalid regex");
+            let Ok(regex) = Regex::new(include) else {
+                warn!(pattern = include, "Ignoring subscription with invalid include regex");
+                return false;
+            };
             if !regex.is_match(&entry.title) {
                 debug!(?entry.title, pattern = include, "Entry does not match include regex");
                 return false;
             }
         }
         if let Some(exclude) = &sub.exclude {
-            let regex = Regex::new(exclude).expect("Invalid regex");
+            let Ok(regex) = Regex::new(exclude) else {
+                warn!(pattern = exclude, "Ignoring subscription with invalid exclude regex");
+                return false;
+            };
             if regex.is_match(&entry.title) {
                 debug!(?entry.title, pattern = exclude, "Entry matches exclude regex");
                 return false;
@@ -128,7 +151,7 @@ impl SubscriptionActor {
             .await
             .expect("db error")
             // Only keep entries that are "wanted" by the subscription
-            .try_filter(move |entry| ready(Self::sub_wants_entry(sub, entry)))
+            .try_filter(move |entry| ready(self.sub_wants_entry(sub, entry)))
             .try_filter(|entry| {
                 let entry_id = entry.id;
                 let job = &self.job;
@@ -238,7 +261,7 @@ impl Actor for SubscriptionActor {
                     return Ok(());
                 };
 
-                if !Self::sub_wants_entry(&sub, &entry) {
+                if !self.sub_wants_entry(&sub, &entry) {
                     return Ok(());
                 }
 
@@ -259,5 +282,20 @@ impl Actor for SubscriptionActor {
         };
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use regex::RegexSet;
+
+    use super::is_globally_excluded;
+
+    #[test]
+    fn applies_global_exclude_filters_to_entry_titles() {
+        let filters = RegexSet::new([r"\bCAM\b", r"\b720p\b"]).unwrap();
+
+        assert!(is_globally_excluded(&filters, "Show 01 720p"));
+        assert!(!is_globally_excluded(&filters, "Show 01 1080p"));
     }
 }

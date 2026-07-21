@@ -28,6 +28,10 @@ update_interval = "5m"
 # Fetch f=1 through f=10 once at startup. Omit to disable history loading.
 load_history_pages = 10
 
+[subscription]
+# Exclude matching entry titles from every subscription.
+exclude = ["\\bCAM\\b", "\\b720p\\b"]
+
 [downloader]
 type = "qbittorrent"          # Supported: "qbittorrent", "transmission"
 url = "http://localhost:8080" # Default to "http://localhost:9091/transmission/rpc" for Transmission

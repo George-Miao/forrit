@@ -21,6 +21,9 @@ pub enum ApiError {
     #[error("Invalid cursor")]
     InvalidCursor,
 
+    #[error("Invalid request: {reason}")]
+    InvalidRequest { reason: String },
+
     #[error("Internal service error: {0}")]
     InternalError(String),
 }
@@ -35,6 +38,7 @@ impl ToResponses for ApiError {
     fn to_responses(components: &mut oapi::Components) -> oapi::Responses {
         let mut responses = oapi::Responses::new();
         let errors = vec![
+            StatusError::bad_request(),
             StatusError::not_found(),
             StatusError::request_timeout(),
             StatusError::internal_server_error(),
@@ -58,6 +62,7 @@ impl ApiError {
             ApiError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::InvalidCursor => StatusCode::BAD_REQUEST,
+            ApiError::InvalidRequest { .. } => StatusCode::BAD_REQUEST,
         }
     }
 

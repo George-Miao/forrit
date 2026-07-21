@@ -3,7 +3,8 @@
 //! Used to fetch updates of subtitle groups from source websites/feeds.
 
 use forrit_config::{RssConfig, SourcerType, get_config};
-use forrit_core::model::{BsonEntry, ListParam, ListResult, PartialEntry, WithId};
+use forrit_core::model::{BsonEntry, EntryGroup, ListParam, ListResult, PartialEntry, WithId};
+use futures::TryStreamExt;
 use mongodb::{
     bson::{Bson, doc, oid::ObjectId},
     options::{UpdateModifications, UpdateOptions},
@@ -122,20 +123,28 @@ impl EntryStorage {
             .pipe(Ok)
     }
 
-    pub async fn list_groups_of_meta(&self, meta_id: ObjectId) -> MongoResult<Vec<String>> {
+    pub async fn list_groups_of_meta(&self, meta_id: ObjectId) -> MongoResult<Vec<EntryGroup>> {
         self.get
-            .distinct("group", doc! { "meta_id": meta_id }, None)
+            .aggregate(
+                vec![
+                    doc! { "$match": { "meta_id": meta_id, "group": { "$type": "string" } } },
+                    doc! { "$group": { "_id": "$group", "count": { "$sum": 1 } } },
+                    doc! { "$sort": { "count": -1, "_id": 1 } },
+                ],
+                None,
+            )
             .await?
-            .into_iter()
-            .map(|x| {
-                if let Bson::String(s) = x {
-                    s
-                } else {
-                    panic!("Invalid group value")
-                }
+            .map_ok(|document| {
+                let name = document.get_str("_id").expect("group name must be a string").to_owned();
+                let count = match document.get("count").expect("group count must exist") {
+                    Bson::Int32(count) => u64::try_from(*count).expect("group count must be non-negative"),
+                    Bson::Int64(count) => u64::try_from(*count).expect("group count must be non-negative"),
+                    count => panic!("invalid group count: {count:?}"),
+                };
+                EntryGroup { name, count }
             })
-            .collect::<Vec<_>>()
-            .pipe(Ok)
+            .try_collect()
+            .await
     }
 
     // pub async fn get_by_info_hash(&self, info_hash: &str) ->

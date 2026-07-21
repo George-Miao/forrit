@@ -237,7 +237,12 @@ pub struct NyaaConfig {
 
 /// Subscription related configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct SubscriptionConfig {}
+pub struct SubscriptionConfig {
+    /// Exclude entries whose titles match any of these regular expressions.
+    /// These filters apply to every subscription.
+    #[serde(default)]
+    pub exclude: Vec<String>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DownloaderConfig {
@@ -442,6 +447,7 @@ path = "/doc"
         assert_eq!(config.resolver.index.interval, Duration::from_secs(7 * 24 * 60 * 60));
         assert_eq!(config.database.url, "mongodb://localhost:27017");
         assert_eq!(config.database.database, "forrit");
+        assert!(config.subscription.exclude.is_empty());
         assert!(config.downloader.rename.enable);
         assert_eq!(config.downloader.rename.interval, Duration::from_secs(5 * 60));
         assert_eq!(config.downloader.rename.format, RenameFormat::Full);
@@ -487,4 +493,12 @@ load_history_pages = 12
     assert_eq!(custom.category, "1_2");
     assert_eq!(custom.update_interval, Duration::from_secs(60));
     assert_eq!(custom.load_history_pages, NonZeroU32::new(12));
+}
+
+#[test]
+fn subscription_global_exclude_filters() {
+    let config = figment::providers::Toml::from_str::<SubscriptionConfig>(r#"exclude = ["\\bCAM\\b", "720p"]"#)
+        .expect("subscription configuration should deserialize");
+
+    assert_eq!(config.exclude, [r"\bCAM\b", "720p"]);
 }

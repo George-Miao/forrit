@@ -1,10 +1,12 @@
 use forrit_core::{
     date::{Season, YearSeason},
     model::{
-        Alias, IndexArg, IndexStat, Job, ListParam, ListResult, Meta, PartialEntry, Subscription, UpdateResult, WithId,
+        Alias, EntryGroup, IndexArg, IndexStat, Job, ListParam, ListResult, Meta, PartialEntry, SubscribeGroups,
+        Subscription, UpdateResult, WithId,
     },
 };
 use mongodb::bson::{doc, to_bson};
+use regex::Regex;
 use salvo::{
     oapi::extract::{JsonBody, QueryParam},
     prelude::*,
@@ -13,7 +15,7 @@ use salvo::{
 use tap::Pipe;
 
 use crate::{
-    api::{ApiResult, CrudResultExt, OidParam},
+    api::{ApiError, ApiResult, CrudResultExt, OidParam},
     db::{CrudError, Storage},
     dispatcher::refresh_subscription,
     downloader::JobIdx,
@@ -91,7 +93,7 @@ async fn list_entry(
 
 /// Get all group of a meta
 #[endpoint(tags("meta"))]
-async fn list_groups(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<String>>> {
+async fn list_groups(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<EntryGroup>>> {
     pod.obtain::<EntryStorage>()
         .expect("missing EntryStorage")
         .list_groups_of_meta(id.id)
@@ -133,6 +135,7 @@ async fn update_subscription(
     id: OidParam,
     obj: JsonBody<Subscription>,
 ) -> ApiResult<Json<UpdateResult>> {
+    validate_subscription(&obj.0)?;
     let res = pod
         .obtain::<MetaStorage>()
         .expect("missing MetaStorage")
@@ -148,6 +151,66 @@ async fn update_subscription(
         refresh_subscription(id.id);
     }
     Ok(Json(UpdateResult { updated }))
+}
+
+fn validate_subscription(subscription: &Subscription) -> ApiResult<()> {
+    for (name, pattern) in [("include", &subscription.include), ("exclude", &subscription.exclude)] {
+        if let Some(pattern) = pattern {
+            Regex::new(pattern).map_err(|error| ApiError::InvalidRequest {
+                reason: format!("invalid {name} regex: {error}"),
+            })?;
+        }
+    }
+
+    if let Some(directory) = &subscription.directory
+        && directory.as_str().trim().is_empty()
+    {
+        return Err(ApiError::InvalidRequest {
+            reason: "directory must not be empty".to_owned(),
+        });
+    }
+
+    if let (Some(min), Some(max)) = (subscription.min_size, subscription.max_size)
+        && min > max
+    {
+        return Err(ApiError::InvalidRequest {
+            reason: "min_size must not exceed max_size".to_owned(),
+        });
+    }
+
+    if let SubscribeGroups::Groups(groups) = &subscription.groups {
+        let mut unique = std::collections::HashSet::with_capacity(groups.len());
+        for group in groups {
+            if group.trim().is_empty() {
+                return Err(ApiError::InvalidRequest {
+                    reason: "subscription group names must not be empty".to_owned(),
+                });
+            }
+            if !unique.insert(group) {
+                return Err(ApiError::InvalidRequest {
+                    reason: format!("duplicate subscription group: {group}"),
+                });
+            }
+        }
+    }
+
+    let has_groups = match &subscription.groups {
+        SubscribeGroups::All => true,
+        SubscribeGroups::Groups(groups) => !groups.is_empty(),
+    };
+    if !has_groups
+        && subscription.directory.is_none()
+        && subscription.include.is_none()
+        && subscription.exclude.is_none()
+        && subscription.min_size.is_none()
+        && subscription.max_size.is_none()
+    {
+        return Err(ApiError::InvalidRequest {
+            reason: "subscription must contain at least one setting".to_owned(),
+        });
+    }
+
+    Ok(())
 }
 
 /// Delete subscription of a meta
@@ -197,4 +260,61 @@ pub fn resolver_api() -> Router {
                 .delete(stop_index)
                 .push(Router::with_path("subscribe").goal(subscribe)),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use forrit_core::model::{SubscribeGroups, Subscription};
+
+    use super::validate_subscription;
+
+    fn subscription() -> Subscription {
+        Subscription {
+            directory: None,
+            groups: SubscribeGroups::All,
+            include: None,
+            exclude: None,
+            min_size: None,
+            max_size: None,
+        }
+    }
+
+    #[test]
+    fn accepts_valid_subscription() {
+        let mut subscription = subscription();
+        subscription.include = Some(r"1080p|2160p".to_owned());
+        subscription.exclude = Some(r"\bCAM\b".to_owned());
+        subscription.min_size = Some(100);
+        subscription.max_size = Some(200);
+
+        validate_subscription(&subscription).expect("subscription should be valid");
+    }
+
+    #[test]
+    fn rejects_invalid_subscription_regex() {
+        let mut subscription = subscription();
+        subscription.exclude = Some("[".to_owned());
+
+        let error = validate_subscription(&subscription).expect_err("regex should be rejected");
+        assert!(error.to_string().contains("invalid exclude regex"));
+    }
+
+    #[test]
+    fn rejects_invalid_subscription_settings() {
+        let mut subscription = subscription();
+        subscription.min_size = Some(200);
+        subscription.max_size = Some(100);
+        assert!(validate_subscription(&subscription).is_err());
+
+        subscription.min_size = None;
+        subscription.max_size = None;
+        subscription.groups = SubscribeGroups::Groups(vec!["group".to_owned(), "group".to_owned()]);
+        assert!(validate_subscription(&subscription).is_err());
+
+        subscription.groups = SubscribeGroups::Groups(vec![" ".to_owned()]);
+        assert!(validate_subscription(&subscription).is_err());
+
+        subscription.groups = SubscribeGroups::Groups(Vec::new());
+        assert!(validate_subscription(&subscription).is_err());
+    }
 }

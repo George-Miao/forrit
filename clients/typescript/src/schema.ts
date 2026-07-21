@@ -235,6 +235,7 @@ export interface components {
       };
       group?: string | null;
       guid: string;
+      info_hash: string;
       /** Format: url */
       link?: string | null;
       mime_type: string;
@@ -246,6 +247,12 @@ export interface components {
       title: string;
       /** Format: url */
       torrent: string;
+      torrent_name: string;
+    };
+    "forrit_core.model.EntryGroup": {
+      /** Format: int64 */
+      count: number;
+      name: string;
     };
     "forrit_core.model.IndexArg": {
       after?: components["schemas"]["forrit_core.date.YearMonth"] | null;
@@ -449,6 +456,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -487,6 +500,12 @@ export interface operations {
           "text/plain": string;
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -522,6 +541,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -567,6 +592,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -602,6 +633,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -646,6 +683,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -681,6 +724,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -725,6 +774,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -760,6 +815,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -805,6 +866,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -842,6 +909,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -873,6 +946,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"][];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -910,6 +989,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -1238,6 +1323,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Meta>>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -1297,6 +1388,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -1338,6 +1435,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -1385,6 +1488,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -1424,6 +1533,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -1471,6 +1586,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -1505,7 +1626,13 @@ export interface operations {
       /** @description Response with json format data */
       200: {
         content: {
-          "application/json": string[];
+          "application/json": components["schemas"]["forrit_core.model.EntryGroup"][];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -1543,6 +1670,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.Subscription"] | null;
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
@@ -1588,6 +1721,12 @@ export interface operations {
           "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
         };
       };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The requested resource could not be found. */
       404: {
         content: {
@@ -1623,6 +1762,12 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
       /** @description The requested resource could not be found. */
