@@ -109,8 +109,13 @@
               nodePackages.pnpm
               mongosh
               openssl
+              playwright-driver.browsers
               george-flakes.packages.${system}.obscura-browser-bin
             ];
+            shellHook = ''
+              export PLAYWRIGHT_BROWSERS_PATH=${playwright-driver.browsers}
+              export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+            '';
           };
         };
         packages = {
