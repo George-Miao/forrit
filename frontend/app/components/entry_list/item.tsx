@@ -77,7 +77,7 @@ export default function EntryListItem({ item, show_meta }: EntryListItemProps) {
   return (
     <article className="flex w-full items-center gap-4 py-5 max-sm:items-start max-sm:py-6">
       <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-        <div className="flex flex-wrap gap-2 text-xs text-muted">
+        <div className="flex flex-wrap gap-2 font-300 text-xs text-muted">
           {item.pub_date ? (
             <Hint content={item.pub_date.toLocaleString()} side="right">
               <time dateTime={item.pub_date.toISOString()}>
@@ -113,15 +113,14 @@ export default function EntryListItem({ item, show_meta }: EntryListItemProps) {
           )
         ) : null}
         <Link
-          className={`break-all font-400 tracking-tight text-muted no-underline hover:underline ${
-            show_meta ? 'text-sm' : 'text-base'
-          }`}
+          className={`break-all font-300 tracking-tight text-muted no-underline hover:underline ${show_meta ? 'text-xs' : 'text-base'
+            }`}
           to={`/entry/${item.id}`}
         >
           {item.group
             ? reactStringReplace(item.title, item.group, () => (
-                <span className="text-accent">{item.group}</span>
-              ))
+              <span className="text-accent">{item.group}</span>
+            ))
             : item.title}
         </Link>
         {isSmall ? controls : null}
