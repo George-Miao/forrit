@@ -1,6 +1,5 @@
 import {
   type ClientLoaderFunctionArgs,
-  json,
   useLoaderData,
 } from '@remix-run/react'
 import { useExtractedMeta, useMetaEntries } from 'app/client'
@@ -13,7 +12,7 @@ import WidthLimit from 'app/components/width_limit'
 import { type ExtractedMeta, extract_entry, use_is_big } from 'app/util'
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
-  return json({ id: params.id as string })
+  return { id: params.id as string }
 }
 
 export default function MetaDetail() {
