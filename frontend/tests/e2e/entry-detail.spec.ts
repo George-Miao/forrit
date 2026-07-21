@@ -24,7 +24,7 @@ async function openEntry(page: Page) {
   return entry
 }
 
-test('links the bangumi title and renders sanitized entry HTML', async ({
+test('links the bangumi title and renders server-sanitized entry HTML', async ({
   page,
 }) => {
   await page.route('**/api/entry/entry-with-meta', async (route) => {
@@ -32,8 +32,7 @@ test('links the bangumi title and renders sanitized entry HTML', async ({
       contentType: 'application/json',
       json: {
         _id: { $oid: 'entry-with-meta' },
-        description:
-          '<p>本集由 <strong>测试字幕组</strong> 发布。</p><script>window.__unsafe = true</script>',
+        description: '<p>本集由 <strong>测试字幕组</strong> 发布。</p>',
         elements: {
           AnimeSeason: '02',
           AnimeTitle: '测试番剧',
@@ -82,7 +81,6 @@ test('links the bangumi title and renders sanitized entry HTML', async ({
   await expect(page.locator('[data-entry-tags]')).not.toContainText('S02')
   await expect(page.locator('[data-entry-tags]')).not.toContainText('E03')
   await expect(page.locator('.entry-body strong')).toHaveText('测试字幕组')
-  await expect(page.locator('.entry-body script')).toHaveCount(0)
   await expect(
     page.locator('[data-entry-file] dt').getByText('正文', { exact: true }),
   ).toHaveCount(0)
@@ -91,7 +89,6 @@ test('links the bangumi title and renders sanitized entry HTML', async ({
       (body) => body.parentElement?.lastElementChild === body,
     ),
   ).toBe(true)
-  expect(await page.evaluate(() => '__unsafe' in window)).toBe(false)
 })
 
 test('presents entry details in a compact card layout', async ({

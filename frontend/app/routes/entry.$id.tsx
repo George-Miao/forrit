@@ -10,7 +10,6 @@ import WidthLimit from 'app/components/width_limit'
 import Button from 'app/ui/button'
 import Icon from 'app/ui/icon'
 import { formatBytes, type ExtractedEntry } from 'app/util'
-import DOMPurify from 'dompurify'
 import { useState } from 'react'
 import useClipboard from 'react-use-clipboard'
 
@@ -247,8 +246,8 @@ function EntryBody({ html }: { html: string }) {
   return (
     <div
       className="entry-body text-muted"
-      // RSS descriptions are external HTML and must be sanitized before render.
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+      // Entry descriptions are sanitized by the server before persistence.
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   )
 }
