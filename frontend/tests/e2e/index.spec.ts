@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test'
 
+test('uses the project logo to return home', async ({ page }) => {
+  await page.goto('/entry')
+
+  const homeLink = page.getByRole('link', { name: '返回首页' })
+  await expect(homeLink).toBeVisible()
+  await expect(homeLink.locator('img')).toHaveAttribute('src', '/favicon.svg')
+  await expect(homeLink.locator('img')).toHaveCSS('width', '32px')
+
+  await homeLink.click()
+  await expect(page).toHaveURL(/\/$/)
+})
+
 test('opens the subscription menu without locking page scrolling', async ({
   page,
 }) => {

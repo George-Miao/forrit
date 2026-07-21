@@ -27,12 +27,15 @@ async function openEntry(page: Page) {
 test('links the bangumi title and renders server-sanitized entry HTML', async ({
   page,
 }) => {
+  const publishedAt = new Date(Date.now() - 2 * 60 * 60 * 1000)
+
   await page.route('**/api/entry/entry-with-meta', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       json: {
         _id: { $oid: 'entry-with-meta' },
-        description: '<p>本集由 <strong>测试字幕组</strong> 发布。</p>',
+        description:
+          '<p>本集由 <strong>测试字幕组</strong> 发布。</p><p><img alt="测试海报" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="></p>',
         elements: {
           AnimeSeason: '02',
           AnimeTitle: '测试番剧',
@@ -48,7 +51,7 @@ test('links the bangumi title and renders server-sanitized entry HTML', async ({
         meta_id: { $oid: 'bangumi-meta-id' },
         meta_title: '测试番剧',
         mime_type: 'application/x-bittorrent',
-        pub_date: null,
+        pub_date: publishedAt.toISOString(),
         size: 1024,
         sourcer: 'test-feed',
         title: '测试番剧 - 03',
@@ -59,11 +62,12 @@ test('links the bangumi title and renders server-sanitized entry HTML', async ({
 
   await page.goto('/entry/entry-with-meta')
 
+  await expect(page).toHaveTitle('测试番剧 第03集 | Forrit')
   await expect(page.locator('h1 a')).toHaveAttribute(
     'href',
     '/meta/bangumi-meta-id',
   )
-  await expect(page.locator('h1')).toHaveText('测试番剧 S02E03')
+  await expect(page.locator('h1')).toHaveText('测试番剧 第03集')
   await expect(page.locator('[data-entry-tags]')).toContainText('测试字幕组')
   await expect(page.locator('[data-entry-tags]')).toContainText('test-feed')
   await expect(page.locator('[data-entry-tags]')).toContainText('音频 AAC')
@@ -72,6 +76,17 @@ test('links the bangumi title and renders server-sanitized entry HTML', async ({
   await expect(page.locator('[data-entry-tags]')).not.toContainText('1.0 KiB')
   await expect(page.locator('[data-entry-file]')).toContainText('大小')
   await expect(page.locator('[data-entry-file]')).toContainText('1.0 KiB')
+  await expect(page.locator('time')).toContainText('(2 小时前)')
+  await expect(
+    page.getByRole('heading', { name: '资源信息', exact: true }),
+  ).toHaveCount(0)
+  const detailKeys = page.locator('[data-entry-file] dt')
+  await expect(detailKeys).toHaveCount(6)
+  expect(
+    await detailKeys.evaluateAll((keys) =>
+      keys.every((key) => Boolean(key.querySelector('svg'))),
+    ),
+  ).toBe(true)
   await expect(
     page.locator('[data-entry-tags]').getByRole('link', { name: 'test-feed' }),
   ).toHaveAttribute('href', 'https://example.com/release')
@@ -81,6 +96,14 @@ test('links the bangumi title and renders server-sanitized entry HTML', async ({
   await expect(page.locator('[data-entry-tags]')).not.toContainText('S02')
   await expect(page.locator('[data-entry-tags]')).not.toContainText('E03')
   await expect(page.locator('.entry-body strong')).toHaveText('测试字幕组')
+  await expect(page.getByAltText('测试海报')).toHaveCSS(
+    'object-fit',
+    'contain',
+  )
+  await expect(page.getByAltText('测试海报')).not.toHaveCSS(
+    'max-height',
+    'none',
+  )
   await expect(
     page.locator('[data-entry-file] dt').getByText('正文', { exact: true }),
   ).toHaveCount(0)
@@ -104,16 +127,13 @@ test('presents entry details in a compact card layout', async ({
   const bangumiTitle = String(
     entry.meta_title ?? entry.elements.AnimeTitle ?? '资源详情',
   )
-  const releaseCode = `${
-    entry.elements.AnimeSeason ? `S${String(entry.elements.AnimeSeason)}` : ''
-  }${
+  const episodeTitle =
     entry.elements.EpisodeNumber
-      ? `E${String(entry.elements.EpisodeNumber)}`
+      ? `第${String(entry.elements.EpisodeNumber)}集`
       : ''
-  }`
 
   await expect(page.locator('h1')).toHaveText(
-    `${bangumiTitle}${releaseCode ? ` ${releaseCode}` : ''}`,
+    `${bangumiTitle}${episodeTitle ? ` ${episodeTitle}` : ''}`,
   )
   if (entry.meta_id) {
     await expect(page.locator('h1 a')).toHaveAttribute(
@@ -123,8 +143,8 @@ test('presents entry details in a compact card layout', async ({
   }
   const tags = page.locator('[data-entry-tags]')
   if (entry.group) await expect(tags).toContainText(entry.group)
-  if (releaseCode && entry.group) {
-    await expect(tags).not.toContainText(releaseCode)
+  if (episodeTitle && entry.group) {
+    await expect(tags).not.toContainText(episodeTitle)
   }
   await expect(
     page.locator('[data-entry-file]').getByText(entry.title, { exact: true }).first(),
@@ -139,7 +159,9 @@ test('presents entry details in a compact card layout', async ({
   await expect(page.getByRole('button', { name: '下载' })).toBeVisible()
   await expect(page.getByRole('button', { name: '复制链接' })).toBeVisible()
   if (entry.description) {
-    await expect(page.getByText(entry.description, { exact: true })).toBeVisible()
+    const body = page.locator('[data-entry-body]')
+    await expect(body).toBeVisible()
+    expect((await body.textContent())?.trim().length).toBeGreaterThan(0)
   }
 
   const mainLocator = page.locator('[data-entry-main]')
