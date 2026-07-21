@@ -1,139 +1,122 @@
-import { Card, Space, Tooltip, Typography } from '@douyinfe/semi-ui'
-import { use_is_xs, type ExtractedMeta } from 'app/util'
-import SubscribeButton from './meta_card/subscription'
+import { type ExtractedMeta, use_is_xs } from 'app/util'
 import type { CSSProperties } from 'react'
+import { useState } from 'react'
+import Hint from '../ui/tooltip'
+import SubscribeButton from './meta_card/subscription'
 
 export const width = '(min(max(100dvw * 0.3, 150px), 300px))'
 export const header_height = `calc(60px + 2em + ${width} * 1.5)`
 
-const { Text, Title } = Typography
-
 export default function MetaDetailHeader({
   meta,
-  vertical,
+  vertical = false,
   style,
-}: { meta: ExtractedMeta; vertical?: boolean; style?: CSSProperties }) {
-  vertical = vertical ?? false
-  const is_xs = use_is_xs()
-
+}: {
+  meta: ExtractedMeta
+  vertical?: boolean
+  style?: CSSProperties
+}) {
+  const isSmall = use_is_xs()
   const cover = meta.poster ? (
     <img
-      alt='backdrop'
+      alt={`${meta.title} poster`}
+      className={
+        vertical
+          ? 'aspect-[2/3] w-full object-cover'
+          : 'rounded-md object-cover'
+      }
+      src={meta.poster}
       style={
         vertical
           ? undefined
-          : {
-              width: `calc(${width})`,
-              height: `calc(${width} * 1.5)`,
-              borderRadius: 'var(--semi-border-radius-medium)',
-            }
+          : { width: `calc(${width})`, height: `calc(${width} * 1.5)` }
       }
-      src={meta.poster}
     />
-  ) : undefined
-  const detail_text = (
+  ) : null
+  const detail = (
     <MetaDetailText
       meta={meta}
-      style={{
-        minHeight: vertical ? undefined : `calc(${width} * 1.5)`,
-      }}
+      style={{ minHeight: vertical ? undefined : `calc(${width} * 1.5)` }}
     />
   )
 
-  return vertical ? (
-    <Card shadows='always' cover={cover} style={style}>
-      {detail_text}
-    </Card>
-  ) : (
-    <Space
-      align='start'
-      spacing={is_xs ? 'medium' : 'loose'}
+  if (vertical) {
+    return (
+      <article className="ui-panel overflow-hidden" style={style}>
+        {cover}
+        <div className="p-5">{detail}</div>
+      </article>
+    )
+  }
+
+  return (
+    <div
+      className={`flex items-start ${isSmall ? 'gap-4' : 'gap-8'}`}
       style={style}
-      vertical={vertical}
     >
       {cover}
-      {detail_text}
-    </Space>
+      {detail}
+    </div>
   )
 }
 
 function MetaDetailText({
   meta,
   style,
-}: { meta: ExtractedMeta; style: CSSProperties }) {
+}: {
+  meta: ExtractedMeta
+  style: CSSProperties
+}) {
+  const [expanded, setExpanded] = useState(false)
   const { title, year, info, overview, tv } = meta
 
   return (
-    <Space vertical align='start' style={style}>
-      <Title
-        heading={3}
-        style={{
-          verticalAlign: 'baseline',
-        }}
-      >
-        <Tooltip content={tv?.original_name as string | undefined}>
+    <div className="flex flex-1 flex-col items-start gap-4" style={style}>
+      <h1 className="m-0 text-2xl font-600">
+        <Hint content={String(tv?.original_name ?? '')}>
           <span>{title}</span>
-        </Tooltip>
+        </Hint>
         {year ? (
-          <Title
-            heading={4}
-            type='tertiary'
-            weight='light'
-            component='span'
-            style={{
-              marginLeft: '0.2em',
-            }}
-          >
-            ({year})
-          </Title>
+          <span className="ml-2 text-lg font-300 text-muted">({year})</span>
         ) : null}
-      </Title>
-      <Text type='tertiary'>
-        {info.map((x, i, arr) => (
-          <>
-            {x.tooltip ? (
-              <Tooltip content={x.tooltip} key={x.content}>
-                <span>{x.content}</span>
-              </Tooltip>
+      </h1>
+      <p className="m-0 text-sm text-muted">
+        {info.map((item, index) => (
+          <span key={`${item.content}-${index}`}>
+            {item.tooltip ? (
+              <Hint content={item.tooltip}>
+                <span>{item.content}</span>
+              </Hint>
             ) : (
-              <span key={x.content}>{x.content}</span>
+              item.content
             )}
-
-            {i < arr.length - 1 ? (
-              <span key={x.content} style={{ margin: '0 .3em' }}>
-                ·
-              </span>
-            ) : null}
-          </>
+            {index < info.length - 1 ? ' · ' : null}
+          </span>
         ))}
-      </Text>
-
+      </p>
       {overview ? (
-        <Text
-          type='secondary'
-          ellipsis={{
-            rows: 4,
-            expandable: true,
-          }}
-        >
-          {overview as string}
-        </Text>
+        <div>
+          <p
+            className={`m-0 text-sm leading-6 text-muted ${expanded ? '' : 'line-clamp-4'}`}
+          >
+            {overview as string}
+          </p>
+          <button
+            className="ui-focus mt-1 cursor-pointer border-0 bg-transparent p-0 text-sm text-accent transition hover:underline active:opacity-60"
+            onClick={() => setExpanded((value) => !value)}
+            type="button"
+          >
+            {expanded ? '收起' : '展开'}
+          </button>
+        </div>
       ) : null}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'flex-end',
-          width: '100%',
-        }}
-      >
+      <div className="flex w-full flex-1 items-end justify-end">
         <SubscribeButton
-          show_text
           meta_id={meta.id}
+          show_text
           subscription={meta.subscription ?? null}
         />
       </div>
-    </Space>
+    </div>
   )
 }

@@ -1,46 +1,59 @@
-import SemiTheme from '@kousum/vite-plugin-semi-theme'
 import { vitePlugin as remix } from '@remix-run/dev'
 import { installGlobals } from '@remix-run/node'
 import { defineConfig } from 'vite'
-import { cjsInterop } from 'vite-plugin-cjs-interop'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import UnoCSS from 'unocss/vite'
 
 installGlobals()
 
 export default defineConfig({
-  optimizeDeps: { include: ['forrit-client'] },
+  optimizeDeps: {
+    include: [
+      '@base-ui/react/alert-dialog',
+      '@base-ui/react/button',
+      '@base-ui/react/dialog',
+      '@base-ui/react/menu',
+      '@base-ui/react/popover',
+      '@base-ui/react/toast',
+      '@base-ui/react/tooltip',
+      '@iconify/react',
+      '@remix-run/react',
+      'forrit-client',
+      'immutable',
+      'openapi-fetch',
+      'radash',
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react-responsive',
+      'react/jsx-dev-runtime',
+      'react/jsx-runtime',
+      'swr',
+      'swr/infinite',
+    ],
+  },
+  resolve: { dedupe: ['react', 'react-dom'] },
   server: {
     proxy: {
       '/api': {
-        target:
-          process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:8080',
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:8080',
       },
     },
   },
   plugins: [
-    cjsInterop({ dependencies: ['data-fns', 'date-fns-tz'] }),
+    UnoCSS(),
     remix({
       future: {
         v3_fetcherPersist: true,
+        v3_lazyRouteDiscovery: true,
         v3_relativeSplatPath: true,
+        v3_singleFetch: true,
         v3_throwAbortReason: true,
       },
       ssr: false,
     }),
     tsconfigPaths(),
-    SemiTheme({ theme: '@semi-bot/semi-theme-forrit' }),
   ],
-  ssr: {
-    noExternal: [
-      '@douyinfe/semi-ui',
-      '@douyinfe/semi-foundation',
-      '@douyinfe/semi-animation',
-      '@douyinfe/semi-animation-styled',
-      'scroll-into-view-if-needed',
-      '@douyinfe/semi-icons',
-      'data-fns',
-    ],
-  },
   // build: {
   //   rollupOptions: {
   //     output: {

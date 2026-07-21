@@ -1,31 +1,22 @@
-import { IconDelete, IconEdit, IconPlus, IconTick } from '@douyinfe/semi-icons'
-import {
-  Button,
-  ButtonGroup,
-  Dropdown,
-  Form,
-  InputGroup,
-  Modal,
-  Notification,
-  Popconfirm,
-} from '@douyinfe/semi-ui'
+import { AlertDialog } from '@base-ui/react/alert-dialog'
+import { Dialog } from '@base-ui/react/dialog'
+import { Menu } from '@base-ui/react/menu'
 import { useClient, useMetaGroup } from 'app/client'
-import { format } from 'bytes'
+import Button from 'app/ui/button'
+import Icon from 'app/ui/icon'
+import { notify } from 'app/ui/toast'
 import type { Subscription } from 'forrit-client'
 import { OrderedSet } from 'immutable'
 import { isEqual } from 'radash'
 import { useState } from 'react'
 import Loading from '../loading'
-import './subscription.css'
 
-const isEmpty = (sub: Subscription | null) => {
-  if (sub === null) {
-    return true
-  }
-
-  const { groups, ...rest } = sub
-
-  return groups.length === 0 && Object.values(rest).every(v => v === null)
+const isEmpty = (subscription: Subscription | null) => {
+  if (!subscription) return true
+  const { groups, ...rest } = subscription
+  return (
+    groups.length === 0 && Object.values(rest).every((value) => value === null)
+  )
 }
 
 interface SubscribeButtonProps {
@@ -35,262 +26,324 @@ interface SubscribeButtonProps {
 }
 
 export default function SubscribeButton({
-  show_text,
-  meta_id,
+  show_text: showText,
+  meta_id: metaId,
   subscription,
 }: SubscribeButtonProps) {
   const [editing, setEditing] = useState(false)
-  const [sub, setSub] = useState(subscription)
-  const selected = Array.isArray(sub?.groups)
-    ? OrderedSet(sub.groups)
+  const [confirming, setConfirming] = useState(false)
+  const [current, setCurrent] = useState(subscription)
+  const selected = Array.isArray(current?.groups)
+    ? OrderedSet(current.groups)
     : OrderedSet<string>()
-  const is_sub_all = sub?.groups === 'all'
-  const is_sub_to = (group: string) => is_sub_all || selected.has(group)
+  const subscribesToAll = current?.groups === 'all'
+  const subscribesTo = (group: string) => subscribesToAll || selected.has(group)
   const client = useClient()
 
-  const update =
-    (callback: (sub: Subscription | null) => Subscription) => async () => {
-      const oldSub = window.structuredClone(sub)
-      const newSub = callback(oldSub)
-      if (isEqual(oldSub, newSub)) {
-        return
-      }
-      if (isEmpty(newSub)) {
-        await remove()
-        return
-      }
+  const remove = async () => {
+    const previous = window.structuredClone(current)
+    setCurrent(null)
+    const response = await client.DELETE('/meta/{id}/subscription', {
+      params: { path: { id: metaId } },
+      headers: { Accept: 'application/json' },
+    })
+    if (response.error) {
+      setCurrent(previous)
+      notify('删除订阅失败', response.error)
+    }
+  }
 
-      setSub(newSub)
-
-      await client
-        .PUT('/meta/{id}/subscription', {
-          params: { path: { id: meta_id } },
-          body: newSub,
-          headers: { 'Accept': 'application/json' },
-        })
-        .then(e => {
-          if (e.error) {
-            setSub(oldSub)
-            Notification.error({
-              title: '更新订阅失败',
-              content: e.error,
-            })
-          }
-        })
+  const update = async (
+    callback: (value: Subscription | null) => Subscription,
+  ) => {
+    const previous = window.structuredClone(current)
+    const next = callback(previous)
+    if (isEqual(previous, next)) return
+    if (isEmpty(next)) {
+      await remove()
+      return
     }
 
-  const remove = async () => {
-    const oldSub = window.structuredClone(sub)
-    setSub(null)
-    await client
-      .DELETE('/meta/{id}/subscription', {
-        params: { path: { id: meta_id } },
-        headers: { 'Accept': 'application/json' },
-      })
-      .then(e => {
-        if (e.error) {
-          setSub(oldSub)
-          Notification.error({
-            title: '删除订阅失败',
-            content: e.error,
-          })
-        }
-      })
+    setCurrent(next)
+    const response = await client.PUT('/meta/{id}/subscription', {
+      params: { path: { id: metaId } },
+      body: next,
+      headers: { Accept: 'application/json' },
+    })
+    if (response.error) {
+      setCurrent(previous)
+      notify('更新订阅失败', response.error)
+    }
   }
 
-  const sub_all = (
-    <Dropdown.Item
-      onClick={update(sub =>
-        is_sub_all ? { ...sub, groups: [] } : { ...sub, groups: 'all' },
-      )}
-      active={is_sub_all}
-    >
-      订阅全部
-    </Dropdown.Item>
-  )
-
-  const Render = () => {
-    return (
-      <Loading
-        useData={() => useMetaGroup(meta_id)}
-        spinStyle={{
-          width: '3em',
-          height: '3em',
-          marginTop: 'none',
-        }}
-      >
-        {groups => (
-          <Dropdown.Menu>
-            {groups.length !== 0 && (
-              <>
-                <Dropdown.Title>字幕组</Dropdown.Title>
-                {groups.map(group => (
-                  <Dropdown.Item
-                    active={is_sub_to(group)}
-                    key={group}
-                    style={{
-                      cursor: 'pointer',
-                    }}
-                    disabled={is_sub_all}
-                    onClick={update(curr => ({
-                      ...curr,
-                      groups: is_sub_to(group)
-                        ? selected.remove(group).toArray()
-                        : selected.add(group).toArray(),
-                    }))}
-                  >
-                    {group}
-                  </Dropdown.Item>
-                ))}
-                <Dropdown.Divider />
-              </>
-            )}
-            {sub_all}
-            <Dropdown.Divider />
-            <Dropdown.Item type='secondary' className='dropdown-notick'>
-              <ButtonGroup
-                className='dropdown-button-group'
-                style={{
-                  display: 'flex',
-                  width: '100%',
-                }}
-              >
-                <Button
-                  theme='borderless'
-                  icon={<IconEdit />}
-                  type='tertiary'
-                  onClick={() => {
-                    setEditing(true)
-                  }}
-                />
-                <Modal visible={editing}>123123</Modal>
-                <Popconfirm
-                  title='确定是否要删除订阅？'
-                  position='bottomLeft'
-                  onConfirm={remove}
-                >
-                  <Button
-                    disabled={sub === null}
-                    theme='borderless'
-                    type='danger'
-                    icon={<IconDelete />}
-                  />
-                </Popconfirm>
-              </ButtonGroup>
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        )}
-      </Loading>
-    )
-  }
+  const menuItem =
+    'ui-focus flex w-full cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-left transition hover:bg-[rgb(28_31_35/8%)] data-highlighted:bg-[rgb(28_31_35/8%)] active:scale-[0.98] active:bg-accent-soft data-disabled:cursor-not-allowed data-disabled:opacity-45'
 
   return (
     <>
-      <Dropdown
-        zIndex={500}
-        showTick
-        keepDOM
-        position='bottomRight'
-        trigger='click'
-        render={<Render />}
-        style={{ minWidth: '2em' }}
-      >
-        <Button
-          icon={sub === null ? <IconPlus /> : <IconTick />}
-          theme='borderless'
-          style={{
-            margin: '2px 0 2px',
-            minHeight: '38px',
-            minWidth: '38px',
-          }}
+      <Menu.Root modal={false}>
+        <Menu.Trigger
+          render={
+            <Button
+              aria-label={current ? '编辑订阅' : '订阅'}
+              className={showText ? '' : 'h-9 w-9 shrink-0 p-0'}
+              variant="ghost"
+            />
+          }
         >
-          {show_text ? (sub === null ? '订阅' : '已订阅') : undefined}
-        </Button>
-      </Dropdown>
-      <SubscriptionEditModal
-        current={sub}
-        close={() => setEditing(false)}
-        update={sub =>
-          update(curr => ({ groups: curr?.groups ?? [], ...sub }))()
+          <Icon name={current ? 'check' : 'plus'} />
+          {showText ? (current ? '已订阅' : '订阅') : null}
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner
+            align="end"
+            className="z-300 outline-none"
+            sideOffset={28}
+          >
+            <Menu.Popup className="ui-popup min-w-44 overflow-hidden p-1">
+              <Loading
+                spinStyle={{ margin: '1.5rem auto' }}
+                useData={() => useMetaGroup(metaId)}
+              >
+                {(groups) => (
+                  <>
+                    {groups.length ? (
+                      <Menu.Group>
+                        <Menu.GroupLabel className="px-3 py-1 text-xs font-600 text-muted">
+                          字幕组
+                        </Menu.GroupLabel>
+                        {groups.map((group) => (
+                          <Menu.Item
+                            className={menuItem}
+                            disabled={subscribesToAll}
+                            key={group}
+                            nativeButton
+                            onClick={() =>
+                              void update((value) => ({
+                                ...value,
+                                groups: subscribesTo(group)
+                                  ? selected.remove(group).toArray()
+                                  : selected.add(group).toArray(),
+                                }))
+                            }
+                            render={<button type="button" />}
+                          >
+                            <Icon
+                              className={
+                                subscribesTo(group)
+                                  ? 'opacity-100'
+                                  : 'opacity-0'
+                              }
+                              name="check"
+                            />
+                            {group}
+                          </Menu.Item>
+                        ))}
+                      </Menu.Group>
+                    ) : null}
+                    {groups.length ? (
+                      <Menu.Separator className="my-1 h-px bg-edge" />
+                    ) : null}
+                    <Menu.Item
+                      className={menuItem}
+                      nativeButton
+                      onClick={() =>
+                        void update((value) => ({
+                          ...value,
+                          groups: subscribesToAll ? [] : 'all',
+                        }))
+                      }
+                      render={<button type="button" />}
+                    >
+                      <Icon
+                        className={
+                          subscribesToAll ? 'opacity-100' : 'opacity-0'
+                        }
+                        name="check"
+                      />
+                      订阅全部
+                    </Menu.Item>
+                    <Menu.Separator className="my-1 h-px bg-edge" />
+                    <div className="grid grid-cols-2 gap-1">
+                      <Menu.Item
+                        className={`${menuItem} justify-center`}
+                        nativeButton
+                        onClick={() => setEditing(true)}
+                        render={<button type="button" />}
+                      >
+                        <Icon name="edit" />
+                        编辑
+                      </Menu.Item>
+                      <Menu.Item
+                        className={`${menuItem} justify-center text-danger`}
+                        disabled={!current}
+                        nativeButton
+                        onClick={() => setConfirming(true)}
+                        render={<button type="button" />}
+                      >
+                        <Icon name="trash" />
+                        删除
+                      </Menu.Item>
+                    </div>
+                  </>
+                )}
+              </Loading>
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+      <SubscriptionEditDialog
+        current={current}
+        onOpenChange={setEditing}
+        onSave={(advanced) =>
+          update((value) => ({ groups: value?.groups ?? [], ...advanced }))
         }
-        visible={editing}
+        open={editing}
       />
+      <AlertDialog.Root open={confirming} onOpenChange={setConfirming}>
+        <AlertDialog.Portal>
+          <AlertDialog.Backdrop className="fixed inset-0 z-100 bg-black/30" />
+          <AlertDialog.Viewport className="fixed inset-0 z-101 grid place-items-center p-4">
+            <AlertDialog.Popup className="ui-panel w-full max-w-sm p-6">
+              <AlertDialog.Title className="m-0 text-lg font-600">
+                删除订阅？
+              </AlertDialog.Title>
+              <AlertDialog.Description className="mt-2 text-sm text-muted">
+                这个操作会移除该番剧的订阅设置。
+              </AlertDialog.Description>
+              <div className="mt-6 flex justify-end gap-2">
+                <AlertDialog.Close render={<Button variant="ghost" />}>
+                  取消
+                </AlertDialog.Close>
+                <AlertDialog.Close
+                  render={
+                    <Button onClick={() => void remove()} variant="danger" />
+                  }
+                >
+                  删除
+                </AlertDialog.Close>
+              </div>
+            </AlertDialog.Popup>
+          </AlertDialog.Viewport>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </>
   )
 }
-// directory?: string;
-// exclude?: string;
-// include?: string;
-// max_size?: number;
-// min_size?: number;
+
 type Advanced = Omit<Subscription, 'groups'>
-type AdvancedDisplay = Omit<Advanced, 'max_size' | 'min_size'> & {
-  max_size?: string
-  min_size?: string
-}
 
-const display = (sub: Advanced): AdvancedDisplay => {
-  return {
-    ...sub,
-    max_size: sub.max_size ? format(sub.max_size) : undefined,
-    min_size: sub.min_size ? format(sub.min_size) : undefined,
-  }
-}
-
-function SubscriptionEditModal({
-  visible,
-  close,
+function SubscriptionEditDialog({
+  open,
+  onOpenChange,
   current,
-  update,
+  onSave,
 }: {
-  visible: boolean
-  close: () => void
-  current: Advanced | null
-  update: (sub: Advanced) => Promise<unknown>
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  current: Subscription | null
+  onSave: (subscription: Advanced) => Promise<unknown>
 }) {
-  const [confirmCancel, setConfirmCancel] = useState(false)
-  const validate_regex = (regex: string) => {
-    try {
-      new RegExp(regex)
-      return ''
-    } catch (e) {
-      return '无效的正则表达式'
-    }
-  }
-  return (
-    <Modal visible={visible} title='编辑订阅' onCancel={close}>
-      <Form<Advanced> initValues={current ?? undefined}>
-        {({ formState, formApi, values }) => (
-          <>
-            <Form.Input
-              placeholder='下载路径'
-              field='directory'
-              label='保存目录'
-            />
-            <Form.Input
-              placeholder='用于过滤匹配的条目'
-              field='exclude'
-              label='排除正则'
-              validate={validate_regex}
-            />
-            <Form.Input
-              placeholder='用于保留匹配的条目'
-              field='include'
-              label='包含正则'
-              validate={validate_regex}
-            />
-            <InputGroup>
-              <Form.Input
-                placeholder='1m, 3kb, 2GiB'
-                field='max_size'
-                label='最大文件大小'
-              />
-            </InputGroup>
+  const [error, setError] = useState('')
 
-            <code style={{ marginTop: 24 }}>{JSON.stringify(formState)}</code>
-          </>
-        )}
-      </Form>
-    </Modal>
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="fixed inset-0 z-100 bg-black/30" />
+        <Dialog.Viewport className="fixed inset-0 z-101 grid place-items-center overflow-y-auto p-4">
+          <Dialog.Popup className="ui-panel w-full max-w-lg p-6">
+            <Dialog.Title className="m-0 text-xl font-600">
+              编辑订阅
+            </Dialog.Title>
+            <Dialog.Description className="mt-1 text-sm text-muted">
+              设置下载目录和资源过滤规则。
+            </Dialog.Description>
+            <form
+              className="mt-6 grid gap-4"
+              onSubmit={(event) => {
+                event.preventDefault()
+                const data = new FormData(event.currentTarget)
+                const include = String(data.get('include') || '')
+                const exclude = String(data.get('exclude') || '')
+                try {
+                  if (include) new RegExp(include)
+                  if (exclude) new RegExp(exclude)
+                } catch {
+                  setError('正则表达式无效')
+                  return
+                }
+                setError('')
+                void onSave({
+                  directory: String(data.get('directory') || '') || null,
+                  exclude: exclude || null,
+                  include: include || null,
+                  max_size: Number(data.get('max_size')) || null,
+                  min_size: Number(data.get('min_size')) || null,
+                }).then(() => onOpenChange(false))
+              }}
+            >
+              <Field
+                defaultValue={current?.directory ?? ''}
+                label="保存目录"
+                name="directory"
+                placeholder="下载路径"
+              />
+              <Field
+                defaultValue={current?.include ?? ''}
+                label="包含正则"
+                name="include"
+                placeholder="用于保留匹配的条目"
+              />
+              <Field
+                defaultValue={current?.exclude ?? ''}
+                label="排除正则"
+                name="exclude"
+                placeholder="用于过滤匹配的条目"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Field
+                  defaultValue={current?.min_size ?? ''}
+                  label="最小文件大小"
+                  name="min_size"
+                  type="number"
+                />
+                <Field
+                  defaultValue={current?.max_size ?? ''}
+                  label="最大文件大小"
+                  name="max_size"
+                  type="number"
+                />
+              </div>
+              {error ? (
+                <p className="m-0 text-sm text-danger">{error}</p>
+              ) : null}
+              <div className="mt-2 flex justify-end gap-2">
+                <Dialog.Close render={<Button variant="ghost" />}>
+                  取消
+                </Dialog.Close>
+                <Button type="submit" variant="primary">
+                  保存
+                </Button>
+              </div>
+            </form>
+          </Dialog.Popup>
+        </Dialog.Viewport>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+
+function Field({
+  label,
+  ...props
+}: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label className="grid gap-1.5 text-sm font-500">
+      {label}
+      <input
+        className="ui-focus h-10 rounded-lg border border-edge bg-surface px-3 font-400"
+        {...props}
+      />
+    </label>
   )
 }

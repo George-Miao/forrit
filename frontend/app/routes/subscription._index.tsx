@@ -1,40 +1,24 @@
-import { IconPlus } from '@douyinfe/semi-icons'
-import { Button, Typography } from '@douyinfe/semi-ui'
-import LoadingInfinite from 'app/components/loading_infinite'
 import PageHeader from 'app/components/page_header'
-import SubscriptionList from 'app/components/subscription_list'
+import Button from 'app/ui/button'
+import Icon from 'app/ui/icon'
 import WidthLimit from 'app/components/width_limit'
-
-const { Title } = Typography
 
 export default function Subscription() {
   return (
     <>
       <PageHeader routes={[{ href: '/', name: '首页' }, { name: '订阅' }]}>
-        <Title
-          type='secondary'
-          style={{
-            margin: '2em 0 1em',
-          }}
-        >
+        <h1 className="mb-8 mt-16 text-4xl font-600 text-[rgb(28_31_35/80%)]">
           订阅
-        </Title>
+        </h1>
       </PageHeader>
       <WidthLimit>
         <Button
+          aria-label="添加订阅"
+          className="mt-4 h-25 w-full border-2 border-dashed border-edge"
           onClick={() => alert('NOT IMPLEMENTED')}
-          style={{
-            height: 100,
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: '1em',
-            border: '2px dashed var(--semi-color-border)',
-          }}
-          theme='borderless'
+          variant="ghost"
         >
-          <IconPlus size='extra-large' />
+          <Icon className="text-2xl" name="plus" />
         </Button>
       </WidthLimit>
     </>

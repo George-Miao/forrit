@@ -1,5 +1,5 @@
 import type { ListResult } from 'forrit-client'
-import InfiniteLoader from 'react-swr-infinite-scroll'
+import { useEffect, useRef } from 'react'
 import type { SWRInfiniteResponse } from 'swr/infinite'
 
 export interface LoadingInfiniteProps<T> {
@@ -13,22 +13,38 @@ export default function LoadingInfinite<T>({
 }: LoadingInfiniteProps<T>) {
   const has_next_page =
     data.data?.[data.data.length - 1]?.page_info.has_next_page
+  const trigger = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const node = trigger.current
+    if (!node || has_next_page === false) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !data.isValidating) {
+          void data.setSize((size) => size + 1)
+        }
+      },
+      { rootMargin: '300px' },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [data.isValidating, data.setSize, has_next_page])
+
+  const items = data.data?.flatMap((page) => page?.items ?? []) ?? []
 
   return (
-    <InfiniteLoader<ListResult<T> | undefined>
-      swr={data}
-      isReachingEnd={has_next_page === false}
-      // loadingIndicator={
-      //   <Spin
-      //     style={{
-      //       display: 'block',
-      //       margin: '4em auto',
-      //     }}
-      //   />
-      // }
-      offset={-300}
-    >
-      {data => data && children(data.items)}
-    </InfiniteLoader>
+    <>
+      {children(items)}
+      <div ref={trigger}>
+        {data.isValidating && (
+          <span
+            aria-label="加载中"
+            className="mx-auto my-16 block h-6 w-6 animate-spin rounded-full border-2 border-edge border-t-accent"
+            role="status"
+          />
+        )}
+      </div>
+    </>
   )
 }

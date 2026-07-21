@@ -1,0 +1,56 @@
+:root {
+  color-scheme: light;
+  --color-accent: #f93920;
+  --color-accent-soft: #fef2ed;
+  --color-background: #f7f7f8;
+  --color-danger: #f93920;
+  --color-edge: rgb(28 31 35 / 8%);
+  --color-surface: #ffffff;
+  --color-text: #1c1f23;
+  --color-text-muted: rgb(28 31 35 / 62%);
+  --shadow-card: 0 0 1px rgb(0 0 0 / 30%), 0 4px 14px rgb(0 0 0 / 10%);
+  font-family: "Geist Sans", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+}

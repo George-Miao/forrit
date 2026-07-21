@@ -1,24 +1,8 @@
-import {
-  Button,
-  ButtonGroup,
-  Empty,
-  Notification,
-  Tabs,
-  Typography,
-} from '@douyinfe/semi-ui'
-import * as _ from 'radash'
+import Button from 'app/ui/button'
+import Icon from 'app/ui/icon'
 import type { Subscription, WithId } from 'forrit-client'
-import SubscriptionForm from './form'
 import { useState } from 'react'
-import { IconDelete, IconEdit, IconPlus, IconSave } from '@douyinfe/semi-icons'
-import type { FormApi } from '@douyinfe/semi-ui/lib/es/form'
-import { mutate } from 'swr'
-
-import { useClient } from '../../client'
-
-import './item.css'
-
-const { Text } = Typography
+import SubscriptionForm from './form'
 
 export interface SubscriptionItemProps {
   subs: WithId<Subscription>[]
@@ -28,88 +12,75 @@ export interface SubscriptionItemProps {
   onAdd: (sub: WithId<Subscription>) => void
 }
 
-enum ItemState {
-  Normal = 0,
-  Editing = 1,
-  New = 2,
-}
-
 export default function SubscriptionItem({
   subs,
-  meta_id,
-  onDelete,
-  no_padding,
+  no_padding: noPadding = false,
 }: SubscriptionItemProps) {
-  const c = useClient()
-  const [state, set_state] = useState<Record<string, ItemState>>({})
-  const [forms, set_forms] = useState<Record<string, FormApi<Subscription>>>({})
-
-  const has_subs = subs.length > 0
-  const [active, set_active] = useState(subs[0]?._id.$oid ?? '')
-  const active_editing = state[active] ?? false
-
-  const onAddHandler = () => {
-    alert('NOT IMPLEMENTED')
-  }
-
-  no_padding = no_padding ?? false
+  const [active, setActive] = useState(subs[0]?._id.$oid ?? '')
+  const [editing, setEditing] = useState(false)
+  const selected = subs.find((item) => item._id.$oid === active)
 
   return (
-    <Tabs
-      collapsible
-      activeKey={active}
-      size='small'
-      type='card'
-      onChange={set_active}
-      style={{ width: '100%' }}
-      tabBarExtraContent={
-        <ButtonGroup theme='borderless'>
-          {active_editing ? (
-            <Button icon={<IconSave />} />
+    <div className="w-full">
+      <div className="flex border-b border-edge">
+        <div className="flex flex-1 overflow-x-auto" role="tablist">
+          {subs.length ? (
+            subs.map((subscription, index) => (
+              <button
+                aria-selected={active === subscription._id.$oid}
+                className={`ui-focus cursor-pointer border-0 border-b-2 bg-transparent px-3 py-2 text-xs transition hover:bg-[rgb(28_31_35/8%)] active:bg-accent-soft ${
+                  active === subscription._id.$oid
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-muted'
+                }`}
+                key={subscription._id.$oid}
+                onClick={() => setActive(subscription._id.$oid)}
+                role="tab"
+                type="button"
+              >
+                {index + 1}
+              </button>
+            ))
           ) : (
-            <Button
-              icon={<IconEdit />}
-              disabled={!has_subs}
-              onClick={() => alert('NOT IMPLEMENTED')}
-            />
+            <span className="px-3 py-2 text-xs text-muted">暂无订阅</span>
           )}
+        </div>
+        <div className="flex p-1">
           <Button
-            icon={<IconDelete />}
-            disabled={!has_subs}
-            onClick={() => alert('NOT IMPLEMENTED')}
-          />
-          <Button icon={<IconPlus onClick={onAddHandler} />} />
-        </ButtonGroup>
-      }
-    >
-      {!has_subs ? (
-        <Tabs.TabPane tab='暂无订阅' itemKey=''>
-          <Empty title={<Text type='tertiary'>暂无订阅</Text>} />
-        </Tabs.TabPane>
-      ) : (
-        subs.map((sub, i) => (
-          <Tabs.TabPane
-            key={sub._id.$oid}
-            style={{
-              padding: no_padding ? undefined : '.3em .6em',
-              boxSizing: 'border-box',
-            }}
-            tab={i + 1}
-            itemKey={sub._id.$oid}
+            aria-label={editing ? '保存' : '编辑'}
+            className="h-8 w-8 p-0"
+            disabled={!selected}
+            onClick={() => setEditing((value) => !value)}
+            variant="ghost"
           >
-            <SubscriptionForm
-              disabled={!active_editing}
-              init={sub}
-              getFormApi={form => {
-                set_forms(prev => ({
-                  ...prev,
-                  [sub._id.$oid]: form,
-                }))
-              }}
-            />
-          </Tabs.TabPane>
-        ))
+            <Icon name={editing ? 'save' : 'edit'} />
+          </Button>
+          <Button
+            aria-label="删除"
+            className="h-8 w-8 p-0"
+            disabled={!selected}
+            onClick={() => alert('NOT IMPLEMENTED')}
+            variant="danger"
+          >
+            <Icon name="trash" />
+          </Button>
+          <Button
+            aria-label="添加"
+            className="h-8 w-8 p-0"
+            onClick={() => alert('NOT IMPLEMENTED')}
+            variant="ghost"
+          >
+            <Icon name="plus" />
+          </Button>
+        </div>
+      </div>
+      {selected ? (
+        <div className={noPadding ? '' : 'px-2 py-1'} role="tabpanel">
+          <SubscriptionForm disabled={!editing} init={selected} />
+        </div>
+      ) : (
+        <p className="py-8 text-center text-sm text-muted">暂无订阅</p>
       )}
-    </Tabs>
+    </div>
   )
 }

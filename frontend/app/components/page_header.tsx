@@ -1,33 +1,43 @@
-import { Breadcrumb, Space } from '@douyinfe/semi-ui'
+import { Link } from '@remix-run/react'
 import WidthLimit from './width_limit'
-import type { RouteProps } from '@douyinfe/semi-ui/lib/es/breadcrumb'
+
+export interface PageRoute {
+  href?: string
+  name: string
+}
 
 export interface PageHeaderProps {
-  routes?: Array<RouteProps>
+  routes?: PageRoute[]
   children: React.ReactNode
 }
+
 export default function PageHeader({ children, routes }: PageHeaderProps) {
   return (
-    <div
-      style={{
-        padding: '1em 0',
-        backgroundColor: '#FFF',
-        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)',
-      }}
-    >
+    <div className="border-b border-edge bg-surface py-4 shadow-[0_1px_2px_rgb(0_0_0/10%)]">
       <WidthLimit>
-        <Space vertical align='start' spacing='loose'>
-          <Breadcrumb
-            showTooltip={{
-              width: '24em',
-              opts: {
-                position: 'bottom',
-              },
-            }}
-            routes={routes}
-          />
+        <div className="flex flex-col items-start gap-6">
+          {routes?.length ? (
+            <nav aria-label="面包屑">
+              <ol className="m-0 flex list-none flex-wrap gap-2 p-0 text-sm text-muted">
+                {routes.map((route, index) => (
+                  <li className="flex items-center gap-2" key={route.name}>
+                    {index ? <span aria-hidden="true">/</span> : null}
+                    {route.href ? (
+                      <Link className="hover:text-text" to={route.href}>
+                        {route.name}
+                      </Link>
+                    ) : (
+                      <span aria-current="page" className="font-600 text-text">
+                        {route.name}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          ) : null}
           {children}
-        </Space>
+        </div>
       </WidthLimit>
     </div>
   )

@@ -4,12 +4,14 @@ interface BlurryLoadingImageProps
   extends Omit<HTMLProps<HTMLImageElement>, 'src'> {
   poster_path: string
   background?: string
+  containerClassName?: string
   width: string | number
   height: string | number
 }
 
 export function Poster({
   background = 'transparent',
+  containerClassName,
   poster_path,
   style,
   width,
@@ -37,7 +39,10 @@ export function Poster({
   }, [])
 
   return (
-    <div style={{ height, width, overflow: 'hidden' }}>
+    <div
+      className={containerClassName}
+      style={{ height, width, overflow: 'hidden' }}
+    >
       {/* biome-ignore lint/a11y/useAltText: Passed in via props */}
       <img
         style={{

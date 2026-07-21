@@ -1,35 +1,36 @@
-import { Col, Divider, Row, Select, Typography } from '@douyinfe/semi-ui'
-import type { OptionProps } from '@douyinfe/semi-ui/lib/es/select'
+import type { LinksFunction } from '@remix-run/node'
 import type { MetaFunction } from '@remix-run/react'
 import { useMetaSeason } from 'app/client'
 import Loading from 'app/components/loading'
-import MetaCard from 'app/components/meta_card'
+import MetaCard, { metaCardWidth } from 'app/components/meta_card'
 import PageHeader from 'app/components/page_header'
 import WidthLimit from 'app/components/width_limit'
 import type { Meta, Season, WithId } from 'forrit-client'
 import { group, listify } from 'radash'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { format_day, parse_broadcast, sort_day } from '../util'
-import { LinksFunction } from '@remix-run/node'
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: 'Forrit' },
-    { name: 'description', content: 'Elegant bangumi tracker and downloader' },
-  ]
-}
+export const meta: MetaFunction = () => [
+  { title: 'Forrit' },
+  { name: 'description', content: 'Elegant bangumi tracker and downloader' },
+]
 
-export const link: LinksFunction = () => {
-  return [
-    { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-    { rel: "icon", type: "image/png", sizes: "96x96", href: "/favicon-96x96.png" },
-    { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
-    { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
-    { rel: "shortcut icon", href: "/favicon.ico" },
-    { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
-    { rel: "manifest", href: "/site.webmanifest" },
-  ]
-}
+export const links: LinksFunction = () => [
+  { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+  {
+    rel: 'icon',
+    type: 'image/png',
+    sizes: '96x96',
+    href: '/favicon-96x96.png',
+  },
+  { rel: 'shortcut icon', href: '/favicon.ico' },
+  {
+    rel: 'apple-touch-icon',
+    sizes: '180x180',
+    href: '/apple-touch-icon.png',
+  },
+  { rel: 'manifest', href: '/site.webmanifest' },
+]
 
 const seasons: { value: Season; label: string }[] = [
   { value: 'winter', label: '1月番' },
@@ -39,128 +40,99 @@ const seasons: { value: Season; label: string }[] = [
 ]
 
 export default function Index() {
-  const start_year = 1943
-  const current_year = new Date().getFullYear()
-  const current_month = Math.floor((new Date().getMonth() + 1) / 3)
-  const current_season = seasons[current_month].value
-
-  const [season, set_season] = useState<Season>(current_season)
-  const [year, set_year] = useState(current_year)
-
-  const years: OptionProps[] = Array.from(
-    { length: current_year - 1943 + 1 },
-    (_, x) => x + start_year,
-  )
-    .map(year => ({
-      value: year,
-      label: year,
-    }))
-    .reverse()
+  const startYear = 1943
+  const currentYear = new Date().getFullYear()
+  const currentMonth = Math.floor((new Date().getMonth() + 1) / 3)
+  const currentSeason = seasons[currentMonth].value
+  const [season, setSeason] = useState<Season>(currentSeason)
+  const [year, setYear] = useState(currentYear)
+  const years = Array.from(
+    { length: currentYear - startYear + 1 },
+    (_, index) => index + startYear,
+  ).reverse()
 
   return (
     <>
       <PageHeader routes={[{ href: '/', name: '首页' }, { name: '本季新番' }]}>
-        <Typography.Title type='secondary' style={{ margin: '2em 0 1em' }}>
-          {season === current_season && year === current_year
+        <h1 className="mb-8 mt-16 text-4xl font-600 text-[rgb(28_31_35/80%)]">
+          {season === currentSeason && year === currentYear
             ? '本季新番'
-            : `${year}年${seasons.find(s => s.value === season)?.label}`}
-        </Typography.Title>
-        <Row gutter={12}>
-          <Col span={12}>
-            <Select
-              placeholder='年'
-              style={{ width: 180 }}
+            : `${year}年${seasons.find((item) => item.value === season)?.label}`}
+        </h1>
+        <div className="grid w-full max-w-92 grid-cols-2 gap-3">
+          <label>
+            <span className="sr-only">年</span>
+            <select
+              className="ui-focus h-10 w-full cursor-pointer rounded-md border-0 bg-background px-3 text-text"
+              onChange={(event) => setYear(Number(event.currentTarget.value))}
               value={year}
-              onSelect={val => set_year(val as number)}
-              optionList={years}
-            />
-          </Col>
-          <Col span={12}>
-            <Select
-              placeholder='季'
-              style={{ width: 180 }}
+            >
+              {years.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">季</span>
+            <select
+              className="ui-focus h-10 w-full cursor-pointer rounded-md border-0 bg-background px-3 text-text"
+              onChange={(event) =>
+                setSeason(event.currentTarget.value as Season)
+              }
               value={season}
-              onSelect={val => set_season(val as Season)}
-              optionList={seasons}
-            />
-          </Col>
-        </Row>
+            >
+              {seasons.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </PageHeader>
-      <Loading size='large' useData={() => useMetaSeason(year, season)}>
-        {data => Loaded(data)}
+      <Loading size="large" useData={() => useMetaSeason(year, season)}>
+        {(data) => <Loaded data={data} />}
       </Loading>
     </>
   )
 }
 
-function Loaded(data: WithId<Meta>[]) {
+function Loaded({ data }: { data: WithId<Meta>[] }) {
   const bangumi = data
-    .filter(m => !!m.tv && !!m.broadcast)
-    .map(m => ({
-      ...m,
-      parsed_broadcast: parse_broadcast(m.broadcast as string),
+    .filter((item) => !!item.tv && !!item.broadcast)
+    .map((item) => ({
+      ...item,
+      parsed_broadcast: parse_broadcast(item.broadcast as string),
     }))
-
-  const by_day = listify(
-    group(bangumi, m => m.parsed_broadcast.begin.getDay()),
-    (k, v) => ({ day: k, bangumis: v }),
-  ).sort((a, b) => sort_day(a.day, b.day))
+  const byDay = listify(
+    group(bangumi, (item) => item.parsed_broadcast.begin.getDay()),
+    (day, items) => ({ day, bangumis: items }),
+  ).sort((first, second) => sort_day(first.day, second.day))
 
   return (
-    <>
-      <WidthLimit maxWidth={230 * 6 + 20 * 5}>
-        {by_day.map(({ day, bangumis }) => (
-          <>
-            <Row key={`header-${day}`}>
-              <Divider
-                style={{
-                  marginTop: '2em',
-                  marginBottom: '3em',
-                }}
-              >
-                <Typography.Title
-                  heading={4}
-                  style={{
-                    margin: '0 1em',
-                  }}
-                >
-                  星期{format_day(day)}
-                </Typography.Title>
-              </Divider>
-            </Row>
-            <Row
-              key={`content-${day}`}
-              gutter={{
-                xs: 8,
-                sm: 12,
-                md: 20,
-              }}
-            >
-              {bangumis
-                ?.sort(
-                  (a, b) =>
-                    +a.parsed_broadcast.begin - +b.parsed_broadcast.begin,
-                )
-                .map(meta => (
-                  <Col
-                    key={meta._id.$oid}
-                    xs={12}
-                    md={8}
-                    lg={6}
-                    xxl={4}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      marginBottom: '1em',
-                    }}
-                  >
-                    <MetaCard meta={meta} />
-                  </Col>
-                ))}
-            </Row>
-          </>
-        ))}
-      </WidthLimit>
-    </>
+    <WidthLimit maxWidth={metaCardWidth * 6 + 20 * 5}>
+      {byDay.map(({ day, bangumis }) => (
+        <Fragment key={day}>
+          <div className="my-10 flex items-center gap-4">
+            <span className="h-px flex-1 bg-edge" />
+            <h2 className="m-0 text-lg font-500">星期{format_day(day)}</h2>
+            <span className="h-px flex-1 bg-edge" />
+          </div>
+          <div className="grid grid-cols-2 justify-items-center gap-5 sm:grid-cols-[repeat(2,280px)] sm:justify-center lg:grid-cols-[repeat(3,280px)] xl:grid-cols-[repeat(4,280px)] 2xl:grid-cols-[repeat(5,280px)]">
+            {bangumis
+              ?.sort(
+                (first, second) =>
+                  +first.parsed_broadcast.begin -
+                  +second.parsed_broadcast.begin,
+              )
+              .map((item) => (
+                <MetaCard key={item._id.$oid} meta={item} />
+              ))}
+          </div>
+        </Fragment>
+      ))}
+    </WidthLimit>
   )
 }

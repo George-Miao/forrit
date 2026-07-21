@@ -1,6 +1,6 @@
-import { Notification, Spin } from '@douyinfe/semi-ui'
 import type { Ret } from 'app/client'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect } from 'react'
+import { notify } from '../ui/toast'
 
 export interface LoadingProps<T> {
   useData: () => Ret<T>
@@ -13,46 +13,34 @@ export interface LoadingProps<T> {
 export default function Loading<T>({
   useData,
   children,
-  size,
-  spin,
+  size = 'middle',
+  spin = true,
   spinStyle,
 }: LoadingProps<T>) {
   const { data, isLoading, error } = useData()
-  const [errorShowed, setShowed] = useState(false)
 
-  size = size ?? 'middle'
-  spin = spin ?? true
+  useEffect(() => {
+    if (!error) return
+    const message = error.toString()
+    notify(
+      '加载失败',
+      message.length > 100 ? `${message.slice(0, 100)}...` : message,
+    )
+  }, [error])
 
   if (spin && isLoading) {
+    const sizes = { large: 'h-9 w-9', middle: 'h-6 w-6', small: 'h-4 w-4' }
+    const margins = { large: 'mt-20', middle: 'mt-14', small: 'mt-6' }
     return (
-      <Spin
-        size={size}
-        style={{
-          display: 'block',
-          margin: 'auto',
-          marginTop:
-            size === 'large' ? '5em' : size === 'middle' ? '3.5em' : '1.5em',
-          ...spinStyle,
-        }}
+      <span
+        aria-label="加载中"
+        className={`block animate-spin rounded-full border-2 border-edge border-t-accent ${sizes[size]} ${margins[size]}`}
+        role="status"
+        style={{ marginLeft: 'auto', marginRight: 'auto', ...spinStyle }}
       />
     )
   }
 
-  if (error) {
-    let err = error.toString().substring(0, 100)
-    if (err != error) {
-      err = `${err}...`
-    }
-    if (!errorShowed) {
-      setShowed(true)
-      Notification.open({
-        title: '加载失败',
-        content: err,
-        duration: 3,
-      })
-    }
-    return
-  }
-
+  if (error) return null
   return data ? children(data) : null
 }

@@ -1,101 +1,66 @@
-import { Space, Typography } from '@douyinfe/semi-ui'
-import { group_by, use_is_md } from 'app/util'
-import type { Subscription, WithId } from 'forrit-client'
-import Loading from '../loading'
 import { useExtractedMeta } from 'app/client'
+import { group_by, use_is_md } from 'app/util'
+import type { ObjectId, Subscription, WithId } from 'forrit-client'
 import { useState } from 'react'
-
+import Loading from '../loading'
 import SubscriptionItem from './item'
-
-const { Text } = Typography
 
 const width = 150
 const height = 150 * 1.5
 const placeholder = `https://placedog.net/${width}/${height}`
 
 export interface SubscriptionListProps {
-  data: WithId<Subscription>[]
+  data: (WithId<Subscription> & { meta_id: ObjectId })[]
 }
 
 export default function SubscriptionList({ data }: SubscriptionListProps) {
-  const [grouped, set_grouped] = useState(group_by(data, x => x.meta_id.$oid))
-  const is_md = use_is_md()
+  const [grouped, setGrouped] = useState(
+    group_by(data, (item) => item.meta_id.$oid),
+  )
+  const isMedium = use_is_md()
+
   return (
     <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: is_md ? '1fr' : '1fr 1fr',
-        gap: '1em',
-        marginTop: '1em',
-      }}
+      className={`mt-4 grid gap-4 ${isMedium ? 'grid-cols-1' : 'grid-cols-2'}`}
     >
-      {[...grouped.entries()].map(([id, subs]) => (
+      {[...grouped.entries()].map(([id, subscriptions]) => (
         <Loading key={id} useData={() => useExtractedMeta(id)}>
-          {meta => {
-            return (
-              <Space
-                spacing={0}
-                style={{
-                  height,
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  border: '1px solid var(--semi-color-border)',
-                  borderRadius: 'var(--semi-border-radius-medium)',
-                }}
-              >
-                <img
-                  height={height}
-                  width={width}
-                  src={meta.poster ?? placeholder}
-                  alt='poster'
-                  style={{
-                    borderRadius:
-                      'var(--semi-border-radius-medium) 0 0 var(--semi-border-radius-medium)',
-                  }}
-                />
-                <Space
-                  vertical
-                  spacing={0}
-                  align='start'
-                  style={{
-                    boxSizing: 'border-box',
-                    height: '100%',
-                    width: 'calc(100% - 100px)',
-                  }}
+          {(meta) => (
+            <article className="ui-panel flex h-56.25 overflow-hidden">
+              <img
+                alt={`${meta.title} poster`}
+                className="h-full w-37.5 object-cover"
+                src={meta.poster ?? placeholder}
+              />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <a
+                  className="truncate px-5 py-4 font-600 no-underline hover:underline"
+                  href={`/meta/${meta._id.$oid}`}
                 >
-                  <Text
-                    strong
-                    style={{
-                      padding: '1em 1.2em',
-                    }}
-                    link={{ href: `/meta/${meta._id.$oid}` }}
-                  >
-                    {meta.title}
-                  </Text>
-                  <SubscriptionItem
-                    key={id}
-                    subs={subs}
-                    meta_id={id}
-                    onAdd={added => {}}
-                    onDelete={deleted => {
-                      set_grouped(v => {
-                        const group = v.get(id)
-                        if (!group) return v
-                        v.delete(id)
-                        if (group.length === 1) return new Map(v)
-                        return new Map(
-                          v.set(
-                            id,
-                            group.filter(x => x._id.$oid !== deleted),
-                          ),
-                        )
-                      })
-                    }}
-                  />
-                </Space>
-              </Space>
-            )
-          }}
+                  {meta.title}
+                </a>
+                <SubscriptionItem
+                  meta_id={id}
+                  onAdd={() => {}}
+                  onDelete={(deleted) => {
+                    setGrouped((value) => {
+                      const group = value.get(id)
+                      if (!group) return value
+                      value.delete(id)
+                      if (group.length === 1) return new Map(value)
+                      return new Map(
+                        value.set(
+                          id,
+                          group.filter((item) => item._id.$oid !== deleted),
+                        ),
+                      )
+                    })
+                  }}
+                  subs={subscriptions}
+                />
+              </div>
+            </article>
+          )}
         </Loading>
       ))}
     </div>

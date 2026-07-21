@@ -1,7 +1,3 @@
-/* eslint-disable import/no-unresolved */
-/* eslint-disable react-hooks/rules-of-hooks */
-import { List, Space } from '@douyinfe/semi-ui'
-import Text from '@douyinfe/semi-ui/lib/es/typography/text'
 import {
   type ClientLoaderFunctionArgs,
   json,
@@ -24,8 +20,8 @@ export default function MetaDetail() {
   const id = useLoaderData<typeof clientLoader>().id
 
   return (
-    <Loading size='large' useData={() => useExtractedMeta(id)}>
-      {data => <Loaded meta={data} />}
+    <Loading size="large" useData={() => useExtractedMeta(id)}>
+      {(data) => <Loaded meta={data} />}
     </Loading>
   )
 }
@@ -42,25 +38,12 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
     />
   )
   const list = (
-    <Space vertical align='start' spacing='loose' style={{ width: '100%' }}>
-      <List
-        style={{ width: '100%' }}
-        emptyContent={
-          <Text
-            type='tertiary'
-            style={{
-              display: 'block',
-              marginTop: '2rem',
-            }}
-          >
-            暂无资源
-          </Text>
-        }
-      >
-        <LoadingInfinite data={useMetaEntries(meta.id)}>
-          {data => (
+    <div className="w-full divide-y divide-edge">
+      <LoadingInfinite data={useMetaEntries(meta.id)}>
+        {(data) =>
+          data.length ? (
             <>
-              {data.map(entry => (
+              {data.map((entry) => (
                 <EntryListItem
                   key={entry._id.$oid}
                   item={extract_entry(entry)}
@@ -68,10 +51,12 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
                 />
               ))}
             </>
-          )}
-        </LoadingInfinite>
-      </List>
-    </Space>
+          ) : (
+            <p className="mt-8 text-muted">暂无资源</p>
+          )
+        }
+      </LoadingInfinite>
+    </div>
   )
 
   return (
@@ -88,10 +73,8 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
 
       <WidthLimit
         topPadding={is_big}
+        className="flex gap-10 pl-8"
         style={{
-          display: 'flex',
-          gap: '2.5rem',
-          paddingLeft: '2rem',
           maxWidth: 'calc(1200px + 4rem)',
         }}
       >

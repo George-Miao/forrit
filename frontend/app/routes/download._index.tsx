@@ -1,6 +1,3 @@
-import { List } from '@douyinfe/semi-ui'
-import Text from '@douyinfe/semi-ui/lib/es/typography/text'
-import Title from '@douyinfe/semi-ui/lib/es/typography/title'
 import { useDownloadList } from 'app/client'
 import DownloadItem from 'app/components/download_list'
 import LoadingInfinite from 'app/components/loading_infinite'
@@ -11,35 +8,26 @@ export default function Download() {
   return (
     <>
       <PageHeader routes={[{ href: '/', name: '首页' }, { name: '下载' }]}>
-        <Title type='secondary' style={{ margin: '2em 0 1em' }}>
+        <h1 className="mb-8 mt-16 text-4xl font-600 text-[rgb(28_31_35/80%)]">
           下载
-        </Title>
+        </h1>
       </PageHeader>
       <WidthLimit>
-        <List
-          style={{ width: '100%' }}
-          emptyContent={
-            <Text
-              type='tertiary'
-              style={{
-                display: 'block',
-                marginTop: '2em',
-              }}
-            >
-              暂无下载
-            </Text>
-          }
-        >
+        <div className="w-full divide-y divide-edge">
           <LoadingInfinite data={useDownloadList()}>
-            {data => (
-              <>
-                {data.map(item => (
-                  <DownloadItem key={item._id.$oid} item={item} />
-                ))}
-              </>
-            )}
+            {(data) =>
+              data.length ? (
+                <>
+                  {data.map((item) => (
+                    <DownloadItem item={item} key={item._id.$oid} />
+                  ))}
+                </>
+              ) : (
+                <p className="mt-8 text-muted">暂无下载</p>
+              )
+            }
           </LoadingInfinite>
-        </List>
+        </div>
       </WidthLimit>
     </>
   )

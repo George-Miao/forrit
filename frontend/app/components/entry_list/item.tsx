@@ -1,233 +1,132 @@
-import { IconCheckboxTick, IconCopy, IconDownload } from '@douyinfe/semi-icons'
-import {
-  Button,
-  ButtonGroup,
-  List,
-  Popover,
-  Space,
-  Tooltip,
-  Typography,
-} from '@douyinfe/semi-ui'
+import { Link } from '@remix-run/react'
 import { useClient } from 'app/client'
+import Button from 'app/ui/button'
+import Icon from 'app/ui/icon'
+import PreviewPopover from 'app/ui/popover'
+import Hint from 'app/ui/tooltip'
 import { type ExtractedEntry, format_time_relative, use_is_xs } from 'app/util'
-import { type CSSProperties, useState } from 'react'
+import { useState } from 'react'
 import reactStringReplace from 'react-string-replace'
 import useClipboard from 'react-use-clipboard'
 import MetaPreview from '../meta_preview'
-import './item.css'
-
-const { Text } = Typography
 
 export interface EntryListItemProps {
   show_meta: boolean
   item: ExtractedEntry
 }
 
-export default function EntryListItem({
-  item,
-
-  show_meta,
-}: EntryListItemProps) {
-  const [copied, copy] = useClipboard(item.torrent, {
-    successDuration: 1000,
-  })
+export default function EntryListItem({ item, show_meta }: EntryListItemProps) {
+  const [copied, copy] = useClipboard(item.torrent, { successDuration: 1000 })
   const [downloaded, setDownloaded] = useState(false)
   const client = useClient()
-  const is_xs = use_is_xs()
+  const isSmall = use_is_xs()
 
   const download = () => {
     if (downloaded) return
-    client.POST('/entry/{id}/download', {
-      params: {
-        path: {
-          id: item.id,
-        },
-      },
+    void client.POST('/entry/{id}/download', {
+      params: { path: { id: item.id } },
     })
     setDownloaded(true)
     setTimeout(() => setDownloaded(false), 1000)
   }
 
-  const detail = (
-    <Space align='start'>
-      {/* Date */}
-      {item.pub_date ? (
-        <Tooltip position='right' content={item.pub_date.toLocaleString()}>
-          <Text size='small' type='tertiary'>
-            {format_time_relative(item.pub_date)}
-          </Text>
-        </Tooltip>
-      ) : null}
-
-      {/* Sourcer */}
-      <Text type='tertiary' size='small'>
-        来自
-        <Text
-          size='inherit'
-          weight={400}
-          style={{
-            maxWidth: '15em',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            marginLeft: '.2em',
-          }}
-          link={
-            item.link
-              ? {
-                  href: item.link,
-                  target: '_blank',
-                }
-              : undefined
-          }
+  const episode = item.elements.EpisodeNumber
+    ? `第${item.elements.EpisodeNumber}集`
+    : null
+  const metaText = (
+    <span className={show_meta ? 'font-300' : 'font-500'}>
+      {show_meta && item.meta_id ? (
+        <Link
+          className="mr-2 font-500 no-underline hover:underline"
+          to={`/meta/${item.meta_id.$oid}`}
         >
-          {item.sourcer}
-        </Text>
-      </Text>
-    </Space>
+          {item.meta_title}
+        </Link>
+      ) : null}
+      {episode}
+    </span>
   )
 
-  const episode = item.elements.EpisodeNumber ? (
-    <>第{item.elements.EpisodeNumber}集</>
-  ) : null
-
-  const meta_text = (
-    <Text style={{ fontSize: '16px', fontWeight: show_meta ? 300 : 500 }}>
-      <>
-        {show_meta && item.meta_id && (
-          <Text
-            style={{
-              fontSize: 'inherit',
-              textDecoration: 'none',
-              fontWeight: 500,
-              marginRight: '.5em',
-            }}
-            link={{ href: `/meta/${item.meta_id?.$oid}` }}
-          >
-            {item.meta_title}
-          </Text>
-        )}
-        {episode}
-      </>
-    </Text>
-  )
-
-  const meta =
-    item.meta_id &&
-    (is_xs ? (
-      meta_text
-    ) : (
-      <Popover
-        content={<MetaPreview meta_id={item.meta_id?.$oid} />}
-        trigger='hover'
-        position='right'
-      >
-        {meta_text}
-      </Popover>
-    ))
-
-  const title = (
-    <Text
-      size={show_meta ? 'small' : 'normal'}
-      link={{ href: `/entry/${item.id}` }}
-      style={
-        {
-          wordWrap: 'break-word',
-          wordBreak: 'break-all',
-          cursor: item.link ? 'pointer' : 'default',
-          fontWeight: 400,
-          letterSpacing: '-0.5px',
-          '--semi-color-link': 'var(--semi-color-text-2)',
-        } as CSSProperties
-      }
-    >
-      {item.group
-        ? reactStringReplace(item.title, item.group, () => (
-            <Text size='inherit' style={{ color: 'rgba(var(--semi-teal-7))' }}>
-              {item.group}
-            </Text>
-          ))
-        : item.title}
-    </Text>
-  )
-
-  const non_xs_buttons = (
-    <ButtonGroup>
-      <Tooltip content='复制链接'>
+  const controls = (
+    <div className={`flex gap-1 ${isSmall ? 'self-end' : ''}`}>
+      <Hint content="复制链接">
         <Button
-          theme='borderless'
-          style={{ color: 'rgba(var(--semi-grey-3))' }}
-          icon={copied ? <IconCheckboxTick /> : <IconCopy />}
+          aria-label="复制链接"
+          className={isSmall ? '' : 'h-9 w-9 p-0'}
           onClick={copy}
-        />
-      </Tooltip>
-      <Tooltip content='下载'>
+          variant="ghost"
+        >
+          <Icon name={copied ? 'check' : 'copy'} />
+          {isSmall ? '复制' : null}
+        </Button>
+      </Hint>
+      <Hint content="下载">
         <Button
-          theme='borderless'
-          icon={downloaded ? <IconCheckboxTick /> : <IconDownload />}
+          aria-label="下载"
+          className={isSmall ? '' : 'h-9 w-9 p-0'}
           onClick={download}
-        />
-      </Tooltip>
-    </ButtonGroup>
-  )
-
-  const xs_buttons = (
-    <ButtonGroup style={{ alignSelf: 'flex-end' }}>
-      <Button
-        theme='borderless'
-        style={{
-          color: 'rgba(var(--semi-grey-3))',
-        }}
-        icon={
-          copied ? <IconCheckboxTick size='small' /> : <IconCopy size='small' />
-        }
-        onClick={copy}
-      >
-        复制
-      </Button>
-      <Button
-        theme='borderless'
-        icon={
-          downloaded ? (
-            <IconCheckboxTick size='small' />
-          ) : (
-            <IconDownload size='small' />
-          )
-        }
-        onClick={download}
-      >
-        下载
-      </Button>
-    </ButtonGroup>
+          variant="ghost"
+        >
+          <Icon name={downloaded ? 'check' : 'download'} />
+          {isSmall ? '下载' : null}
+        </Button>
+      </Hint>
+    </div>
   )
 
   return (
-    <List.Item
-      style={{
-        width: '100%',
-        padding: '16px 0',
-        paddingTop: is_xs ? '24px' : undefined,
-      }}
-      main={
-        <Space
-          vertical
-          align='start'
-          className='entry-list-item'
-          spacing='tight'
+    <article className="flex w-full items-center gap-4 py-5 max-sm:items-start max-sm:py-6">
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+        <div className="flex flex-wrap gap-2 text-xs text-muted">
+          {item.pub_date ? (
+            <Hint content={item.pub_date.toLocaleString()} side="right">
+              <time dateTime={item.pub_date.toISOString()}>
+                {format_time_relative(item.pub_date)}
+              </time>
+            </Hint>
+          ) : null}
+          <span>
+            来自{' '}
+            {item.link ? (
+              <a
+                className="inline-block max-w-60 truncate align-bottom hover:underline"
+                href={item.link}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {item.sourcer}
+              </a>
+            ) : (
+              item.sourcer
+            )}
+          </span>
+        </div>
+        {item.meta_id ? (
+          isSmall ? (
+            metaText
+          ) : (
+            <PreviewPopover
+              content={<MetaPreview meta_id={item.meta_id.$oid} />}
+            >
+              {metaText}
+            </PreviewPopover>
+          )
+        ) : null}
+        <Link
+          className={`break-all font-400 tracking-tight text-muted no-underline hover:underline ${
+            show_meta ? 'text-sm' : 'text-base'
+          }`}
+          to={`/entry/${item.id}`}
         >
-          {/* Date and Sourcer */}
-          {detail}
-
-          {/* Entry bangumi name */}
-          {meta}
-
-          {/* Title */}
-          {title}
-
-          {/* Buttons */}
-          {is_xs ? xs_buttons : null}
-        </Space>
-      }
-      extra={is_xs ? null : non_xs_buttons}
-    />
+          {item.group
+            ? reactStringReplace(item.title, item.group, () => (
+                <span className="text-accent">{item.group}</span>
+              ))
+            : item.title}
+        </Link>
+        {isSmall ? controls : null}
+      </div>
+      {isSmall ? null : controls}
+    </article>
   )
 }

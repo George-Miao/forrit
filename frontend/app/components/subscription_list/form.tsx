@@ -1,72 +1,67 @@
-import { Col, Form, Row } from '@douyinfe/semi-ui'
-import type { FormApi } from '@douyinfe/semi-ui/lib/es/form'
-import type { Subscription, WithId } from 'forrit-client'
+import type { Subscription } from 'forrit-client'
 
 export default function SubscriptionForm({
   init,
   disabled,
-  getFormApi,
 }: {
   init: Subscription
   disabled: boolean
-  getFormApi?: (form: FormApi<Subscription>) => void
 }) {
   return (
-    <Form<Subscription>
-      getFormApi={form => getFormApi?.(form)}
-      labelPosition='inset'
-      className='subscription-form'
-      initValues={init}
-      disabled={disabled}
-    >
-      <Row>
-        <Col span={12}>
-          <Form.Input pure field='team' label='字幕组' trigger='blur' />
-        </Col>
-        <Col span={12}>
-          <Form.Input pure field='directory' label='目录' trigger='blur' />
-        </Col>
-      </Row>
-      <Row>
-        <Col span={14}>
-          <Form.Input
-            pure
-            field='include'
-            label='包含正则'
-            trigger='blur'
-            rules={[{ type: 'regexp', message: '包含正则不合法' }]}
-          />
-        </Col>
-        <Col span={10}>
-          <Form.InputNumber
-            pure
-            field='min_size'
-            label='最小'
-            trigger='blur'
-            validate={(val, values) => {
-              const max = values.max_size as number | undefined | null
-              if (max && val > max) {
-                return `文件最小值 (${val}) 不能大于文件最大值 (${max})`
-              }
-              return ''
-            }}
-          />
-        </Col>
-      </Row>
-      <Row>
-        <Col span={14}>
-          <Form.Input
-            pure
-            field='exclude'
-            label='排除正则'
-            trigger='blur'
-            rules={[{ type: 'regexp', message: '排除正则不合法' }]}
-          />
-        </Col>
-        <Col span={10}>
-          <Form.InputNumber pure field='max_size' label='最大' trigger='blur' />
-        </Col>
-      </Row>
-    </Form>
+    <form className="grid grid-cols-2 gap-2 p-2 text-xs">
+      <Field
+        defaultValue={init.directory ?? ''}
+        disabled={disabled}
+        label="目录"
+        name="directory"
+      />
+      <Field
+        defaultValue={init.min_size ?? ''}
+        disabled={disabled}
+        label="最小"
+        name="min_size"
+        type="number"
+      />
+      <Field
+        className="col-span-2"
+        defaultValue={init.include ?? ''}
+        disabled={disabled}
+        label="包含正则"
+        name="include"
+      />
+      <Field
+        className="col-span-2"
+        defaultValue={init.exclude ?? ''}
+        disabled={disabled}
+        label="排除正则"
+        name="exclude"
+      />
+      <Field
+        defaultValue={init.max_size ?? ''}
+        disabled={disabled}
+        label="最大"
+        name="max_size"
+        type="number"
+      />
+    </form>
+  )
+}
+
+function Field({
+  className = '',
+  label,
+  ...props
+}: {
+  className?: string
+  label: string
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label className={`grid gap-1 text-muted ${className}`}>
+      {label}
+      <input
+        className="ui-focus h-8 min-w-0 rounded-md border border-edge bg-surface px-2 text-text disabled:bg-background"
+        {...props}
+      />
+    </label>
   )
 }

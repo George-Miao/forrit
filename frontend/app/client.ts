@@ -5,6 +5,7 @@ import useSWRInfinite from 'swr/infinite'
 import { type ExtractedEntry, type ExtractedMeta, extract_entry, extract_meta } from './util'
 
 type JsonMedia = 'application/json'
+type Operation = Record<string | number, unknown>
 
 export type Ret<T> =
   | {
@@ -57,12 +58,14 @@ const get_key =
           ? [resource, get_edge(prev.page_info.end_cursor as DirectedCursor)]
           : null
 
-const throw_it = <T, O>(resp: FetchResponse<T, O, JsonMedia>) => {
+const throw_it = <T extends Operation, O>(
+  resp: FetchResponse<T, O, JsonMedia>,
+) => {
   if (resp.error) throw resp.error
   return resp.data
 }
 
-function make_inf<T, O>(
+function make_inf<T extends Operation, O>(
   resource: string,
   req: (key: InfKey) => Promise<FetchResponse<T, O, JsonMedia>>
 ) {
@@ -82,7 +85,7 @@ const get_key_with_id =
           ? [resource, id, get_edge(prev.page_info.end_cursor as DirectedCursor)]
           : null
 
-function make_inf_with_id<O, T>(
+function make_inf_with_id<O extends Operation, T>(
   resource: string,
   req: (key: IdInfKey) => Promise<FetchResponse<O, T, JsonMedia>>
 ) {
@@ -92,7 +95,7 @@ function make_inf_with_id<O, T>(
     )
 }
 
-function make_get<P, O>(
+function make_get<P extends Operation, O>(
   resource: string,
   req: (id: string) => Promise<FetchResponse<P, O, JsonMedia>>
 ) {
