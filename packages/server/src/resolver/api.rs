@@ -76,6 +76,21 @@ async fn by_season(year: QueryParam<i32, false>, season: QueryParam<Season, fals
     super::get_by_season(param).await.pipe(Json)
 }
 
+/// Get all subscribed meta
+#[endpoint(tags("meta"))]
+async fn list_subscriptions(
+    year: QueryParam<i32, false>,
+    season: QueryParam<Season, false>,
+) -> Json<Vec<WithId<Meta>>> {
+    let selected = try { YearSeason::new(year.into_inner()?, season.into_inner()?) };
+    super::get_by_season(selected)
+        .await
+        .into_iter()
+        .filter(|meta| meta.inner.subscription.is_some())
+        .collect::<Vec<_>>()
+        .pipe(Json)
+}
+
 /// Get all entries of a meta
 #[endpoint(tags("meta"))]
 async fn list_entry(
@@ -242,6 +257,7 @@ pub fn resolver_api() -> Router {
         .push(
             Router::with_path("meta")
                 .push(Router::with_path("season").get(by_season))
+                .push(Router::with_path("subscription").get(list_subscriptions))
                 .push(Router::with_path("<id>/entry").get(list_entry))
                 .push(Router::with_path("<id>/group").get(list_groups))
                 .push(Router::with_path("<id>/alias").get(list_alias))

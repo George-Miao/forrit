@@ -140,6 +140,13 @@ export interface paths {
      */
     get: operations["forrit_server.resolver.api.by_season"];
   };
+  "/meta/subscription": {
+    /**
+     * Get all subscribed meta
+     * @description Get all subscribed meta
+     */
+    get: operations["forrit_server.resolver.api.list_subscriptions"];
+  };
   "/meta/{id}": {
     /**
      * Get by id
@@ -1354,6 +1361,28 @@ export interface operations {
    * @description Get all meta by season
    */
   "forrit_server.resolver.api.by_season": {
+    parameters: {
+      query?: {
+        /** @description Get parameter `year` from request url query. */
+        year?: number;
+        /** @description Get parameter `season` from request url query. */
+        season?: components["schemas"]["forrit_core.date.Season"];
+      };
+    };
+    responses: {
+      /** @description Response with json format data */
+      200: {
+        content: {
+          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"][];
+        };
+      };
+    };
+  };
+  /**
+   * Get all subscribed meta
+   * @description Get all subscribed meta
+   */
+  "forrit_server.resolver.api.list_subscriptions": {
     parameters: {
       query?: {
         /** @description Get parameter `year` from request url query. */
