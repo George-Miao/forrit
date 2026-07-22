@@ -17,6 +17,13 @@
   text-rendering: optimizeLegibility;
 }
 
+:lang(ja) {
+  font-family:
+    "Geist Sans", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP",
+    "Noto Sans CJK JP", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
+}
+
 * {
   box-sizing: border-box;
 }

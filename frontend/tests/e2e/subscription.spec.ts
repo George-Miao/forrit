@@ -104,7 +104,11 @@ test('edits a subscription inline', async ({ page }) => {
   const groupSelect = page.getByRole('button', { name: '选择字幕组' })
   await expect(groupSelect).toContainText('测试字幕组')
   await groupSelect.click()
-  await page.getByRole('menuitemcheckbox', { name: /日本語字幕組/ }).click()
+  const japaneseGroup = page.getByRole('menuitemcheckbox', {
+    name: /日本語字幕組/,
+  })
+  await expect(japaneseGroup).toHaveAttribute('lang', 'ja')
+  await japaneseGroup.click()
   await expect(page.getByRole('menu')).toBeVisible()
   await expect(groupSelect).toContainText('测试字幕组、日本語字幕組')
   await page.keyboard.press('Escape')
