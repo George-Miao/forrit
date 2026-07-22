@@ -1,7 +1,12 @@
 import { Icon as IconifyIcon } from '@iconify/react'
 import activity from '@iconify-icons/lucide/activity'
+import alertTriangle from '@iconify-icons/lucide/alert-triangle'
 import bell from '@iconify-icons/lucide/bell'
+import calendarSearch from '@iconify-icons/lucide/calendar-search'
 import check from '@iconify-icons/lucide/check'
+import chevronDown from '@iconify-icons/lucide/chevron-down'
+import chevronLeft from '@iconify-icons/lucide/chevron-left'
+import chevronRight from '@iconify-icons/lucide/chevron-right'
 import copy from '@iconify-icons/lucide/copy'
 import download from '@iconify-icons/lucide/download'
 import fileType from '@iconify-icons/lucide/file-type-2'
@@ -22,7 +27,11 @@ import x from '@iconify-icons/lucide/x'
 const icons = {
   activity,
   bell,
+  calendarSearch,
   check,
+  chevronDown,
+  chevronLeft,
+  chevronRight,
   clock,
   copy,
   download,
@@ -38,6 +47,7 @@ const icons = {
   plus,
   save,
   trash,
+  warning: alertTriangle,
   x,
 } as const
 

@@ -5,7 +5,13 @@ import SubscribeButton from './subscription'
 
 export const metaCardWidth = 280
 
-export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
+export default function MetaCard({
+  meta,
+  subscriptionEditHref,
+}: {
+  meta: WithId<Meta>
+  subscriptionEditHref?: string
+}) {
   const interval = meta.broadcast ? parse_broadcast(meta.broadcast) : {}
 
   return (
@@ -31,6 +37,7 @@ export default function MetaCard({ meta }: { meta: WithId<Meta> }) {
           </p>
         </div>
         <SubscribeButton
+          edit_href={subscriptionEditHref}
           meta_id={meta._id.$oid}
           show_text={false}
           subscription={meta.subscription ?? null}

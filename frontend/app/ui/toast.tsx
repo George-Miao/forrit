@@ -2,13 +2,22 @@ import { Toast } from '@base-ui/react/toast'
 
 export const toastManager = Toast.createToastManager()
 
+function errorDescription(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (value instanceof Error) return value.message
+  if (value && typeof value === 'object') {
+    const error = value as Record<string, unknown>
+    if (error.error !== undefined) return errorDescription(error.error)
+    if (typeof error.brief === 'string') return error.brief
+    return JSON.stringify(value, null, 2)
+  }
+  return String(value)
+}
+
 export function notify(title: string, description: unknown) {
   toastManager.add({
     title,
-    description:
-      typeof description === 'string'
-        ? description
-        : JSON.stringify(description),
+    description: errorDescription(description),
     priority: 'high',
   })
 }

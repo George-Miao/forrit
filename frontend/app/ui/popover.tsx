@@ -21,3 +21,26 @@ export default function PreviewPopover({
     </Popover.Root>
   )
 }
+
+export function ClickPopover({
+  children,
+  content,
+  onOpenChange,
+  open,
+}: {
+  children: ReactElement
+  content: ReactNode
+  onOpenChange: (open: boolean) => void
+  open: boolean
+}) {
+  return (
+    <Popover.Root onOpenChange={onOpenChange} open={open}>
+      <Popover.Trigger render={children} />
+      <Popover.Portal>
+        <Popover.Positioner align="center" side="bottom" sideOffset={8}>
+          <Popover.Popup className="ui-popup p-0">{content}</Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}

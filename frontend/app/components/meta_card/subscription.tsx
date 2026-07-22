@@ -1,14 +1,19 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { Dialog } from '@base-ui/react/dialog'
 import { Menu } from '@base-ui/react/menu'
-import { useClient, useMetaGroup } from 'app/client'
+import { useNavigate } from '@remix-run/react'
+import {
+  useClient,
+  useMetaGroup,
+  useRefreshSubscriptionData,
+} from 'app/client'
 import Button from 'app/ui/button'
 import Icon from 'app/ui/icon'
 import { notify } from 'app/ui/toast'
 import type { Subscription } from 'forrit-client'
 import { OrderedSet } from 'immutable'
 import { isEqual } from 'radash'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Loading from '../loading'
 
 const isEmpty = (subscription: Subscription | null) => {
@@ -20,12 +25,14 @@ const isEmpty = (subscription: Subscription | null) => {
 }
 
 interface SubscribeButtonProps {
+  edit_href?: string
   show_text: boolean
   meta_id: string
   subscription: Subscription | null
 }
 
 export default function SubscribeButton({
+  edit_href: editHref,
   show_text: showText,
   meta_id: metaId,
   subscription,
@@ -33,12 +40,15 @@ export default function SubscribeButton({
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [current, setCurrent] = useState(subscription)
+  const navigate = useNavigate()
+  const pendingUpdate = useRef<Promise<void> | null>(null)
   const selected = Array.isArray(current?.groups)
     ? OrderedSet(current.groups)
     : OrderedSet<string>()
   const subscribesToAll = current?.groups === 'all'
   const subscribesTo = (group: string) => subscribesToAll || selected.has(group)
   const client = useClient()
+  const refreshSubscriptionData = useRefreshSubscriptionData()
 
   const remove = async () => {
     const previous = window.structuredClone(current)
@@ -50,30 +60,42 @@ export default function SubscribeButton({
     if (response.error) {
       setCurrent(previous)
       notify('删除订阅失败', response.error)
-    }
-  }
-
-  const update = async (
-    callback: (value: Subscription | null) => Subscription,
-  ) => {
-    const previous = window.structuredClone(current)
-    const next = callback(previous)
-    if (isEqual(previous, next)) return
-    if (isEmpty(next)) {
-      await remove()
       return
     }
+    await refreshSubscriptionData()
+  }
 
-    setCurrent(next)
-    const response = await client.PUT('/meta/{id}/subscription', {
-      params: { path: { id: metaId } },
-      body: next,
-      headers: { Accept: 'application/json' },
+  const update = (
+    callback: (value: Subscription | null) => Subscription,
+  ) => {
+    const operation = (async () => {
+      const previous = window.structuredClone(current)
+      const next = callback(previous)
+      if (isEqual(previous, next)) return
+      if (isEmpty(next)) {
+        await remove()
+        return
+      }
+
+      setCurrent(next)
+      const response = await client.PUT('/meta/{id}/subscription', {
+        params: { path: { id: metaId } },
+        body: next,
+        headers: { Accept: 'application/json' },
+      })
+      if (response.error) {
+        setCurrent(previous)
+        notify('更新订阅失败', response.error)
+        return
+      }
+      await refreshSubscriptionData()
+    })()
+
+    pendingUpdate.current = operation
+    void operation.finally(() => {
+      if (pendingUpdate.current === operation) pendingUpdate.current = null
     })
-    if (response.error) {
-      setCurrent(previous)
-      notify('更新订阅失败', response.error)
-    }
+    return operation
   }
 
   const menuItem =
@@ -183,7 +205,16 @@ export default function SubscribeButton({
                           <Menu.Item
                             className={`${menuItem} justify-center`}
                             nativeButton
-                            onClick={() => setEditing(true)}
+                            onClick={() => {
+                              if (!editHref) {
+                                setEditing(true)
+                                return
+                              }
+                              void (async () => {
+                                await pendingUpdate.current
+                                navigate(editHref)
+                              })()
+                            }}
                             render={<button type="button" />}
                           >
                             <Icon name="edit" />

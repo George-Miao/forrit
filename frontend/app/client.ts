@@ -1,6 +1,10 @@
 import type { DirectedCursor, ListResult, Season, paths } from 'forrit-client'
 import create_client, { type FetchResponse } from 'openapi-fetch'
-import useSWR, { type KeyedMutator, type SWRResponse } from 'swr'
+import useSWR, {
+  type KeyedMutator,
+  type SWRResponse,
+  useSWRConfig,
+} from 'swr'
 import useSWRInfinite from 'swr/infinite'
 import { type ExtractedEntry, type ExtractedMeta, extract_entry, extract_meta } from './util'
 
@@ -144,6 +148,25 @@ export const useMetaSeason = (year?: number, season?: Season) =>
         .then(throw_it)
     )
   )
+
+export const useSubscriptionSeason = (year?: number, season?: Season) =>
+  handle(
+    useSWR(['subscription-season', year, season], () =>
+      useClient()
+        .GET('/meta/subscription', { params: { query: { year, season } } })
+        .then(throw_it)
+    ),
+  )
+
+export const useRefreshSubscriptionData = () => {
+  const { mutate } = useSWRConfig()
+  return () =>
+    mutate(
+      (key) =>
+        Array.isArray(key) &&
+        (key[0] === 'season' || key[0] === 'subscription-season'),
+    )
+}
 
 export const useExtractedMeta = (id: string): Ret<ExtractedMeta> =>
   map(useMeta(id), extract_meta)
