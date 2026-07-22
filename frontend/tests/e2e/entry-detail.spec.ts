@@ -153,7 +153,7 @@ test('presents entry details in a compact card layout', async ({
     exact: true,
   })
   await expect(torrentMime).toHaveClass(/font-mono/)
-  await expect(page.getByRole('heading', { name: '资源信息' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '资源信息' })).toHaveCount(0)
   await expect(page.getByText(entry.mime_type, { exact: true })).toBeVisible()
   await expect(page.getByText(entry.sourcer, { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '下载' })).toBeVisible()
@@ -170,7 +170,7 @@ test('presents entry details in a compact card layout', async ({
   const titleSection = await page.locator('[data-entry-title]').boundingBox()
   await expect(page.locator('[data-entry-title]')).toHaveCSS(
     'margin-top',
-    '64px',
+    '0px',
   )
   expect(main).not.toBeNull()
   expect(title).not.toBeNull()

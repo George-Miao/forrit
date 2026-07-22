@@ -80,13 +80,13 @@ function EntryHeader({ entry }: { entry: ExtractedEntry }) {
   return (
     <PageHeader
       routes={[
-        { href: '/', name: '首页' },
+        { href: '/meta', name: '番剧' },
         { href: '/entry', name: '更新' },
         { name: '资源详情' },
       ]}
     >
       <div
-        className="mt-16 flex w-full items-center justify-between gap-6 max-md:flex-col max-md:items-start"
+        className="flex w-full items-center justify-between gap-6 max-md:flex-col max-md:items-start"
         data-entry-title
       >
         <div className="min-w-0">
