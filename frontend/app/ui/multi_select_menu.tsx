@@ -7,6 +7,12 @@ export interface MultiSelectOption {
   value: string
 }
 
+export interface MultiSelectExclusiveOption {
+  label: string
+  onSelectedChange: (selected: boolean) => void
+  selected: boolean
+}
+
 const hasJapaneseKana = (value: string) =>
   /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(value)
 
@@ -20,12 +26,14 @@ function GroupName({ name }: { name: string }) {
 
 export default function MultiSelectMenu({
   disabled = false,
+  exclusiveOption,
   label,
   onValueChange,
   options,
   values,
 }: {
   disabled?: boolean
+  exclusiveOption?: MultiSelectExclusiveOption
   label: string
   onValueChange: (values: string[]) => void
   options: MultiSelectOption[]
@@ -49,13 +57,18 @@ export default function MultiSelectMenu({
         }
       >
         <span className="min-w-0 truncate font-500">
-          {disabled
-            ? '全部字幕组'
+          {exclusiveOption?.selected
+            ? exclusiveOption.label
             : values.length
               ? values.map((value, index) => (
                   <span key={value}>
                     {index ? '、' : null}
-                    <GroupName name={value} />
+                    <GroupName
+                      name={
+                        options.find((option) => option.value === value)
+                          ?.label ?? value
+                      }
+                    />
                   </span>
                 ))
               : '选择字幕组'}
@@ -69,12 +82,43 @@ export default function MultiSelectMenu({
           sideOffset={4}
         >
           <Menu.Popup className="ui-popup max-h-64 min-w-64 overflow-y-auto p-1">
+            {exclusiveOption ? (
+              <>
+                <Menu.CheckboxItem
+                  checked={exclusiveOption.selected}
+                  className={itemClass}
+                  closeOnClick={false}
+                  nativeButton
+                  onCheckedChange={exclusiveOption.onSelectedChange}
+                  render={<button type="button" />}
+                >
+                  <span className="grid h-4 w-4 shrink-0 place-items-center">
+                    <Menu.CheckboxItemIndicator>
+                      <Icon name="check" />
+                    </Menu.CheckboxItemIndicator>
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-500">
+                    {exclusiveOption.label}
+                  </span>
+                </Menu.CheckboxItem>
+                {options.length ? (
+                  <Menu.Separator className="my-1 h-px bg-edge" />
+                ) : null}
+              </>
+            ) : null}
             {options.length ? (
               options.map((option) => (
                 <Menu.CheckboxItem
-                  checked={selected.has(option.value)}
-                  className={itemClass}
+                  checked={
+                    exclusiveOption?.selected || selected.has(option.value)
+                  }
+                  className={`${itemClass} ${
+                    exclusiveOption?.selected
+                      ? 'cursor-not-allowed text-muted opacity-45 hover:bg-transparent active:scale-100'
+                      : ''
+                  }`}
                   closeOnClick={false}
+                  disabled={exclusiveOption?.selected}
                   key={option.value}
                   nativeButton
                   onCheckedChange={(checked) =>
@@ -101,7 +145,7 @@ export default function MultiSelectMenu({
                   ) : null}
                 </Menu.CheckboxItem>
               ))
-            ) : (
+            ) : exclusiveOption ? null : (
               <p className="m-0 px-3 py-4 text-center text-sm text-muted">
                 暂无字幕组
               </p>

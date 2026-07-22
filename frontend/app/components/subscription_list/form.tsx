@@ -85,7 +85,14 @@ export default function SubscriptionForm({
         <div className="grid gap-1.5 text-sm font-500 text-text">
           <span>字幕组</span>
           <MultiSelectMenu
-            disabled={allGroups}
+            exclusiveOption={{
+              label: '全部字幕组',
+              onSelectedChange: (selected) => {
+                setAllGroups(selected)
+                if (selected) setSelectedGroups([])
+              },
+              selected: allGroups,
+            }}
             label="选择字幕组"
             onValueChange={setSelectedGroups}
             options={options}
@@ -119,15 +126,6 @@ export default function SubscriptionForm({
           type="number"
         />
       </div>
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-text">
-        <input
-          checked={allGroups}
-          className="ui-focus h-4 w-4 accent-accent"
-          onChange={(event) => setAllGroups(event.currentTarget.checked)}
-          type="checkbox"
-        />
-        订阅全部字幕组
-      </label>
       {validationError ? (
         <p className="m-0 text-sm text-danger" role="alert">
           {validationError}

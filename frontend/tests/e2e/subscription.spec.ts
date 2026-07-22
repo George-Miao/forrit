@@ -134,6 +134,54 @@ test('edits a subscription inline', async ({ page }) => {
   })
 })
 
+test('selects all groups exclusively from the group menu', async ({ page }) => {
+  await mockSubscriptions(page)
+  let requestBody: unknown
+  await page.route('**/api/meta/subscription-meta-id/subscription', async (route) => {
+    requestBody = route.request().postDataJSON()
+    await route.fulfill({
+      contentType: 'application/json',
+      json: { updated: true },
+    })
+  })
+  await page.goto('/subscription?year=2026&season=summer')
+  await page.getByRole('button', { name: '编辑 测试番剧' }).click()
+
+  await expect(page.getByText('订阅全部字幕组')).toHaveCount(0)
+  const groupSelect = page.getByRole('button', { name: '选择字幕组' })
+  await groupSelect.click()
+  const allGroups = page.getByRole('menuitemcheckbox', {
+    name: '全部字幕组',
+  })
+  const chineseGroup = page.getByRole('menuitemcheckbox', {
+    name: /测试字幕组/,
+  })
+  const japaneseGroup = page.getByRole('menuitemcheckbox', {
+    name: /日本語字幕グループ/,
+  })
+
+  await allGroups.click()
+  await expect(allGroups).toHaveAttribute('aria-checked', 'true')
+  await expect(chineseGroup).toHaveAttribute('aria-checked', 'true')
+  await expect(chineseGroup).toBeDisabled()
+  await expect(chineseGroup).toHaveCSS('color', 'rgba(28, 31, 35, 0.62)')
+  await expect(chineseGroup).toHaveCSS('opacity', '0.45')
+  await expect(japaneseGroup).toHaveAttribute('aria-checked', 'true')
+  await expect(japaneseGroup).toBeDisabled()
+  await expect(groupSelect).toContainText('全部字幕组')
+
+  await allGroups.click()
+  await expect(chineseGroup).toHaveAttribute('aria-checked', 'false')
+  await expect(japaneseGroup).toHaveAttribute('aria-checked', 'false')
+  await expect(chineseGroup).toBeEnabled()
+  await expect(japaneseGroup).toBeEnabled()
+  await allGroups.click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '保存', exact: true }).click()
+
+  expect(requestBody).toMatchObject({ groups: 'all' })
+})
+
 test('deletes a subscription after confirmation', async ({ page }) => {
   await mockSubscriptions(page)
   await page.route('**/api/meta/subscription-meta-id/subscription', (route) =>
