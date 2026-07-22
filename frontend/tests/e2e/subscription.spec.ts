@@ -37,7 +37,7 @@ async function mockSubscriptions(
       contentType: 'application/json',
       json: [
         { count: 12, name: '测试字幕组' },
-        { count: 3, name: '日本語字幕組' },
+        { count: 3, name: '日本語字幕グループ' },
       ],
     }),
   )
@@ -104,14 +104,24 @@ test('edits a subscription inline', async ({ page }) => {
   const groupSelect = page.getByRole('button', { name: '选择字幕组' })
   await expect(groupSelect).toContainText('测试字幕组')
   await groupSelect.click()
+  const chineseGroupName = page
+    .getByRole('menuitemcheckbox', { name: /测试字幕组/ })
+    .getByText('测试字幕组', { exact: true })
+  await expect(chineseGroupName).toHaveCSS('font-family', /PingFang SC/)
+  await expect(chineseGroupName).not.toHaveCSS(
+    'font-family',
+    /Forrit Japanese/,
+  )
   const japaneseGroup = page.getByRole('menuitemcheckbox', {
-    name: /日本語字幕組/,
+    name: /日本語字幕グループ/,
   })
   await expect(japaneseGroup).not.toHaveAttribute('lang', 'ja')
-  await expect(japaneseGroup).toHaveCSS('font-family', /Forrit Japanese/)
+  await expect(
+    japaneseGroup.getByText('日本語字幕グループ', { exact: true }),
+  ).toHaveCSS('font-family', /Forrit Japanese/)
   await japaneseGroup.click()
   await expect(page.getByRole('menu')).toBeVisible()
-  await expect(groupSelect).toContainText('测试字幕组、日本語字幕組')
+  await expect(groupSelect).toContainText('测试字幕组、日本語字幕グループ')
   await page.keyboard.press('Escape')
   await page.getByLabel('包含正则').fill('1080p|2160p')
   await page.getByRole('button', { name: '保存', exact: true }).click()
@@ -119,7 +129,7 @@ test('edits a subscription inline', async ({ page }) => {
   await expect(page).toHaveURL('/subscription?year=2026&season=summer')
   await expect(page.getByText('包含 1080p|2160p')).toBeVisible()
   expect(requestBody).toMatchObject({
-    groups: ['测试字幕组', '日本語字幕組'],
+    groups: ['测试字幕组', '日本語字幕グループ'],
     include: '1080p|2160p',
   })
 })

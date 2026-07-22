@@ -7,6 +7,17 @@ export interface MultiSelectOption {
   value: string
 }
 
+const hasJapaneseKana = (value: string) =>
+  /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(value)
+
+function GroupName({ name }: { name: string }) {
+  return (
+    <span className={hasJapaneseKana(name) ? 'font-cjk-jp' : undefined}>
+      {name}
+    </span>
+  )
+}
+
 export default function MultiSelectMenu({
   disabled = false,
   label,
@@ -41,7 +52,12 @@ export default function MultiSelectMenu({
           {disabled
             ? '全部字幕组'
             : values.length
-              ? values.join('、')
+              ? values.map((value, index) => (
+                  <span key={value}>
+                    {index ? '、' : null}
+                    <GroupName name={value} />
+                  </span>
+                ))
               : '选择字幕组'}
         </span>
         <Icon name="chevronDown" />
@@ -76,7 +92,7 @@ export default function MultiSelectMenu({
                     </Menu.CheckboxItemIndicator>
                   </span>
                   <span className="min-w-0 flex-1 truncate font-500">
-                    {option.label}
+                    <GroupName name={option.label} />
                   </span>
                   {option.suffix !== undefined ? (
                     <span className="text-xs tabular-nums text-muted">
