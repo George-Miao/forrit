@@ -10,7 +10,7 @@ export default function MetaCard({
   subscriptionEditHref,
 }: {
   meta: WithId<Meta>
-  subscriptionEditHref?: string
+  subscriptionEditHref: string
 }) {
   const interval = meta.broadcast ? parse_broadcast(meta.broadcast) : {}
 
@@ -37,9 +37,9 @@ export default function MetaCard({
           </p>
         </div>
         <SubscribeButton
-          edit_href={subscriptionEditHref}
+          editHref={subscriptionEditHref}
           meta_id={meta._id.$oid}
-          show_text={false}
+          style="icon-only"
           subscription={meta.subscription ?? null}
         />
       </div>

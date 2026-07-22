@@ -2,6 +2,7 @@ import { type ExtractedMeta, use_is_xs } from 'app/util'
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import Hint from '../ui/tooltip'
+import { getSeasonFromDate } from './season_selector'
 import SubscribeButton from './meta_card/subscription'
 
 export const width = '(min(max(100dvw * 0.3, 150px), 300px))'
@@ -69,6 +70,10 @@ function MetaDetailText({
 }) {
   const [expanded, setExpanded] = useState(false)
   const { title, year, info, overview, tv } = meta
+  const selected = getSeasonFromDate(
+    meta.begin ? new Date(meta.begin) : new Date(),
+  )
+  const editHref = `/subscription?year=${selected.year}&season=${selected.season}&edit=${meta.id}`
 
   return (
     <div className="flex flex-1 flex-col items-start gap-4" style={style}>
@@ -112,8 +117,9 @@ function MetaDetailText({
       ) : null}
       <div className="flex w-full flex-1 items-end justify-end">
         <SubscribeButton
+          editHref={editHref}
           meta_id={meta.id}
-          show_text
+          style="with-text"
           subscription={meta.subscription ?? null}
         />
       </div>

@@ -20,6 +20,13 @@ export function getCurrentSeason() {
   }
 }
 
+export function getSeasonFromDate(date: Date) {
+  return {
+    season: seasons[Math.floor(date.getUTCMonth() / 3)].value,
+    year: date.getUTCFullYear(),
+  }
+}
+
 export function getSeasonLabel(season: Season) {
   return seasons.find((item) => item.value === season)?.label
 }

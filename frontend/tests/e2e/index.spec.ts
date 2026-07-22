@@ -293,6 +293,68 @@ test('opens a card subscription in the subscription page editor', async ({
   ).toBeVisible()
 })
 
+test('opens a detail subscription in the subscription page editor', async ({
+  page,
+}) => {
+  const meta = {
+    _id: { $oid: 'detail-meta-id' },
+    begin: '2026-07-01T00:00:00Z',
+    broadcast: 'R/2026-07-01T00:00:00Z/P7D',
+    comment: null,
+    end: null,
+    lang: 'ja',
+    official_site: '',
+    season: null,
+    season_override: null,
+    sites: [],
+    subscription: {
+      directory: null,
+      exclude: null,
+      groups: ['测试字幕组'],
+      include: '1080p',
+      max_size: null,
+      min_size: null,
+    },
+    title: '详情页测试番剧',
+    title_translate: { 'zh-Hans': ['详情页测试番剧'] },
+    tv: {},
+    type: 'tv',
+  }
+
+  await page.route('**/api/meta/detail-meta-id', (route) =>
+    route.fulfill({ contentType: 'application/json', json: meta }),
+  )
+  await page.route('**/api/meta/detail-meta-id/entry**', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: { items: [], page_info: { has_next_page: false } },
+    }),
+  )
+  await page.route('**/api/meta/detail-meta-id/group', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: [{ count: 1, name: '测试字幕组' }],
+    }),
+  )
+  await page.route('**/api/meta/subscription**', (route) =>
+    route.fulfill({ contentType: 'application/json', json: [meta] }),
+  )
+
+  await page.goto('/meta/detail-meta-id')
+
+  const trigger = page.getByRole('button', { name: '编辑订阅' })
+  await expect(trigger).toContainText('已订阅')
+  await trigger.click()
+  await expect(page.getByRole('menuitem', { name: '编辑' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('menuitem', { name: '编辑' }).click()
+
+  await expect(page).toHaveURL(
+    '/subscription?year=2026&season=summer&edit=detail-meta-id',
+  )
+  await expect(page.getByLabel('包含正则')).toHaveValue('1080p')
+})
+
 test('keeps the subscription menu open when selecting a group', async ({
   page,
 }) => {
