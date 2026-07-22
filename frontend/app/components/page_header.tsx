@@ -13,9 +13,12 @@ export interface PageHeaderProps {
 
 export default function PageHeader({ children, routes }: PageHeaderProps) {
   return (
-    <div className="border-b border-edge bg-surface py-4 shadow-[0_1px_2px_rgb(0_0_0/10%)]">
+    <header
+      className="border-b border-edge bg-surface pb-8 pt-4 shadow-[0_1px_2px_rgb(0_0_0/10%)]"
+      data-page-header
+    >
       <WidthLimit>
-        <div className="flex flex-col items-start gap-6">
+        <div className="flex min-h-44 flex-col items-start">
           {routes?.length ? (
             <nav aria-label="面包屑">
               <ol className="m-0 flex list-none flex-wrap gap-2 p-0 text-sm text-muted">
@@ -36,9 +39,9 @@ export default function PageHeader({ children, routes }: PageHeaderProps) {
               </ol>
             </nav>
           ) : null}
-          {children}
+          <div className="flex w-full flex-1 items-end pt-6">{children}</div>
         </div>
       </WidthLimit>
-    </div>
+    </header>
   )
 }

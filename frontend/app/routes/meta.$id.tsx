@@ -65,7 +65,6 @@ export function Loaded({ meta }: { meta: ExtractedMeta }) {
     <>
       <PageHeader
         routes={[
-          { href: '/', name: '首页' },
           { href: '/meta', name: '番剧' },
           { name: meta.title },
         ]}

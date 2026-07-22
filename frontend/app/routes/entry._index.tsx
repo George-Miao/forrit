@@ -12,8 +12,8 @@ export const meta: MetaFunction = () => [{ title: '更新 | Forrit' }]
 export default function Entry() {
   return (
     <>
-      <PageHeader routes={[{ href: '/', name: '首页' }, { name: '更新' }]}>
-        <h1 className="mb-8 mt-16 text-4xl font-600 text-[rgb(28_31_35/80%)]">
+      <PageHeader routes={[{ href: '/meta', name: '番剧' }, { name: '更新' }]}>
+        <h1 className="m-0 text-4xl font-600 text-[rgb(28_31_35/80%)]">
           更新
         </h1>
       </PageHeader>

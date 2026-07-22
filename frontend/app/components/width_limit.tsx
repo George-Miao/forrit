@@ -16,8 +16,9 @@ export default function WidthLimit({
         marginLeft: 'auto',
         marginRight: 'auto',
         margin: '0 auto',
-        padding: '0 1em',
-        paddingTop: top ? '1em' : 0,
+        paddingLeft: '1em',
+        paddingRight: '1em',
+        ...(top ? { paddingTop: '1em' } : {}),
         ...style,
       }}
       {...props}

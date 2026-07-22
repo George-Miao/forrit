@@ -48,7 +48,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         isActive ? 'bg-[rgb(28_31_35/5%)]' : ''
                       }`
                     }
-                    to="/"
+                    to="/meta"
                   >
                     <img
                       alt=""
@@ -100,7 +100,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   By <a href="https://github.com/George-Miao">Pop</a>
                   <br />
                   Built with <a href="https://remix.run">Remix</a>,{' '}
-                  <a href="https://base-ui.com">Base UI</a>, and UnoCSS
+                  <a href="https://base-ui.com">Base UI</a>, and{' '}
+                  <a href="https://unocss.dev">UnoCSS</a>
                 </p>
               </WidthLimit>
             </footer>

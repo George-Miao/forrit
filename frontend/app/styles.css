@@ -9,7 +9,10 @@
   --color-text: #1c1f23;
   --color-text-muted: rgb(28 31 35 / 62%);
   --shadow-card: 0 0 1px rgb(0 0 0 / 30%), 0 4px 14px rgb(0 0 0 / 10%);
-  font-family: "Geist Sans", system-ui, sans-serif;
+  font-family:
+    "Geist Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Noto Sans CJK SC", "Source Han Sans SC", "Hiragino Sans", "Yu Gothic UI",
+    "Yu Gothic", "Noto Sans JP", "Noto Sans CJK JP", system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }

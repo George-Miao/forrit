@@ -10,8 +10,8 @@ export const meta: MetaFunction = () => [{ title: '下载 | Forrit' }]
 export default function Download() {
   return (
     <>
-      <PageHeader routes={[{ href: '/', name: '首页' }, { name: '下载' }]}>
-        <h1 className="mb-8 mt-16 text-4xl font-600 text-[rgb(28_31_35/80%)]">
+      <PageHeader routes={[{ href: '/meta', name: '番剧' }, { name: '下载' }]}>
+        <h1 className="m-0 text-4xl font-600 text-[rgb(28_31_35/80%)]">
           下载
         </h1>
       </PageHeader>
