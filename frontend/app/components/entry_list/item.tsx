@@ -33,15 +33,35 @@ export default function EntryListItem({ item, show_meta }: EntryListItemProps) {
   const episode = item.elements.EpisodeNumber
     ? `第${item.elements.EpisodeNumber}集`
     : null
+  const parsedTitle =
+    typeof item.elements.AnimeTitle === 'string'
+      ? item.elements.AnimeTitle
+      : null
   const metaText = (
     <span className={show_meta ? 'font-300' : 'font-500'}>
-      {show_meta && item.meta_id ? (
-        <Link
-          className="mr-2 font-500 no-underline hover:underline"
-          to={`/meta/${item.meta_id.$oid}`}
-        >
-          {item.meta_title}
-        </Link>
+      {show_meta ? (
+        item.meta_id ? (
+          <Link
+            className="mr-2 font-500 no-underline hover:underline"
+            to={`/meta/${item.meta_id.$oid}`}
+          >
+            {item.meta_title}
+          </Link>
+        ) : (
+          <span className="mr-2 inline-flex items-center gap-1.5 font-500">
+            {parsedTitle ? <span className="text-muted">{parsedTitle}</span> : null}
+            <Hint content="此条目未匹配到番剧">
+              <span
+                aria-label="未匹配条目"
+                className="ui-focus inline-flex text-accent"
+                role="img"
+                tabIndex={0}
+              >
+                <Icon name="warning" />
+              </span>
+            </Hint>
+          </span>
+        )
       ) : null}
       {episode}
     </span>
@@ -111,6 +131,8 @@ export default function EntryListItem({ item, show_meta }: EntryListItemProps) {
               {metaText}
             </PreviewPopover>
           )
+        ) : show_meta ? (
+          metaText
         ) : null}
         <Link
           className={`break-all font-300 tracking-tight text-muted no-underline hover:underline ${show_meta ? 'text-xs' : 'text-base'
