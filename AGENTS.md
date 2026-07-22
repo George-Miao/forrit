@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file should always be updated if any of the factual content in this file has been updated and became obsolete. Use ASD-STE100 as the standard for speaking english.
+This file should always be updated if any of the factual content in this file has been updated and became obsolete. Use ASD-STE100 as the standard for speaking english. Always speak English when communicating with user.
 
 ## Project overview
 
