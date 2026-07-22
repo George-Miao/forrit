@@ -1,5 +1,4 @@
 import { Menu } from '@base-ui/react/menu'
-import { Fragment } from 'react'
 import Icon from './icon'
 
 export interface MultiSelectOption {
@@ -7,11 +6,6 @@ export interface MultiSelectOption {
   suffix?: string | number
   value: string
 }
-
-const textLanguage = (value: string) =>
-  /[\p{Script=Hiragana}\p{Script=Katakana}]|日本語/u.test(value)
-    ? 'ja'
-    : undefined
 
 export default function MultiSelectMenu({
   disabled = false,
@@ -47,12 +41,7 @@ export default function MultiSelectMenu({
           {disabled
             ? '全部字幕组'
             : values.length
-              ? values.map((value, index) => (
-                  <Fragment key={value}>
-                    {index ? '、' : null}
-                    <span lang={textLanguage(value)}>{value}</span>
-                  </Fragment>
-                ))
+              ? values.join('、')
               : '选择字幕组'}
         </span>
         <Icon name="chevronDown" />
@@ -71,7 +60,6 @@ export default function MultiSelectMenu({
                   className={itemClass}
                   closeOnClick={false}
                   key={option.value}
-                  lang={textLanguage(option.label)}
                   nativeButton
                   onCheckedChange={(checked) =>
                     onValueChange(

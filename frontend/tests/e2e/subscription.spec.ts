@@ -107,7 +107,8 @@ test('edits a subscription inline', async ({ page }) => {
   const japaneseGroup = page.getByRole('menuitemcheckbox', {
     name: /日本語字幕組/,
   })
-  await expect(japaneseGroup).toHaveAttribute('lang', 'ja')
+  await expect(japaneseGroup).not.toHaveAttribute('lang', 'ja')
+  await expect(japaneseGroup).toHaveCSS('font-family', /Forrit Japanese/)
   await japaneseGroup.click()
   await expect(page.getByRole('menu')).toBeVisible()
   await expect(groupSelect).toContainText('测试字幕组、日本語字幕組')

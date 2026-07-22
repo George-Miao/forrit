@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Forrit Japanese";
+  src:
+    local("Hiragino Sans"), local("Yu Gothic UI"), local("Yu Gothic"),
+    local("Noto Sans JP"), local("Noto Sans CJK JP");
+  unicode-range: U+3040-30FF, U+31F0-31FF, U+FF66-FF9F;
+}
+
 :root {
   color-scheme: light;
   --color-accent: #f93920;
@@ -10,18 +18,12 @@
   --color-text-muted: rgb(28 31 35 / 62%);
   --shadow-card: 0 0 1px rgb(0 0 0 / 30%), 0 4px 14px rgb(0 0 0 / 10%);
   font-family:
-    "Geist Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    "Noto Sans CJK SC", "Source Han Sans SC", "Hiragino Sans", "Yu Gothic UI",
-    "Yu Gothic", "Noto Sans JP", "Noto Sans CJK JP", system-ui, sans-serif;
+    "Geist Sans", "Forrit Japanese", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Hiragino Sans",
+    "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", "Noto Sans CJK JP", system-ui,
+    sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-}
-
-:lang(ja) {
-  font-family:
-    "Geist Sans", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP",
-    "Noto Sans CJK JP", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
 }
 
 * {
