@@ -4,7 +4,7 @@ use reqwest_websocket::Message;
 use tap::Tap;
 use url::Url;
 
-use crate::{error::Result, ForritClient, ResourceClient};
+use crate::{ForritClient, ResourceClient, error::Result};
 
 impl ForritClient {
     pub fn index(&self) -> ResourceClient<'_, IndexStat> {
@@ -81,7 +81,7 @@ impl<'a> ResourceClient<'a, IndexStat> {
     //         .map(|x| {
     //             match x? {
     //                 Message::Text(text) =>
-    // serde_json::from_str::<IndexStat>(&text),                 
+    // serde_json::from_str::<IndexStat>(&text),
     // Message::Binary(bytes) => serde_json::from_slice(&bytes),             }
     //             .map_err(Into::into)
     //         })

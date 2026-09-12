@@ -1,5 +1,5 @@
 use forrit_core::model::{Alias, Job, Meta, PartialEntry, Subscription};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::resource::sealed::Sealed;
 

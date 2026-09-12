@@ -6,9 +6,9 @@ use mongodb::bson::oid::ObjectId;
 use ractor::ActorCell;
 
 use crate::{
-    resolver::{index::IndexStatRecv, ExtractResult, Message, Resolver},
-    util::ActorCellExt,
     ACTOR_ERR, RECV_ERR, SEND_ERR,
+    resolver::{ExtractResult, Message, Resolver, index::IndexStatRecv},
+    util::ActorCellExt,
 };
 
 fn resolver() -> ActorCell {

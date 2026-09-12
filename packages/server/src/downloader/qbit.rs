@@ -3,16 +3,16 @@ use std::{borrow::Cow, collections::HashMap, time::Duration};
 use camino::Utf8PathBuf;
 use forrit_config::QbittorrentConfig;
 use forrit_core::{
-    model::{DownloadState, WithId},
     IntoStream,
+    model::{DownloadState, WithId},
 };
-use futures::{future::try_join_all, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt, future::try_join_all};
 use mongodb::bson::oid::ObjectId;
 use qbit_rs::{
-    model::{AddTorrentArg, Credential, GetTorrentListArg, Torrent, TorrentSource},
     Qbit,
+    model::{AddTorrentArg, Credential, GetTorrentListArg, Torrent, TorrentSource},
 };
-use ractor::{concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef};
+use ractor::{Actor, ActorProcessingErr, ActorRef, concurrency::JoinHandle};
 use reqwest::Client;
 use tap::Pipe;
 use tracing::{debug, info, warn};

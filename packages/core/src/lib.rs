@@ -11,7 +11,7 @@ pub use util::IntoStream;
 mod list_stream {
     use std::{
         pin::Pin,
-        task::{ready, Context, Poll},
+        task::{Context, Poll, ready},
     };
 
     use futures::{Future, Stream};

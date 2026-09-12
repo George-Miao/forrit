@@ -1,6 +1,6 @@
 unstable_features = true
 
-version = "Two"
+style_edition = "2024"
 
 max_width = 120
 
