@@ -1081,6 +1081,7 @@ dependencies = [
  "ammonia",
  "anitomy",
  "bangumi-data",
+ "base64 0.22.1",
  "bt_bencode",
  "camelpaste",
  "camino",
@@ -1118,6 +1119,7 @@ dependencies = [
  "tracing-appender",
  "tracing-flame",
  "tracing-subscriber",
+ "unicode-normalization",
  "url",
 ]
 

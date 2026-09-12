@@ -13,6 +13,7 @@ pub mod dispatcher;
 pub mod downloader;
 pub mod notifier;
 pub mod resolver;
+pub mod search;
 pub mod sourcer;
 pub mod test;
 pub mod util;

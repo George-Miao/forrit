@@ -139,7 +139,7 @@ impl Resolver {
         let result = self.match_item(&item).await;
         debug!(?result, "Item matched");
         let meta = Meta::new(item, result.tv, result.season);
-        self.meta.upsert(&meta.into()).await.expect("db error");
+        self.meta.upsert(meta).await.expect("db error");
         if exist { IndexResult::Updated } else { IndexResult::New }
     }
 }

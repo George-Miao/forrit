@@ -111,7 +111,9 @@ impl From<CrudError> for ApiError {
     fn from(crud: CrudError) -> Self {
         match crud {
             CrudError::DatabaseError(db) => ApiError::DatabaseError(db),
-            CrudError::CursorError(e) => e.into(),
+            CrudError::CursorError(error) => error.into(),
+            CrudError::InvalidResource(reason) => ApiError::InvalidRequest { reason },
+            CrudError::Serialization(error) => ApiError::InternalError(error.to_string()),
         }
     }
 }

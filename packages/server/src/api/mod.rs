@@ -12,7 +12,8 @@ use crate::{
     db::{Collections, Storage},
     dispatcher::dispatcher_api,
     downloader::job_added,
-    resolver::{AliasKV, MetaStorage, resolver_api},
+    resolver::{MetaStorage, resolver_api},
+    search::{AliasStorage, search_api},
     sourcer::EntryStorage,
 };
 
@@ -37,6 +38,7 @@ impl Handler for Collections {
         depot.inject(self.entry.clone());
         depot.inject(self.jobs.clone());
         depot.inject(self.alias.clone());
+        depot.inject(self.search.clone());
     }
 }
 
@@ -85,7 +87,7 @@ impl Handler for AuthHoop {
 pub fn api() -> Router {
     let entry_api = build_crud!(EntryStorage, "entry").without_create();
     let meta_api = build_crud!(MetaStorage, "meta").list().read().update().build();
-    let alias_api = build_crud!(AliasKV, "alias").all();
+    let alias_api = build_crud!(AliasStorage, "alias").all();
     let download_api = build_crud!(Storage<Job>, "download", on_create = job_added)
         .list()
         .read()
@@ -94,6 +96,7 @@ pub fn api() -> Router {
     Router::new()
         .push(resolver_api())
         .push(dispatcher_api())
+        .push(search_api())
         .push(entry_api)
         .push(meta_api)
         .push(alias_api)

@@ -19,7 +19,8 @@ use crate::{
     db::{CrudError, Storage},
     dispatcher::refresh_subscription,
     downloader::JobIdx,
-    resolver::{AliasKV, MetaStorage},
+    resolver::MetaStorage,
+    search::AliasStorage,
     sourcer::EntryStorage,
 };
 
@@ -120,8 +121,8 @@ async fn list_groups(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<EntryG
 /// Get all aliases of a meta
 #[endpoint(tags("meta"))]
 async fn list_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Alias>>>> {
-    pod.obtain::<AliasKV>()
-        .expect("missing AliasKV")
+    pod.obtain::<AliasStorage>()
+        .expect("missing AliasStorage")
         .list_keys_by_value(&id.id, param)
         .await?
         .pipe(Json)

@@ -200,6 +200,15 @@ export interface paths {
      */
     delete: operations["forrit_server.resolver.api.delete_subscription"];
   };
+  "/search": {
+    get: operations["search"];
+  };
+  "/search/meta/{id}/entry": {
+    get: operations["search_meta_entries"];
+  };
+  "/search/suggestions": {
+    get: operations["search_suggestions"];
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -419,6 +428,41 @@ export interface components {
     };
     /** @enum {string} */
     "forrit_core.model.mongodb_pagination.Direction": "forward" | "backwards";
+    /** @enum {string} */
+    "forrit_server.search.model.MatchField": "meta_title" | "tmdb_name" | "alias" | "entry_title" | "parsed_title" | "torrent_name";
+    /** @enum {string} */
+    "forrit_server.search.model.MatchKind": "exact" | "prefix" | "substring" | "terms";
+    "forrit_server.search.model.SearchEntryHit": {
+      entry: components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
+      matched_by?: components["schemas"]["forrit_server.search.model.SearchMatch"] | null;
+    };
+    "forrit_server.search.model.SearchEntryPage": {
+      items: components["schemas"]["forrit_server.search.model.SearchEntryHit"][];
+      next_cursor?: string | null;
+    };
+    "forrit_server.search.model.SearchMatch": {
+      field: components["schemas"]["forrit_server.search.model.MatchField"];
+      fragments: string[];
+      kind: components["schemas"]["forrit_server.search.model.MatchKind"];
+      text: string;
+    };
+    "forrit_server.search.model.SearchMetaGroup": {
+      entries: components["schemas"]["forrit_server.search.model.SearchEntryHit"][];
+      matched_by?: components["schemas"]["forrit_server.search.model.SearchMatch"] | null;
+      /** Format: int64 */
+      matching_entry_count: number;
+      meta: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"];
+    };
+    "forrit_server.search.model.SearchMetaPage": {
+      items: components["schemas"]["forrit_server.search.model.SearchMetaGroup"][];
+      next_cursor?: string | null;
+    };
+    "forrit_server.search.model.SearchResult": {
+      metadata?: components["schemas"]["forrit_server.search.model.SearchMetaPage"] | null;
+      unmatched_entries?: components["schemas"]["forrit_server.search.model.SearchEntryPage"] | null;
+    };
+    /** @enum {string} */
+    "forrit_server.search.model.SearchSection": "metadata" | "unmatched";
     "salvo_core.http.errors.status_error.StatusError": {
       brief: string;
       cause?: string;
@@ -1791,6 +1835,135 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The requested resource could not be found. */
+      404: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server timed out waiting for the request. */
+      408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server encountered an internal error while processing this request. */
+      500: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+    };
+  };
+  search: {
+    parameters: {
+      query: {
+        /** @description Get parameter `q` from request url query. */
+        q: string;
+        /** @description Get parameter `section` from request url query. */
+        section?: components["schemas"]["forrit_server.search.model.SearchSection"];
+        /** @description Get parameter `cursor` from request url query. */
+        cursor?: string;
+      };
+    };
+    responses: {
+      /** @description Response with json format data */
+      200: {
+        content: {
+          "application/json": components["schemas"]["forrit_server.search.model.SearchResult"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The requested resource could not be found. */
+      404: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server timed out waiting for the request. */
+      408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server encountered an internal error while processing this request. */
+      500: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+    };
+  };
+  search_meta_entries: {
+    parameters: {
+      query: {
+        /** @description Get parameter `q` from request url query. */
+        q: string;
+        /** @description Get parameter `cursor` from request url query. */
+        cursor?: string;
+      };
+      path: {
+        id: components["schemas"]["ObjectIdString"];
+      };
+    };
+    responses: {
+      /** @description Response with json format data */
+      200: {
+        content: {
+          "application/json": components["schemas"]["forrit_server.search.model.SearchEntryPage"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The requested resource could not be found. */
+      404: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server timed out waiting for the request. */
+      408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server encountered an internal error while processing this request. */
+      500: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+    };
+  };
+  search_suggestions: {
+    parameters: {
+      query: {
+        /** @description Get parameter `q` from request url query. */
+        q: string;
+      };
+    };
+    responses: {
+      /** @description Response with json format data */
+      200: {
+        content: {
+          "application/json": components["schemas"]["forrit_server.search.model.SearchResult"];
         };
       };
       /** @description The request could not be understood by the server due to malformed syntax. */

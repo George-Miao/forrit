@@ -345,52 +345,6 @@ impl Meta {
     }
 }
 
-impl Deref for BsonMeta {
-    type Target = Meta;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl DerefMut for BsonMeta {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-impl From<Meta> for BsonMeta {
-    fn from(meta: Meta) -> Self {
-        Self {
-            bson_begin: meta.begin.map(bson::DateTime::from_chrono),
-            bson_end: meta.end.map(bson::DateTime::from_chrono),
-            tv_id: meta.tv.as_ref().map(|tv| tv.inner.id),
-            inner: meta,
-        }
-    }
-}
-
-impl From<BsonMeta> for Meta {
-    fn from(meta: BsonMeta) -> Self {
-        meta.inner
-    }
-}
-
-impl From<PartialEntry> for BsonEntry {
-    fn from(meta: PartialEntry) -> Self {
-        Self {
-            bson_pub_date: meta.base.pub_date.map(bson::DateTime::from_chrono),
-            inner: meta,
-        }
-    }
-}
-
-impl From<BsonEntry> for PartialEntry {
-    fn from(meta: BsonEntry) -> Self {
-        meta.inner
-    }
-}
-
 impl From<Entry> for PartialEntry {
     fn from(entry: Entry) -> Self {
         Self {
@@ -398,14 +352,6 @@ impl From<Entry> for PartialEntry {
             meta_title: Some(entry.meta_title),
             meta_id: Some(entry.meta_id),
         }
-    }
-}
-
-impl Deref for BsonEntry {
-    type Target = PartialEntry;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
     }
 }
 

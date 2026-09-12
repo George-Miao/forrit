@@ -1,6 +1,10 @@
-use std::{borrow::Borrow, fmt::Debug};
+use std::{
+    borrow::Borrow,
+    convert::Infallible,
+    fmt::{Debug, Display},
+};
 
-use forrit_core::model::{BsonMeta, Job, ListParam, ListResult, Meta, Record, WithId};
+use forrit_core::model::{Job, ListParam, ListResult, Record, WithId};
 use mongodb::{
     Collection, IndexModel,
     bson::{self, Bson, Document, doc, oid::ObjectId},
@@ -13,7 +17,8 @@ use thiserror::Error;
 
 use crate::{
     downloader::JobIdx,
-    resolver::{AliasKV, MetaStorage},
+    resolver::MetaStorage,
+    search::{AliasStorage, Search},
     sourcer::EntryStorage,
     util::ToCore,
 };
@@ -22,6 +27,31 @@ mod_use::mod_use![crud, index, kv, migration];
 
 pub type MongoResult<T> = mongodb::error::Result<T>;
 
+#[derive(Debug, Error)]
+pub enum InitError {
+    #[error("Database initialization failed: {0}")]
+    Database(#[from] mongodb::error::Error),
+
+    #[error("Database serialization failed: {0}")]
+    Serialization(#[from] bson::ser::Error),
+
+    #[error("Cannot materialize search fields for {collection} record {id}: {reason}")]
+    SearchMaterial {
+        collection: &'static str,
+        id: ObjectId,
+        reason: String,
+    },
+
+    #[error("Cannot decode {collection} record {id:?} while materializing search fields: {source}")]
+    SearchDecode {
+        collection: &'static str,
+        id: Bson,
+        source: bson::de::Error,
+    },
+}
+
+pub type InitResult<T> = Result<T, InitError>;
+
 /// All collections in the database that we need
 #[derive(Debug, Clone)]
 pub struct Collections {
@@ -29,38 +59,43 @@ pub struct Collections {
     pub meta: MetaStorage,
     pub entry: EntryStorage,
     pub jobs: Storage<Job>,
-    pub alias: AliasKV,
+    pub alias: AliasStorage,
+    pub search: Search,
 }
 
 impl Collections {
-    pub async fn new(db: &mongodb::Database) -> MongoResult<Self> {
+    pub async fn new(db: &mongodb::Database) -> InitResult<Self> {
         let migration = KV::new(db.collection("migration")).await?;
         let meta = MetaStorage::new(db.collection("meta")).await?;
         let entry = EntryStorage::new(db.collection("entry")).await?;
-        let download = Storage::new(db.collection("job")).await?;
-        let alias = AliasKV::new(db.collection("alias")).await?;
+        let jobs = Storage::new(db.collection("job")).await?;
+        let alias = AliasStorage::new(db.collection("alias")).await?;
+        let search = Search::new(meta.get.clone(), entry.get.clone(), alias.get.clone());
 
         let this = Self {
             migration,
             meta,
             entry,
-            jobs: download,
+            jobs,
             alias,
+            search,
         };
         this.migrate().await?;
+        this.search.ensure_indexes().await?;
         Ok(this)
     }
 
-    async fn migrate(&self) -> MongoResult<()> {
+    async fn migrate(&self) -> InitResult<()> {
         tracing::info!("Starting database migration");
         self.run_one_migration(AddTorrentInfoToEntry).await?;
         self.run_one_migration(SanitizeEntryDescriptions).await?;
+        self.run_one_migration(SearchMaterial).await?;
         tracing::info!("Database migration completed");
 
         Ok(())
     }
 
-    async fn run_one_migration<M: Migration>(&self, m: M) -> MongoResult<()> {
+    async fn run_one_migration<M: Migration>(&self, m: M) -> InitResult<()> {
         let curr = self.migration.get(&"version".into()).await?.unwrap_or_default();
         let migrate = m.version();
         if curr.as_str() >= &*migrate {
@@ -79,31 +114,25 @@ impl Collections {
 /// after serialization. Serialized form of `Self` **MUST** also be a valid `T`,
 /// that is, it can be deserialized back to `T`.
 pub trait Wrapping<T> {
-    fn wrap(x: T) -> Self;
+    type Error: Display;
+
+    fn try_wrap(x: T) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
     fn unwrap(self) -> T;
 }
 
 impl<T> Wrapping<T> for T {
+    type Error = Infallible;
+
     #[inline(always)]
-    fn wrap(x: T) -> Self {
-        x
+    fn try_wrap(x: T) -> Result<Self, Self::Error> {
+        Ok(x)
     }
 
     #[inline(always)]
     fn unwrap(self) -> T {
         self
-    }
-}
-
-impl Wrapping<Meta> for BsonMeta {
-    #[inline(always)]
-    fn wrap(x: Meta) -> Self {
-        x.into()
-    }
-
-    #[inline(always)]
-    fn unwrap(self) -> Meta {
-        self.inner
     }
 }
 
@@ -139,11 +168,11 @@ where
         self.get.find_one(doc! { JobIdx::NAME: name }, None).await
     }
 
-    pub async fn insert(&self, data: R) -> MongoResult<WithId<R>>
+    pub async fn insert(&self, data: R) -> CrudResult<WithId<R>>
     where
         W: Serialize,
     {
-        let wrapped = W::wrap(data);
+        let wrapped = W::try_wrap(data).map_err(|error| CrudError::InvalidResource(error.to_string()))?;
         let id = self
             .set
             .insert_one(&wrapped, None)

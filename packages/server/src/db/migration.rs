@@ -1,13 +1,17 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
+use forrit_core::model::{Alias, Meta, PartialEntry, WithId};
 use futures::TryStreamExt;
 use mongodb::{
-    bson::{Document, doc},
+    Collection,
+    bson::{self, Bson, Document, doc},
     options::{UpdateModifications, UpdateOptions},
 };
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{
-    db::{Collections, MongoResult},
+    db::{Collections, InitError, InitResult},
+    search::{BsonAlias, BsonEntry, BsonMeta},
     sourcer::sanitize_description,
     util::get_torrent_info,
 };
@@ -17,7 +21,7 @@ pub(crate) trait Migration {
 
     fn description(&self) -> Cow<'static, str>;
 
-    async fn run(&self, col: &Collections) -> MongoResult<()>;
+    async fn run(&self, col: &Collections) -> InitResult<()>;
 }
 
 pub struct AddTorrentInfoToEntry;
@@ -31,7 +35,7 @@ impl Migration for AddTorrentInfoToEntry {
         "Add torrent information to entry documents".into()
     }
 
-    async fn run(&self, col: &Collections) -> MongoResult<()> {
+    async fn run(&self, col: &Collections) -> InitResult<()> {
         let entry = col.entry.set.clone_with_type::<Document>();
 
         entry
@@ -82,7 +86,7 @@ impl Migration for SanitizeEntryDescriptions {
         "Sanitize HTML in entry descriptions".into()
     }
 
-    async fn run(&self, col: &Collections) -> MongoResult<()> {
+    async fn run(&self, col: &Collections) -> InitResult<()> {
         let entry = col.entry.set.clone_with_type::<Document>();
 
         entry
@@ -102,6 +106,68 @@ impl Migration for SanitizeEntryDescriptions {
                     Ok(())
                 }
             })
-            .await
+            .await?;
+        Ok(())
     }
+}
+
+pub struct SearchMaterial;
+
+impl Migration for SearchMaterial {
+    fn version(&self) -> Cow<'static, str> {
+        "2026-09-10-01".into()
+    }
+
+    fn description(&self) -> Cow<'static, str> {
+        "Materialize indexed search fields".into()
+    }
+
+    async fn run(&self, col: &Collections) -> InitResult<()> {
+        materialize::<Meta, BsonMeta>(col.meta.set.clone_with_type(), "meta").await?;
+        materialize::<PartialEntry, BsonEntry>(col.entry.set.clone_with_type(), "entry").await?;
+        materialize::<Alias, BsonAlias>(col.alias.set.clone_with_type(), "alias").await
+    }
+}
+
+fn search_material(value: &impl Serialize) -> InitResult<Bson> {
+    Ok(mongodb::bson::to_document(value)?
+        .remove("_search")
+        .expect("search wrapper must serialize _search"))
+}
+
+async fn materialize<R, W>(collection: Collection<Document>, name: &'static str) -> InitResult<()>
+where
+    WithId<R>: DeserializeOwned,
+    W: Serialize + TryFrom<R>,
+    W::Error: Display,
+{
+    collection
+        .find(doc! { "_search": { "$exists": false } }, None)
+        .await?
+        .map_err(InitError::from)
+        .try_for_each_concurrent(50, |document| {
+            let collection = collection.clone();
+            async move {
+                let raw_id = document.get("_id").cloned().unwrap_or(Bson::Null);
+                let WithId { id, inner } = bson::from_document(document).map_err(|source| InitError::SearchDecode {
+                    collection: name,
+                    id: raw_id,
+                    source,
+                })?;
+                let wrapped = W::try_from(inner).map_err(|source| InitError::SearchMaterial {
+                    collection: name,
+                    id,
+                    reason: source.to_string(),
+                })?;
+                collection
+                    .update_one(
+                        doc! { "_id": id },
+                        doc! { "$set": { "_search": search_material(&wrapped)? } },
+                        None,
+                    )
+                    .await?;
+                Ok(())
+            }
+        })
+        .await
 }

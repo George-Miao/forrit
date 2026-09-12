@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use forrit_core::model::{ListResult, UpdateResult, WithId};
 use mongodb::bson::{doc, oid::ObjectId};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use tap::Pipe;
 
 use crate::db::*;
@@ -14,6 +14,12 @@ pub enum CrudError {
 
     #[error("Pagination error: {0}")]
     CursorError(#[from] mongodb_cursor_pagination::CursorError),
+
+    #[error("Invalid resource: {0}")]
+    InvalidResource(String),
+
+    #[error("Resource serialization failed: {0}")]
+    Serialization(#[from] mongodb::bson::ser::Error),
 }
 
 pub type CrudResult<T, E = CrudError> = Result<T, E>;
@@ -44,7 +50,10 @@ where
 
     async fn create(&self, data: Self::Resource) -> CrudResult<ObjectId> {
         self.set
-            .insert_one(S::wrap(data), None)
+            .insert_one(
+                S::try_wrap(data).map_err(|error| CrudError::InvalidResource(error.to_string()))?,
+                None,
+            )
             .await?
             .inserted_id
             .as_object_id()
@@ -57,7 +66,14 @@ where
     }
 
     async fn update(&self, id: ObjectId, data: Self::Resource) -> CrudResult<UpdateResult> {
-        let res = self.set.replace_one(doc! { "_id": id }, S::wrap(data), None).await?;
+        let res = self
+            .set
+            .replace_one(
+                doc! { "_id": id },
+                S::try_wrap(data).map_err(|error| CrudError::InvalidResource(error.to_string()))?,
+                None,
+            )
+            .await?;
         Ok(UpdateResult {
             updated: res.modified_count != 0,
         })

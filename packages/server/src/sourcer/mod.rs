@@ -3,7 +3,7 @@
 //! Used to fetch updates of subtitle groups from source websites/feeds.
 
 use forrit_config::{RssConfig, SourcerType, get_config};
-use forrit_core::model::{BsonEntry, EntryGroup, ListParam, ListResult, PartialEntry, WithId};
+use forrit_core::model::{EntryGroup, ListParam, ListResult, PartialEntry, WithId};
 use futures::TryStreamExt;
 use mongodb::{
     bson::{Bson, doc, oid::ObjectId},
@@ -15,7 +15,8 @@ use tracing::warn;
 
 use crate::{
     REQ,
-    db::{Collections, CrudResult, MongoResult, Storage, Wrapping, impl_resource},
+    db::{Collections, CrudError, CrudResult, MongoResult, Storage, impl_resource},
+    search::BsonEntry,
     util::Boom,
 };
 
@@ -100,16 +101,6 @@ pub enum SourcerMessage {
     Update,
 }
 
-impl Wrapping<PartialEntry> for BsonEntry {
-    fn wrap(x: PartialEntry) -> Self {
-        x.into()
-    }
-
-    fn unwrap(self) -> PartialEntry {
-        self.into()
-    }
-}
-
 impl_resource!(BsonEntry, sort_by bson_pub_date, field(guid, torrent_name, meta_id));
 
 impl EntryStorage {
@@ -161,15 +152,15 @@ impl EntryStorage {
         self.get.find_one(query, None).await?.is_some().pipe(Ok)
     }
 
-    pub async fn upsert(&self, entry: PartialEntry) -> MongoResult<BsonEntry> {
+    pub async fn upsert(&self, entry: PartialEntry) -> CrudResult<BsonEntry> {
         let mut entry = entry;
         entry.base.description = entry
             .base
             .description
             .take()
             .map(|description| sanitize_description(&description));
-        let entry = BsonEntry::from(entry);
-        let doc = mongodb::bson::to_document(&entry).expect("Failed to convert entry to bson Document");
+        let entry = BsonEntry::try_from(entry).map_err(|error| CrudError::InvalidResource(error.to_string()))?;
+        let doc = mongodb::bson::to_document(&entry)?;
 
         self.set
             .update_one(
@@ -198,31 +189,4 @@ mod tests {
         assert!(!sanitized.contains("<script"));
         assert!(!sanitized.contains("javascript:"));
     }
-}
-
-#[test]
-fn migrate() {
-    use futures::TryStreamExt;
-
-    crate::test::run(|env| async move {
-        let db = env.col.entry.clone();
-        db.get
-            .find(None, None)
-            .await
-            .unwrap()
-            .try_for_each_concurrent(None, |WithId { id, inner }| {
-                let db = db.clone();
-                async move {
-                    let new = BsonEntry::wrap(inner);
-                    let bson = mongodb::bson::to_bson(&new).unwrap();
-                    db.set
-                        .update_one(doc! { "_id": &id }, doc! { "$set": bson }, None)
-                        .await
-                        .unwrap();
-                    Ok(())
-                }
-            })
-            .await
-            .unwrap();
-    })
 }

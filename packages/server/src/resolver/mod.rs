@@ -26,11 +26,12 @@ use tracing::{debug, info, instrument, trace};
 
 use crate::{
     REQ,
-    db::{Collections, KV},
+    db::Collections,
     resolver::{
         index::{IndexJob, IndexStatRecv},
         util::StrExt,
     },
+    search::AliasStorage,
     util::{Boom, GovernedClient},
 };
 
@@ -45,7 +46,6 @@ pub use call::*;
 pub use meta::MetaStorage;
 
 pub type Datetime = chrono::DateTime<chrono::FixedOffset>;
-pub type AliasKV = KV<String, ObjectId>;
 
 /// Genre ID for animation on TMDB
 ///
@@ -135,7 +135,7 @@ enum SearchRes {
 
 pub struct ResolverInner {
     tmdb: GovernedClient,
-    alias: AliasKV,
+    alias: AliasStorage,
     meta: MetaStorage,
     config: &'static ResolverConfig,
 }
@@ -154,7 +154,7 @@ impl Deref for Resolver {
 impl Resolver {
     pub const NAME: &'static str = "resolve";
 
-    pub fn new(tmdb: GovernedClient, meta: MetaStorage, alias: AliasKV, config: &'static ResolverConfig) -> Self {
+    pub fn new(tmdb: GovernedClient, meta: MetaStorage, alias: AliasStorage, config: &'static ResolverConfig) -> Self {
         Self(Arc::new(ResolverInner {
             tmdb,
             meta,

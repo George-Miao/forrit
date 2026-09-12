@@ -1,16 +1,19 @@
 use forrit_core::{
     date::YearSeason,
-    model::{BsonMeta, Meta, WithId},
+    model::{Meta, WithId},
 };
 use futures::{StreamExt, TryStreamExt};
 use mongodb::{
+    IndexModel,
     bson::{self, doc, oid::ObjectId},
     options::{FindOneOptions, IndexOptions, UpdateModifications, UpdateOptions},
-    IndexModel,
 };
 use tap::Pipe;
 
-use crate::db::{impl_resource, MongoResult, Storage};
+use crate::{
+    db::{CrudError, CrudResult, MongoResult, Storage, impl_resource},
+    search::BsonMeta,
+};
 
 pub type MetaStorage = Storage<Meta, BsonMeta>;
 
@@ -104,8 +107,9 @@ impl MetaStorage {
     //         .await
     // }
 
-    pub async fn upsert(&self, meta: &BsonMeta) -> MongoResult<()> {
-        let doc = mongodb::bson::to_document(&meta).expect("Failed to convert Meta to bson Document");
+    pub async fn upsert(&self, meta: Meta) -> CrudResult<()> {
+        let meta = BsonMeta::try_from(meta).map_err(|error| CrudError::InvalidResource(error.to_string()))?;
+        let doc = mongodb::bson::to_document(&meta)?;
         self.set
             .update_one(
                 doc! { BsonMetaIdx::TITLE: &meta.title },

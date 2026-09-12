@@ -174,18 +174,6 @@ fn test_subscribe_group() {
     assert_eq!(serde_json::to_string(&g).unwrap(), r#"["a","b"]"#);
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct BsonMeta {
-    pub bson_begin: Option<bson::DateTime>,
-
-    pub bson_end: Option<bson::DateTime>,
-
-    pub tv_id: Option<u64>,
-
-    #[serde(flatten)]
-    pub inner: Meta,
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct SeasonOverride {
@@ -222,14 +210,6 @@ pub struct PartialEntry {
     #[salvo(schema(value_type = Option<ObjectIdSchema>))]
     #[ts(as = "Option<OidExtJson>")]
     pub meta_id: Option<ObjectId>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BsonEntry {
-    pub bson_pub_date: Option<bson::DateTime>,
-
-    #[serde(flatten)]
-    pub inner: PartialEntry,
 }
 
 /// Resolved entry with metadata
