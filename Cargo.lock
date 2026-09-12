@@ -1023,7 +1023,7 @@ dependencies = [
 
 [[package]]
 name = "forrit-client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bson",
  "forrit-core",
@@ -1040,7 +1040,7 @@ dependencies = [
 
 [[package]]
 name = "forrit-config"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "camino",
  "dirs",
@@ -1055,7 +1055,7 @@ dependencies = [
 
 [[package]]
 name = "forrit-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bangumi-data",
  "bson",
@@ -1076,7 +1076,7 @@ dependencies = [
 
 [[package]]
 name = "forrit-server"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ammonia",
  "anitomy",
