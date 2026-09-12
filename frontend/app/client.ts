@@ -1,4 +1,12 @@
-import type { DirectedCursor, ListResult, Season, paths } from 'forrit-client'
+import type {
+  DirectedCursor,
+  ListResult,
+  SearchEntryPage,
+  SearchResult,
+  SearchSection,
+  Season,
+  paths,
+} from 'forrit-client'
 import create_client, { type FetchResponse } from 'openapi-fetch'
 import useSWR, {
   type KeyedMutator,
@@ -6,7 +14,13 @@ import useSWR, {
   useSWRConfig,
 } from 'swr'
 import useSWRInfinite from 'swr/infinite'
-import { type ExtractedEntry, type ExtractedMeta, extract_entry, extract_meta } from './util'
+import {
+  type ExtractedEntry,
+  type ExtractedMeta,
+  extract_entry,
+  extract_meta,
+  is_search_query,
+} from './util'
 
 type JsonMedia = 'application/json'
 type Operation = Record<string | number, unknown>
@@ -67,6 +81,11 @@ const throw_it = <T extends Operation, O>(
 ) => {
   if (resp.error) throw resp.error
   return resp.data
+}
+
+const require_data = <T>(data: T | undefined): T => {
+  if (data === undefined) throw new Error('响应缺少数据')
+  return data
 }
 
 function make_inf<T extends Operation, O>(
@@ -189,3 +208,80 @@ export const useEntry = make_get('entry', id =>
 export const useEntryList = make_inf('entry', ([, cursor]) =>
   useClient().GET('/entry', { params: { query: { cursor } } })
 )
+
+export const useSearchSuggestions = (query: string) => {
+  const enabled = is_search_query(query)
+  const response = useSWR(
+    enabled ? ['search-suggestions', query] : null,
+    () =>
+      useClient()
+        .GET('/search/suggestions', { params: { query: { q: query } } })
+        .then(throw_it)
+        .then(require_data),
+  )
+  return enabled
+    ? handle(response)
+    : {
+        data: undefined,
+        isLoading: false as const,
+        error: null,
+        mutate: response.mutate,
+      }
+}
+
+export const useSearch = (query: string) => {
+  const enabled = is_search_query(query)
+  const response = useSWR(
+    enabled ? ['search', query] : null,
+    () =>
+      useClient()
+        .GET('/search', { params: { query: { q: query } } })
+        .then(throw_it)
+        .then(require_data),
+  )
+  return enabled
+    ? handle(response)
+    : {
+        data: undefined,
+        isLoading: false as const,
+        error: null,
+        mutate: response.mutate,
+      }
+}
+
+export const getSearchSection = (
+  query: string,
+  section: SearchSection,
+  cursor?: string,
+): Promise<SearchResult> =>
+  useClient()
+    .GET('/search', {
+      params: { query: { q: query, section, cursor } },
+    })
+    .then(throw_it)
+    .then(require_data)
+
+type SearchEntryKey = [
+  resource: string,
+  metaId: string,
+  query: string,
+  cursor?: string,
+]
+
+export const useSearchMetaEntries = (metaId: string, query: string) =>
+  useSWRInfinite(
+    (index: number, previous: SearchEntryPage | undefined): SearchEntryKey | null => {
+      if (!is_search_query(query)) return null
+      if (index === 0) return ['search-meta-entry', metaId, query]
+      return previous?.next_cursor
+        ? ['search-meta-entry', metaId, query, previous.next_cursor]
+        : null
+    },
+    ([, id, q, cursor]: SearchEntryKey) =>
+      useClient()
+        .GET('/search/meta/{id}/entry', {
+          params: { path: { id }, query: { q, cursor } },
+        })
+        .then(throw_it)
+        .then(require_data),
+  )

@@ -14,6 +14,7 @@ import {
 } from '@remix-run/react'
 import 'virtual:uno.css'
 import './styles.css'
+import SearchControl from './components/search_control'
 import WidthLimit from './components/width_limit'
 import Icon, { type IconName } from './ui/icon'
 import ToastRegion from './ui/toast'
@@ -39,7 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <header className="border-b border-edge bg-surface">
               <nav
                 aria-label="主要导航"
-                className="flex min-h-15 items-center gap-8 px-4 sm:px-16"
+                className="flex min-h-15 items-center gap-2 px-4 sm:gap-8 sm:px-16"
               >
                   <NavLink
                     aria-label="返回首页"
@@ -73,16 +74,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </NavLink>
                   ))}
                   <span className="flex-1" />
+                  <SearchControl />
                   <button
                     aria-label="通知"
-                    className="ui-icon-button text-xl"
+                    className="ui-icon-button hidden text-xl sm:inline-flex"
                     type="button"
                   >
                     <Icon className="text-lg" name="bell" />
                   </button>
                   <a
                     aria-label="GitHub"
-                    className="ui-icon-button text-xl"
+                    className="ui-icon-button hidden text-xl sm:inline-flex"
                     href="https://github.com/George-Miao/forrit"
                     rel="noreferrer"
                     target="_blank"

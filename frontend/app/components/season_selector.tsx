@@ -5,11 +5,11 @@ import { ClickPopover } from 'app/ui/popover'
 import type { Season } from 'forrit-client'
 import { useEffect, useState } from 'react'
 
-export const seasons: { value: Season; label: string }[] = [
-  { value: 'winter', label: '冬季新番' },
-  { value: 'spring', label: '春季新番' },
-  { value: 'summer', label: '夏季新番' },
-  { value: 'fall', label: '秋季新番' },
+export const seasons: { value: Season; label: string; name: string }[] = [
+  { value: 'winter', label: '冬季新番', name: '冬季' },
+  { value: 'spring', label: '春季新番', name: '春季' },
+  { value: 'summer', label: '夏季新番', name: '夏季' },
+  { value: 'fall', label: '秋季新番', name: '秋季' },
 ]
 
 export function getCurrentSeason() {
@@ -29,6 +29,10 @@ export function getSeasonFromDate(date: Date) {
 
 export function getSeasonLabel(season: Season) {
   return seasons.find((item) => item.value === season)?.label
+}
+
+export function getSeasonName(season: Season) {
+  return seasons.find(item => item.value === season)?.name
 }
 
 export function useSeasonQuery() {

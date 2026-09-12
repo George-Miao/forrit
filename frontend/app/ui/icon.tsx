@@ -21,7 +21,9 @@ import home from '@iconify-icons/lucide/home'
 import clock from '@iconify-icons/lucide/clock-3'
 import plus from '@iconify-icons/lucide/plus'
 import save from '@iconify-icons/lucide/save'
+import search from '@iconify-icons/lucide/search'
 import trash from '@iconify-icons/lucide/trash-2'
+import tv from '@iconify-icons/lucide/tv'
 import x from '@iconify-icons/lucide/x'
 
 const icons = {
@@ -46,7 +48,9 @@ const icons = {
   home,
   plus,
   save,
+  search,
   trash,
+  tv,
   warning: alertTriangle,
   x,
 } as const

@@ -11,6 +11,7 @@ export default defineConfig({
     include: [
       '@base-ui/react/alert-dialog',
       '@base-ui/react/button',
+      '@base-ui/react/combobox',
       '@base-ui/react/dialog',
       '@base-ui/react/menu',
       '@base-ui/react/popover',

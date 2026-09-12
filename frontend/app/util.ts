@@ -108,6 +108,22 @@ export const get_title = (m: Meta) => {
   )
 }
 
+export const normalize_search_query = (query: string) =>
+  query
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s_/\\／・·-]+/g, ' ')
+    .trim()
+
+export const is_search_query = (query: string) =>
+  normalize_search_query(query)
+    .split(' ')
+    .some(
+      term =>
+        Array.from(term).length >= 2 ||
+        Array.from(term).some(character => (character.codePointAt(0) ?? 0) > 0x7f),
+    )
+
 export enum BroadcastType {
   OneTime = '0D',
   Daily = '1D',

@@ -5,17 +5,24 @@ import Icon from 'app/ui/icon'
 import PreviewPopover from 'app/ui/popover'
 import Hint from 'app/ui/tooltip'
 import { type ExtractedEntry, format_time_relative, use_is_xs } from 'app/util'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import reactStringReplace from 'react-string-replace'
 import useClipboard from 'react-use-clipboard'
 import MetaPreview from '../meta_preview'
 
 export interface EntryListItemProps {
+  detail?: ReactNode
   show_meta: boolean
   item: ExtractedEntry
+  title?: ReactNode
 }
 
-export default function EntryListItem({ item, show_meta }: EntryListItemProps) {
+export default function EntryListItem({
+  detail,
+  item,
+  show_meta,
+  title,
+}: EntryListItemProps) {
   const [copied, copy] = useClipboard(item.torrent, { successDuration: 1000 })
   const [downloaded, setDownloaded] = useState(false)
   const client = useClient()
@@ -139,12 +146,14 @@ export default function EntryListItem({ item, show_meta }: EntryListItemProps) {
             }`}
           to={`/entry/${item.id}`}
         >
-          {item.group
-            ? reactStringReplace(item.title, item.group, () => (
-              <span className="text-accent">{item.group}</span>
-            ))
-            : item.title}
+          {title ??
+            (item.group
+              ? reactStringReplace(item.title, item.group, () => (
+                  <span className="text-accent">{item.group}</span>
+                ))
+              : item.title)}
         </Link>
+        {detail}
         {isSmall ? controls : null}
       </div>
       {isSmall ? null : controls}

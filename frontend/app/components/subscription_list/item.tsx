@@ -1,4 +1,3 @@
-import { Link } from '@remix-run/react'
 import { useClient } from 'app/client'
 import { extract_meta, formatBytes } from 'app/util'
 import Button from 'app/ui/button'
@@ -6,6 +5,7 @@ import Icon from 'app/ui/icon'
 import { notify } from 'app/ui/toast'
 import type { Meta, Subscription, WithId } from 'forrit-client'
 import { useEffect, useRef, useState } from 'react'
+import MetaPanelSummary from '../meta_panel_summary'
 import SubscriptionForm from './form'
 
 export default function SubscriptionItem({
@@ -75,67 +75,39 @@ export default function SubscriptionItem({
       className="ui-panel grid grid-cols-1 overflow-hidden sm:grid-cols-[7rem_minmax(0,1fr)]"
       ref={itemRef}
     >
-      <Link
-        aria-label={`查看 ${meta.title}`}
-        className="hidden overflow-hidden bg-background sm:block"
-        to={`/meta/${meta.id}`}
+      <MetaPanelSummary
+        controls={
+          <>
+            <Button
+              aria-label={`编辑 ${meta.title}`}
+              className="h-9 w-9 p-0"
+              disabled={busy}
+              onClick={() => {
+                setConfirming(false)
+                onEditingChange(editing ? null : meta.id)
+              }}
+              variant="ghost"
+            >
+              <Icon name={editing ? 'x' : 'edit'} />
+            </Button>
+            <Button
+              aria-label={`删除 ${meta.title}`}
+              className="h-9 w-9 p-0"
+              disabled={busy}
+              onClick={() => {
+                onEditingChange(null)
+                setConfirming(true)
+              }}
+              variant="danger"
+            >
+              <Icon name="trash" />
+            </Button>
+          </>
+        }
+        meta={source}
       >
-        {meta.poster ? (
-          <img
-            alt=""
-            className="h-auto w-full"
-            src={meta.poster}
-          />
-        ) : (
-          <span className="grid aspect-[2/3] w-full place-items-center text-muted">
-            <Icon className="text-2xl" name="fileVideo" />
-          </span>
-        )}
-      </Link>
-      <div className="flex min-w-0 flex-col justify-center p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <Link
-                className="block truncate text-lg font-600 text-text no-underline hover:text-accent hover:underline"
-                to={`/meta/${meta.id}`}
-              >
-                {meta.title}
-              </Link>
-              {meta.info.length ? (
-                <p className="mb-0 mt-1 text-sm text-muted">
-                  {meta.info.map((item) => item.content).join(' | ')}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 gap-1">
-              <Button
-                aria-label={`编辑 ${meta.title}`}
-                className="h-9 w-9 p-0"
-                disabled={busy}
-                onClick={() => {
-                  setConfirming(false)
-                  onEditingChange(editing ? null : meta.id)
-                }}
-                variant="ghost"
-              >
-                <Icon name={editing ? 'x' : 'edit'} />
-              </Button>
-              <Button
-                aria-label={`删除 ${meta.title}`}
-                className="h-9 w-9 p-0"
-                disabled={busy}
-                onClick={() => {
-                  onEditingChange(null)
-                  setConfirming(true)
-                }}
-                variant="danger"
-              >
-                <Icon name="trash" />
-              </Button>
-            </div>
-          </div>
-          <SubscriptionSummary subscription={subscription} />
-      </div>
+        <SubscriptionSummary subscription={subscription} />
+      </MetaPanelSummary>
       {editing ? (
           <div className="col-span-full border-t border-edge bg-background/50 p-4 sm:p-5">
             <SubscriptionForm
