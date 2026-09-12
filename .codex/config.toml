@@ -1,5 +1,0 @@
-[mcp_servers.obscura]
-command = "nix"
-args = ["develop", "--command", "obscura", "--allow-private-network", "mcp"]
-startup_timeout_sec = 60
-tool_timeout_sec = 60

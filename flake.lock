@@ -15,39 +15,6 @@
         "type": "github"
       }
     },
-    "crane_2": {
-      "locked": {
-        "lastModified": 1772560058,
-        "narHash": "sha256-NuVKdMBJldwUXgghYpzIWJdfeB7ccsu1CC7B+NfSoZ8=",
-        "owner": "ipetkov",
-        "repo": "crane",
-        "rev": "db590d9286ed5ce22017541e36132eab4e8b3045",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ipetkov",
-        "repo": "crane",
-        "type": "github"
-      }
-    },
-    "flake-parts": {
-      "inputs": {
-        "nixpkgs-lib": "nixpkgs-lib"
-      },
-      "locked": {
-        "lastModified": 1763759067,
-        "narHash": "sha256-LlLt2Jo/gMNYAwOgdRQBrsRoOz7BPRkzvNaI/fzXi2Q=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "2cccadc7357c0ba201788ae99c4dfa90728ef5e0",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -66,61 +33,7 @@
         "type": "github"
       }
     },
-    "george-flakes": {
-      "inputs": {
-        "crane": "crane_2",
-        "flake-parts": "flake-parts",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "vericert": "vericert"
-      },
-      "locked": {
-        "lastModified": 1784600828,
-        "narHash": "sha256-/K4SzvMiCRF97NmanNHerVxIKM1IGmz7ODvlBWvg/Ek=",
-        "owner": "George-Miao",
-        "repo": "flakes",
-        "rev": "451f9988c88f365b543c5e3fbb6a9cb3abb2c966",
-        "type": "github"
-      },
-      "original": {
-        "owner": "George-Miao",
-        "repo": "flakes",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
-      "locked": {
-        "lastModified": 1682591986,
-        "narHash": "sha256-BU5dJ9MmZYsGr1Dnf8p5VV8cSbMKuNiqw4A14/V8pjo=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "1c8257a313a5eb4d5f86edc2d325a23ff8085b94",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "1c8257a313a5eb4d5f86edc2d325a23ff8085b94",
-        "type": "github"
-      }
-    },
-    "nixpkgs-lib": {
-      "locked": {
-        "lastModified": 1761765539,
-        "narHash": "sha256-b0yj6kfvO8ApcSE+QmA6mUfu8IYG6/uU28OFn4PaC8M=",
-        "owner": "nix-community",
-        "repo": "nixpkgs.lib",
-        "rev": "719359f4562934ae99f5443f20aa06c2ffff91fc",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "nixpkgs.lib",
-        "type": "github"
-      }
-    },
-    "nixpkgs_2": {
       "locked": {
         "lastModified": 1758427187,
         "narHash": "sha256-pHpxZ/IyCwoTQPtFIAG2QaxuSm8jWzrzBGjwQZIttJc=",
@@ -140,8 +53,7 @@
       "inputs": {
         "crane": "crane",
         "flake-utils": "flake-utils",
-        "george-flakes": "george-flakes",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay"
       }
     },
@@ -179,26 +91,6 @@
         "repo": "default",
         "type": "github"
       }
-    },
-    "vericert": {
-      "inputs": {
-        "flake-parts": [
-          "george-flakes",
-          "flake-parts"
-        ],
-        "nixpkgs": "nixpkgs"
-      },
-      "locked": {
-        "path": "vericert",
-        "type": "path"
-      },
-      "original": {
-        "path": "vericert",
-        "type": "path"
-      },
-      "parent": [
-        "george-flakes"
-      ]
     }
   },
   "root": "root",
