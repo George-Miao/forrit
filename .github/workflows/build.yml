@@ -4,10 +4,13 @@ on:
     branches:
       - main
     paths:
-      - "packages/"
-      - "clients/"
-      - "frontend/app"
-      - "frontend/*"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "packages/**"
+      - "clients/**"
+      - "frontend/**"
+      - "flake.nix"
+      - "flake.lock"
   workflow_dispatch:
 
 env:
@@ -23,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -48,7 +53,7 @@ jobs:
           git add frontend/build
           git diff --quiet --exit-code frontend/build
           changed=$?
-          echo "changed=$changed" >> $GITHUB_OUTPUT
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
           [[ $changed = 0 ]] && echo "Nothing changed, early exiting" && exit 0
           echo "Changed, commit & push"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -64,7 +69,7 @@ jobs:
           branch: ${{ github.ref }}
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -73,7 +78,11 @@ jobs:
       - name: Build and Push Docker image
         run: |
           nix build ".#forrit-server-docker"
-          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)
+          SHA_SHORT="${GITHUB_SHA::7}"
+          VERSION_TAG=$(git tag --points-at "$GITHUB_SHA" --list "v*" --sort=-version:refname | head -n 1)
           IMAGE="${{ env.REGISTRY }}/george-miao/forrit"
           nix-shell -p skopeo --command "skopeo --insecure-policy copy docker-archive:$(readlink -f ./result) docker://$IMAGE:$SHA_SHORT --dest-compress-format zstd"
           nix-shell -p skopeo --command "skopeo --insecure-policy copy docker-archive:$(readlink -f ./result) docker://$IMAGE:latest --dest-compress-format zstd"
+          if [[ -n "$VERSION_TAG" ]]; then
+            nix-shell -p skopeo --command "skopeo --insecure-policy copy docker-archive:$(readlink -f ./result) docker://$IMAGE:$VERSION_TAG --dest-compress-format zstd"
+          fi
