@@ -2,8 +2,10 @@
 //!
 //! Download torrents
 
+use std::sync::Arc;
+
 use camino::Utf8PathBuf;
-use forrit_config::{DownloaderConfig, DownloaderType, get_config};
+use forrit_config::{Config, DownloaderConfig, DownloaderType};
 use forrit_core::model::{DownloadState, Job, Meta, PartialEntry, WithId};
 use futures::{TryStream, TryStreamExt};
 use mongodb::{
@@ -55,11 +57,11 @@ pub struct Prepared {
 pub struct DownloadManager {
     jobs: Storage<Job>,
     entry: EntryStorage,
-    config: &'static DownloaderConfig,
+    config: Arc<DownloaderConfig>,
 }
 
 impl DownloadManager {
-    fn new(db: &Collections, config: &'static DownloaderConfig) -> Self {
+    fn new(db: &Collections, config: Arc<DownloaderConfig>) -> Self {
         Self {
             entry: db.entry.clone(),
             jobs: db.jobs.clone(),
@@ -115,29 +117,38 @@ impl DownloadManager {
     }
 }
 
-pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
-    let config = &get_config().downloader;
-    let manager = DownloadManager::new(db, config);
+pub async fn start(db: &Collections, supervisor: ActorCell, config: &Config) -> ActorCell {
+    let config = Arc::new(config.downloader.clone());
+    let manager = DownloadManager::new(db, config.clone());
 
     match &config.ty {
         DownloaderType::Disabled => {
             warn!("Downloader is disabled in the configuration");
-            Actor::spawn_linked(Some(NAME.to_owned()), DummyDownloader {}, (), supervisor)
-                .await
-                .boom("Failed to spawn dummy downloader actor")
-                .0
-                .get_cell()
+            start_dummy(supervisor).await
         }
         DownloaderType::Transmission(_) => todo!("Transmission downloader is not yet implemented"),
         DownloaderType::Qbittorrent(qb_conf) => {
-            let actor = QbitActor::new(REQ.clone(), qb_conf, manager);
-            Actor::spawn_linked(Some(NAME.to_owned()), actor, (), supervisor)
-                .await
-                .boom("Failed to spawn downloader actor")
-                .0
-                .get_cell()
+            let actor = QbitActor::new(REQ.clone(), Arc::new(qb_conf.clone()), manager);
+            match Actor::spawn_linked(Some(NAME.to_owned()), actor, (), supervisor.clone()).await {
+                Ok((actor, _)) => actor.get_cell(),
+                Err(error) => {
+                    warn!(?error, "Failed to start qBittorrent downloader, disabling downloader");
+                    db.config.warning(format!(
+                        "Failed to start qBittorrent downloader; downloader is disabled: {error}",
+                    ));
+                    start_dummy(supervisor).await
+                }
+            }
         }
     }
+}
+
+async fn start_dummy(supervisor: ActorCell) -> ActorCell {
+    Actor::spawn_linked(Some(NAME.to_owned()), DummyDownloader {}, (), supervisor)
+        .await
+        .boom("Failed to spawn dummy downloader actor")
+        .0
+        .get_cell()
 }
 
 #[derive(Debug)]

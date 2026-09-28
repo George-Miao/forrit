@@ -1,9 +1,9 @@
 #![cfg(test)]
 
-use std::num::NonZeroU32;
+use std::{num::NonZeroU32, sync::Arc};
 
 use figment::Jail;
-use forrit_config::{Config, init_config};
+use forrit_config::{Config, camino::Utf8Path, load_config};
 use futures::Future;
 use governor::{Quota, RateLimiter};
 use mongodb::{Client, Database};
@@ -14,7 +14,7 @@ use tracing_subscriber::{Layer, filter::Targets, layer::SubscriberExt, util::Sub
 use crate::{REQ, db::Collections, resolver::Resolver, util::GovernedClient};
 
 pub struct Env {
-    pub config: &'static Config,
+    pub config: Config,
     pub db: Database,
     pub col: Collections,
     pub resolver: Resolver,
@@ -70,7 +70,8 @@ async fn prepare(jail: &mut Jail) -> Env {
     )
     .unwrap();
 
-    let config = init_config(Some(&path)).unwrap();
+    let layers = load_config(Some(Utf8Path::new(path))).unwrap();
+    let config = layers.resolve(serde_json::json!({}), 0).unwrap().config().clone();
 
     let fmt_layer = tracing_subscriber::fmt::layer().without_time().with_filter(
         Targets::new()
@@ -92,8 +93,14 @@ async fn prepare(jail: &mut Jail) -> Env {
             .unwrap(),
         RateLimiter::direct(Quota::per_second(NonZeroU32::new(20).unwrap())),
     );
-    let col = Collections::new(&db).await.unwrap();
-    let resolver = Resolver::new(client, col.meta.clone(), col.alias.clone(), &config.resolver);
+    let col = Collections::new(&db, layers).await.unwrap();
+    let resolver = Resolver::new(
+        client,
+        col.meta.clone(),
+        col.alias.clone(),
+        Arc::new(config.resolver.clone()),
+        true,
+    );
 
     Env {
         config,

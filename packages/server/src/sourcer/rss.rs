@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use chrono::DateTime;
 use forrit_config::RssConfig;
 use forrit_core::{IntoStream, model::EntryBase};
@@ -5,7 +7,7 @@ use futures::StreamExt;
 use ractor::{Actor, ActorProcessingErr, ActorRef, concurrency::JoinHandle};
 use reqwest::Client;
 use tap::Pipe;
-use tracing::{debug, info, instrument};
+use tracing::{debug, info, instrument, warn};
 use url::Url;
 
 use crate::{
@@ -17,7 +19,7 @@ use crate::{
 #[derive(Clone)]
 pub struct RssActor {
     client: Client,
-    config: &'static RssConfig,
+    config: Arc<RssConfig>,
     entry: EntryStorage,
     name: String,
 }
@@ -27,7 +29,7 @@ pub struct State {
 }
 
 impl RssActor {
-    pub fn new(config: &'static RssConfig, client: Client, entry: EntryStorage, name: String) -> Self {
+    pub fn new(config: Arc<RssConfig>, client: Client, entry: EntryStorage, name: String) -> Self {
         Self {
             client,
             config,
@@ -45,7 +47,7 @@ impl RssActor {
         url: &str,
         prepare_item: impl Fn(rss::Item) -> Option<rss::Item>,
     ) -> Result<(), ActorProcessingErr> {
-        let bytes = self.client.get(url).send().await?.bytes().await?;
+        let bytes = self.client.get(url).send().await?.error_for_status()?.bytes().await?;
 
         rss::Channel::read_from(&bytes[..])?
             .into_items()
@@ -177,7 +179,14 @@ impl Actor for RssActor {
         match msg {
             SourcerMessage::Update => {
                 debug!(actor = self.name, "Updating RSS");
-                self.load_url(self.config.url.as_str()).await?;
+                if let Err(error) = self.load_url(self.config.url.as_str()).await {
+                    warn!(
+                        actor = self.name,
+                        url = %self.config.url,
+                        %error,
+                        "Failed to update RSS feed"
+                    );
+                }
             }
             SourcerMessage::LoadHistory => {
                 // No-op
@@ -185,5 +194,61 @@ impl Actor for RssActor {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{sync::Arc, time::Duration};
+
+    use forrit_config::RssConfig;
+    use mongodb::Client as MongoClient;
+    use ractor::Actor;
+    use reqwest::Client;
+    use tokio::net::TcpListener;
+    use url::Url;
+
+    use super::RssActor;
+    use crate::{
+        db::Storage,
+        search::BsonEntry,
+        sourcer::{EntryStorage, SourcerMessage},
+    };
+
+    #[tokio::test]
+    async fn request_failure_does_not_stop_actor() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            drop(stream);
+        });
+        let database = MongoClient::with_uri_str("mongodb://127.0.0.1:1")
+            .await
+            .unwrap()
+            .database("forrit_rss_test");
+        let collection = database.collection::<BsonEntry>("entry");
+        let entry: EntryStorage = Storage {
+            get: collection.clone_with_type(),
+            set: collection,
+        };
+        let config = Arc::new(RssConfig {
+            url: Url::parse(&format!("http://{address}/feed.xml")).unwrap(),
+            update_interval: Duration::from_secs(3600),
+            deny_non_torrent: false,
+        });
+        let (actor, handle) = Actor::spawn(None, RssActor::new(config, Client::new(), entry, "test".to_owned()), ())
+            .await
+            .unwrap();
+
+        server.await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        assert!(
+            actor.send_message(SourcerMessage::Update).is_ok(),
+            "a transient request failure must not stop the actor"
+        );
+        actor.stop(None);
+        handle.await.unwrap();
     }
 }

@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::{num::NonZeroU32, sync::Arc};
 
 use forrit_config::NyaaConfig;
 use ractor::Actor;
@@ -12,13 +12,18 @@ use crate::sourcer::{
 
 #[derive(Clone)]
 pub struct NyaaActor {
-    config: &'static NyaaConfig,
+    config: Arc<NyaaConfig>,
+    load_history: bool,
     rss: RssActor,
 }
 
 impl NyaaActor {
-    pub fn new(config: &'static NyaaConfig, rss: RssActor) -> Self {
-        Self { config, rss }
+    pub fn new(config: Arc<NyaaConfig>, rss: RssActor, load_history: bool) -> Self {
+        Self {
+            config,
+            load_history,
+            rss,
+        }
     }
 
     async fn load_page(&self, page: NonZeroU32) -> Result<(), ractor::ActorProcessingErr> {
@@ -67,7 +72,9 @@ impl Actor for NyaaActor {
         myself: ractor::ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ractor::ActorProcessingErr> {
-        myself.send_message(SourcerMessage::LoadHistory)?;
+        if self.load_history {
+            myself.send_message(SourcerMessage::LoadHistory)?;
+        }
         self.rss.pre_start(myself, args).await
     }
 

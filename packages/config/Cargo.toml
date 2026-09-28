@@ -4,12 +4,14 @@ version = { workspace = true }
 edition = { workspace = true }
 
 [dependencies]
-serde   = { workspace = true }
-camino  = { workspace = true }
-tracing = { workspace = true }
-url     = { workspace = true }
-tap     = { workspace = true }
-either  = { workspace = true }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+camino     = { workspace = true }
+tracing    = { workspace = true }
+url        = { workspace = true }
+tap        = { workspace = true }
+either     = { workspace = true }
+arc-swap   = { workspace = true }
 
 dirs            = "5.0.1"
 humantime-serde = "1.1.1"

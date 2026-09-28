@@ -1,3 +1,4 @@
+use forrit_config::Config;
 use forrit_core::model::{
     Download, DownloadState, Entry, EntryBase, Job, PartialEntry, SubscribeGroups, Subscription, WithId,
 };
@@ -49,9 +50,9 @@ pub fn refresh_subscription(meta_id: ObjectId) {
         .expect(SEND_ERR);
 }
 
-pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
-    let global_exclude = RegexSet::new(&forrit_config::get_config().subscription.exclude)
-        .expect("Invalid global subscription exclude filter");
+pub async fn start(db: &Collections, supervisor: ActorCell, config: &Config) -> ActorCell {
+    let global_exclude =
+        RegexSet::new(&config.subscription.exclude).expect("Invalid global subscription exclude filter");
     Actor::spawn_linked(
         Some(SubscriptionActor::NAME.to_owned()),
         SubscriptionActor::new(db.meta.clone(), db.entry.clone(), db.jobs.clone(), global_exclude),

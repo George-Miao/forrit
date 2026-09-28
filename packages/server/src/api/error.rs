@@ -23,6 +23,8 @@ pub enum ApiError {
 
     #[error("Invalid request: {reason}")]
     InvalidRequest { reason: String },
+    #[error("Conflict: {reason}")]
+    Conflict { reason: String },
 
     #[error("Internal service error: {0}")]
     InternalError(String),
@@ -40,6 +42,7 @@ impl ToResponses for ApiError {
         let errors = vec![
             StatusError::bad_request(),
             StatusError::not_found(),
+            StatusError::conflict(),
             StatusError::request_timeout(),
             StatusError::internal_server_error(),
         ];
@@ -61,8 +64,8 @@ impl ApiError {
             ApiError::DoesNotExist { .. } => StatusCode::NOT_FOUND,
             ApiError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApiError::InvalidCursor => StatusCode::BAD_REQUEST,
-            ApiError::InvalidRequest { .. } => StatusCode::BAD_REQUEST,
+            ApiError::InvalidCursor | ApiError::InvalidRequest { .. } => StatusCode::BAD_REQUEST,
+            ApiError::Conflict { .. } => StatusCode::CONFLICT,
         }
     }
 

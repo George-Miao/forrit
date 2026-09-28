@@ -39,6 +39,10 @@ export interface paths {
      */
     delete: operations["delete_alias_by_id"];
   };
+  "/config": {
+    get: operations["get_config"];
+    patch: operations["update_config"];
+  };
   "/download": {
     /**
      * List with pagination
@@ -429,6 +433,86 @@ export interface components {
     /** @enum {string} */
     "forrit_core.model.mongodb_pagination.Direction": "forward" | "backwards";
     /** @enum {string} */
+    "forrit_server.config.ApplyMode": "immediate" | "next_startup" | "next_enable";
+    "forrit_server.config.ConfigChange": {
+      /** @enum {string} */
+      op: "set";
+      path: string;
+      value: components["schemas"]["forrit_server.config.ConfigValue"];
+    } | {
+      /** @enum {string} */
+      op: "unset";
+      path: string;
+    } | {
+      name: string;
+      /** @enum {string} */
+      op: "create_source";
+      source: components["schemas"]["forrit_server.config.SourceInputType"];
+    } | {
+      name: string;
+      /** @enum {string} */
+      op: "delete_source";
+    };
+    "forrit_server.config.ConfigField": {
+      apply: components["schemas"]["forrit_server.config.ApplyMode"];
+      locked: boolean;
+      path: string;
+      secret: boolean;
+      secret_set: boolean;
+      source: components["schemas"]["forrit_server.config.FieldSource"];
+      value?: components["schemas"]["forrit_server.config.ConfigValue"] | null;
+    };
+    "forrit_server.config.ConfigUpdate": {
+      changes: components["schemas"]["forrit_server.config.ConfigChange"][];
+      /** Format: int64 */
+      revision: number;
+    };
+    "forrit_server.config.ConfigValue": boolean | number | string | string[] | (Record<string, unknown> | null);
+    "forrit_server.config.ConfigView": {
+      fields: components["schemas"]["forrit_server.config.ConfigField"][];
+      /** Format: int64 */
+      revision: number;
+      sources: components["schemas"]["forrit_server.config.SourceView"][];
+      warnings: string[];
+    };
+    /** @enum {string} */
+    "forrit_server.config.FieldSource": "default" | "ui" | "file" | "environment";
+    "forrit_server.config.SourceInputType": {
+      deny_non_torrent: boolean;
+      enable: boolean;
+      /** @enum {string} */
+      type: "rss";
+      update_interval: string;
+      url: string;
+    } | ({
+      deny_non_torrent: boolean;
+      enable: boolean;
+      /** Format: int32 */
+      load_history_pages?: number | null;
+      /** Format: int32 */
+      page?: number | null;
+      /** @enum {string} */
+      type: "acg_rip";
+      update_interval: string;
+      /** Format: int32 */
+      zone?: number | null;
+    }) | ({
+      category: string;
+      enable: boolean;
+      /** Format: int32 */
+      load_history_pages?: number | null;
+      /** @enum {string} */
+      type: "nyaa";
+      update_interval: string;
+    });
+    /** @enum {string} */
+    "forrit_server.config.SourceKind": "rss" | "acg_rip" | "nyaa";
+    "forrit_server.config.SourceView": {
+      deletable: boolean;
+      kind: components["schemas"]["forrit_server.config.SourceKind"];
+      name: string;
+    };
+    /** @enum {string} */
     "forrit_server.search.model.MatchField": "meta_title" | "tmdb_name" | "alias" | "entry_title" | "parsed_title" | "torrent_name";
     /** @enum {string} */
     "forrit_server.search.model.MatchKind": "exact" | "prefix" | "substring" | "terms";
@@ -525,6 +609,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -569,6 +659,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -608,6 +704,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -661,6 +763,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -700,6 +808,68 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server encountered an internal error while processing this request. */
+      500: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+    };
+  };
+  get_config: {
+    responses: {
+      /** @description Response with json format data */
+      200: {
+        content: {
+          "application/json": components["schemas"]["forrit_server.config.ConfigView"];
+        };
+      };
+    };
+  };
+  update_config: {
+    /** @description Extract json format data from request. */
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["forrit_server.config.ConfigUpdate"];
+      };
+    };
+    responses: {
+      /** @description Response with json format data */
+      200: {
+        content: {
+          "application/json": components["schemas"]["forrit_server.config.ConfigView"];
+        };
+      };
+      /** @description The request could not be understood by the server due to malformed syntax. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The requested resource could not be found. */
+      404: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The server timed out waiting for the request. */
+      408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -752,6 +922,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -791,6 +967,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -843,6 +1025,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -882,6 +1070,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -935,6 +1129,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -978,6 +1178,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1013,6 +1219,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -1056,6 +1268,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -1392,6 +1610,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1479,6 +1703,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1524,6 +1754,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -1579,6 +1815,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1622,6 +1864,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -1677,6 +1925,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1720,6 +1974,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1759,6 +2019,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -1812,6 +2078,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1851,6 +2123,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -1895,6 +2173,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
@@ -1944,6 +2228,12 @@ export interface operations {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };
       };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
       /** @description The server encountered an internal error while processing this request. */
       500: {
         content: {
@@ -1980,6 +2270,12 @@ export interface operations {
       };
       /** @description The server timed out waiting for the request. */
       408: {
+        content: {
+          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+        };
+      };
+      /** @description The request could not be processed because of a conflict in the request. */
+      409: {
         content: {
           "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
         };

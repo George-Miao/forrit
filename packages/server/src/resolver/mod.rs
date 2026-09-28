@@ -7,7 +7,7 @@ use std::{cell::RefCell, ops::Deref, sync::Arc};
 use anitomy::{Anitomy, ElementCategory, Elements};
 use bangumi_data::Item;
 use chrono::Days;
-use forrit_config::{ResolverConfig, get_config};
+use forrit_config::{Config, ResolverConfig};
 use forrit_core::{
     date::YearSeason,
     model::{IndexArg, Meta, WithId},
@@ -52,8 +52,8 @@ pub type Datetime = chrono::DateTime<chrono::FixedOffset>;
 /// See: https://www.themoviedb.org/genre/16-animation
 const ANIME_GENRE: u64 = 16;
 
-pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
-    let config = &get_config().resolver;
+pub async fn start(db: &Collections, supervisor: ActorCell, config: &Config, initial: bool) -> ActorCell {
+    let config = Arc::new(config.resolver.clone());
     let client = GovernedClient::new(
         tmdb_api::Client::builder()
             .with_api_key(config.tmdb_api_key.clone())
@@ -64,7 +64,7 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> ActorCell {
         RateLimiter::direct(Quota::per_second(config.tmdb_rate_limit)),
     );
 
-    let resolver = Resolver::new(client, db.meta.clone(), db.alias.clone(), config);
+    let resolver = Resolver::new(client, db.meta.clone(), db.alias.clone(), config.clone(), initial);
     Actor::spawn_linked(Some(Resolver::NAME.to_owned()), resolver, (), supervisor)
         .await
         .boom("Failed to spawn resolver actor")
@@ -137,7 +137,8 @@ pub struct ResolverInner {
     tmdb: GovernedClient,
     alias: AliasStorage,
     meta: MetaStorage,
-    config: &'static ResolverConfig,
+    config: Arc<ResolverConfig>,
+    start_at_begin: bool,
 }
 
 #[derive(Clone)]
@@ -154,11 +155,18 @@ impl Deref for Resolver {
 impl Resolver {
     pub const NAME: &'static str = "resolve";
 
-    pub fn new(tmdb: GovernedClient, meta: MetaStorage, alias: AliasStorage, config: &'static ResolverConfig) -> Self {
+    pub fn new(
+        tmdb: GovernedClient,
+        meta: MetaStorage,
+        alias: AliasStorage,
+        config: Arc<ResolverConfig>,
+        initial: bool,
+    ) -> Self {
         Self(Arc::new(ResolverInner {
             tmdb,
-            meta,
             alias,
+            meta,
+            start_at_begin: initial && config.index.start_at_begin,
             config,
         }))
     }
@@ -395,7 +403,7 @@ impl Actor for Resolver {
         let index_timer = if self.config.index.enable {
             let arg = IndexArg::default();
             let interval = humantime::format_duration(self.config.index.interval);
-            if self.config.index.start_at_begin {
+            if self.start_at_begin {
                 this.send_message(Message::StartIndexJob { arg, port: None })
                     .expect("Failed to start index job");
             };

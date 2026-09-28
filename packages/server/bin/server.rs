@@ -3,7 +3,7 @@
 use std::{process::exit, str::FromStr};
 
 use camino::Utf8PathBuf;
-use forrit_config::init_config;
+use forrit_config::load_config;
 use forrit_server::{util::Boom, *};
 use tap::Conv;
 use tracing::{error, info, level_filters::LevelFilter};
@@ -29,7 +29,7 @@ async fn main() -> Result<(), ractor::SpawnErr> {
     tracing_subscriber::registry().with(fmt).init();
 
     let path = get_path_from_args().or_else(get_path_from_env);
-    let config = init_config(path.as_ref()).boom("Failed to load config");
+    let config = load_config(path.as_deref()).boom("Failed to load config");
 
     Forrit::new(config).await.boom("Failed to start Forrit").run().await
 }

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, time::Duration};
+use std::{borrow::Cow, collections::HashMap, sync::Arc, time::Duration};
 
 use camino::Utf8PathBuf;
 use forrit_config::QbittorrentConfig;
@@ -24,12 +24,12 @@ use crate::{
 
 pub struct QbitActor {
     qbit: Qbit,
-    config: &'static QbittorrentConfig,
+    config: Arc<QbittorrentConfig>,
     manager: DownloadManager,
 }
 
 impl QbitActor {
-    pub fn new(client: Client, config: &'static QbittorrentConfig, manager: DownloadManager) -> Self {
+    pub fn new(client: Client, config: Arc<QbittorrentConfig>, manager: DownloadManager) -> Self {
         let qbit = Qbit::new_with_client(
             config.url.clone(),
             Credential::new(config.auth.username.to_owned(), config.auth.password.to_owned()),

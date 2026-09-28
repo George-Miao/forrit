@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use forrit_config::AcgRipConfig;
 use ractor::Actor;
 use tracing::info;
@@ -9,13 +11,18 @@ use crate::sourcer::{
 
 #[derive(Clone)]
 pub struct AcgRipActor {
-    config: &'static AcgRipConfig,
+    config: Arc<AcgRipConfig>,
+    load_history: bool,
     rss: RssActor,
 }
 
 impl AcgRipActor {
-    pub fn new(config: &'static AcgRipConfig, rss: RssActor) -> Self {
-        Self { config, rss }
+    pub fn new(config: Arc<AcgRipConfig>, rss: RssActor, load_history: bool) -> Self {
+        Self {
+            config,
+            load_history,
+            rss,
+        }
     }
 
     pub async fn load_history(&self) {
@@ -51,7 +58,9 @@ impl Actor for AcgRipActor {
         myself: ractor::ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ractor::ActorProcessingErr> {
-        myself.send_message(SourcerMessage::LoadHistory)?;
+        if self.load_history {
+            myself.send_message(SourcerMessage::LoadHistory)?;
+        }
         let res = self.rss.pre_start(myself, args).await?;
         Ok(res)
     }

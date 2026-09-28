@@ -1,4 +1,3 @@
-#![feature(once_cell_try)]
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(
     clippy::missing_errors_doc,
@@ -9,23 +8,21 @@
 use std::{
     net::SocketAddr,
     num::{NonZeroU8, NonZeroU32},
-    sync::OnceLock,
     time::Duration,
 };
 
-use camino::{Utf8Path, Utf8PathBuf};
-use figment::{
-    Figment,
-    providers::{Env, Format, Json, Toml, Yaml},
-};
+use camino::Utf8PathBuf;
+#[cfg(test)]
+use figment::providers::Format;
 use serde::{Deserialize, Serialize};
-use tracing::info;
 use url::Url;
 
+mod runtime;
 mod util;
 
 pub use camino;
 pub use figment;
+pub use runtime::{ConfigHandle, ConfigLayers, ConfigSnapshot, ConfigSource, load_config};
 
 /// Default values for the configuration
 mod default;
@@ -34,48 +31,7 @@ mod default;
 use default::*;
 use util::MapOrVec;
 
-static CONFIG: OnceLock<Config> = OnceLock::new();
-
 const MINUTE: Duration = Duration::from_secs(60);
-const ENV_PREFIX: &str = "FORRIT.";
-
-/// Init the configuration from the given directory or the default config
-pub fn init_config(dir: Option<&impl AsRef<Utf8Path>>) -> Result<&'static Config, figment::Error> {
-    CONFIG.get_or_try_init(|| {
-        dir.as_ref()
-            .map(AsRef::as_ref)
-            .map_or_else(
-                || {
-                    info!("Loading config from config files and environment");
-
-                    let conf_dir = dirs::config_dir()
-                        .expect("failed to find config directory")
-                        .join("forrit");
-                    Figment::new()
-                        .merge(Toml::file(conf_dir.join("config.toml")))
-                        .merge(Yaml::file(conf_dir.join("config.yaml")))
-                        .merge(Json::file(conf_dir.join("config.json")))
-                },
-                |dir| {
-                    info!("Loading config from {dir} and environment");
-
-                    match dir.extension() {
-                        None | Some("toml") => Figment::new().join(Toml::file(dir)),
-                        Some("yaml" | "yml") => Figment::new().join(Yaml::file(dir)),
-                        Some("json") => Figment::new().join(Json::file(dir)),
-                        _ => panic!("Unsupported config file format"),
-                    }
-                },
-            )
-            .merge(Env::prefixed(ENV_PREFIX).split('.'))
-            .extract()
-    })
-}
-
-/// Get the configuration
-pub fn get_config() -> &'static Config {
-    CONFIG.get().expect("config not loaded")
-}
 
 /// All configuration for Forrit
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

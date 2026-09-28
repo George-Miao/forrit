@@ -4,6 +4,7 @@ use std::{
     fmt::{Debug, Display},
 };
 
+use forrit_config::ConfigLayers;
 use forrit_core::model::{Job, ListParam, ListResult, Record, WithId};
 use mongodb::{
     Collection, IndexModel,
@@ -16,6 +17,7 @@ use tap::Pipe;
 use thiserror::Error;
 
 use crate::{
+    config::{ConfigError, ConfigStore},
     downloader::JobIdx,
     resolver::MetaStorage,
     search::{AliasStorage, Search},
@@ -48,6 +50,8 @@ pub enum InitError {
         id: Bson,
         source: bson::de::Error,
     },
+    #[error(transparent)]
+    Config(#[from] ConfigError),
 }
 
 pub type InitResult<T> = Result<T, InitError>;
@@ -61,16 +65,18 @@ pub struct Collections {
     pub jobs: Storage<Job>,
     pub alias: AliasStorage,
     pub search: Search,
+    pub config: ConfigStore,
 }
 
 impl Collections {
-    pub async fn new(db: &mongodb::Database) -> InitResult<Self> {
+    pub async fn new(db: &mongodb::Database, layers: ConfigLayers) -> InitResult<Self> {
         let migration = KV::new(db.collection("migration")).await?;
         let meta = MetaStorage::new(db.collection("meta")).await?;
         let entry = EntryStorage::new(db.collection("entry")).await?;
         let jobs = Storage::new(db.collection("job")).await?;
         let alias = AliasStorage::new(db.collection("alias")).await?;
         let search = Search::new(meta.get.clone(), entry.get.clone(), alias.get.clone());
+        let config = ConfigStore::new(db, layers).await?;
 
         let this = Self {
             migration,
@@ -79,6 +85,7 @@ impl Collections {
             jobs,
             alias,
             search,
+            config,
         };
         this.migrate().await?;
         this.search.ensure_indexes().await?;

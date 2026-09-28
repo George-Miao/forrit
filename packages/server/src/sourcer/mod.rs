@@ -2,7 +2,9 @@
 //!
 //! Used to fetch updates of subtitle groups from source websites/feeds.
 
-use forrit_config::{RssConfig, SourcerType, get_config};
+use std::{collections::BTreeSet, sync::Arc};
+
+use forrit_config::{Config, RssConfig, SourcerType};
 use forrit_core::model::{EntryGroup, ListParam, ListResult, PartialEntry, WithId};
 use futures::TryStreamExt;
 use mongodb::{
@@ -30,9 +32,13 @@ pub(crate) fn sanitize_description(description: &str) -> String {
     ammonia::clean(description)
 }
 
-pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
-    let config = &get_config().sourcer;
-
+pub async fn start(
+    db: &Collections,
+    supervisor: ActorCell,
+    config: &Config,
+    load_history: &BTreeSet<String>,
+) -> Vec<ActorCell> {
+    let config = &config.sourcer;
     if config.is_empty() {
         warn!("No sourcer enabled, nothing will be fetched nor downloaded.");
     }
@@ -46,7 +52,7 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
 
         match &conf.ty {
             SourcerType::Rss(rss_conf) => {
-                let actor = rss::RssActor::new(rss_conf, REQ.clone(), db.entry.clone(), id.clone());
+                let actor = rss::RssActor::new(Arc::new(rss_conf.clone()), REQ.clone(), db.entry.clone(), id.clone());
                 let (actor_ref, _) =
                     Actor::spawn_linked(format!("sourcer-{id}").pipe(Some), actor, (), supervisor.clone())
                         .await
@@ -56,15 +62,13 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
             SourcerType::AcgRip(config) => {
                 let rss_url = config.rss_url().to_url();
                 tracing::info!("Starting acg-rip sourcer with RSS feed: {rss_url}");
-                let rss_config = RssConfig {
+                let rss_config = Arc::new(RssConfig {
                     url: rss_url,
                     update_interval: config.update_interval,
                     deny_non_torrent: config.deny_non_torrent,
-                }
-                .pipe(Box::new)
-                .pipe(Box::leak);
+                });
                 let rss_actor = rss::RssActor::new(rss_config, REQ.clone(), db.entry.clone(), id.clone());
-                let actor = acg_rip::AcgRipActor::new(config, rss_actor);
+                let actor = acg_rip::AcgRipActor::new(Arc::new(config.clone()), rss_actor, load_history.contains(&id));
                 let (actor_ref, _) =
                     Actor::spawn_linked(format!("sourcer-{id}").pipe(Some), actor, (), supervisor.clone())
                         .await
@@ -74,15 +78,13 @@ pub async fn start(db: &Collections, supervisor: ActorCell) -> Vec<ActorCell> {
             SourcerType::Nyaa(config) => {
                 let rss_url = config.rss_url(std::num::NonZeroU32::MIN);
                 tracing::info!(%rss_url, "Starting Nyaa sourcer");
-                let rss_config = RssConfig {
+                let rss_config = Arc::new(RssConfig {
                     url: rss_url,
                     update_interval: config.update_interval,
                     deny_non_torrent: false,
-                }
-                .pipe(Box::new)
-                .pipe(Box::leak);
+                });
                 let rss_actor = rss::RssActor::new(rss_config, REQ.clone(), db.entry.clone(), id.clone());
-                let actor = nyaa::NyaaActor::new(config, rss_actor);
+                let actor = nyaa::NyaaActor::new(Arc::new(config.clone()), rss_actor, load_history.contains(&id));
                 let (actor_ref, _) =
                     Actor::spawn_linked(format!("sourcer-{id}").pipe(Some), actor, (), supervisor.clone())
                         .await
