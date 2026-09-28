@@ -5,6 +5,7 @@ import type {
   SearchResult,
   SearchSection,
   Season,
+  components,
   paths,
 } from 'forrit-client'
 import create_client, { type FetchResponse } from 'openapi-fetch'
@@ -59,10 +60,21 @@ export const map = <T, U>(x: Ret<T>, f: (x: T) => U): Ret<U> => {
   return x as Ret<U>
 }
 
-export const useClient = () => {
-  const api = '/api'
-  return create_client<paths>({ baseUrl: api })
-}
+const createClient = () => create_client<paths>({ baseUrl: '/api' })
+
+export const useClient = createClient
+export type ConfigView =
+  components['schemas']['forrit_server.config.ConfigView']
+export type ConfigField =
+  components['schemas']['forrit_server.config.ConfigField']
+export type ConfigUpdate =
+  components['schemas']['forrit_server.config.ConfigUpdate']
+export type ConfigValue =
+  components['schemas']['forrit_server.config.ConfigValue']
+export type ConfigSourceInput =
+  components['schemas']['forrit_server.config.SourceInputType']
+export type ConfigSourceView =
+  components['schemas']['forrit_server.config.SourceView']
 
 // [resource, cursor?]
 type InfKey = [string, string?]
@@ -125,6 +137,22 @@ function make_get<P extends Operation, O>(
   return (id: string) =>
     handle(useSWR([resource, id], ([, id]) => req(id).then(throw_it)))
 }
+export const getConfiguration = (): Promise<ConfigView> =>
+  createClient()
+    .GET('/config')
+    .then(throw_it)
+    .then(require_data)
+
+export const useConfiguration = () =>
+  handle(useSWR(['config'], getConfiguration))
+
+export const updateConfiguration = (
+  update: ConfigUpdate,
+): Promise<ConfigView> =>
+  createClient()
+    .PATCH('/config', { body: update })
+    .then(throw_it)
+    .then(require_data)
 
 export const useMeta = make_get('meta', id =>
   useClient().GET('/meta/{id}', { params: { path: { id } } })

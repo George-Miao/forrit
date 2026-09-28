@@ -23,6 +23,7 @@ const navigation: Array<{ href: string; icon: IconName; label: string }> = [
   { href: '/entry', icon: 'activity', label: '更新' },
   { href: '/subscription', icon: 'heart', label: '订阅' },
   { href: '/download', icon: 'download', label: '下载' },
+  { href: '/config', icon: 'settings', label: '配置' },
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -42,55 +43,51 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 aria-label="主要导航"
                 className="flex min-h-15 items-center gap-2 px-4 sm:gap-8 sm:px-16"
               >
+                <NavLink
+                  aria-label="返回首页"
+                  className={({ isActive }) =>
+                    `ui-focus flex h-10 w-10 items-center justify-center rounded-md no-underline transition hover:-translate-y-px hover:bg-[rgb(28_31_35/8%)] active:scale-95 ${
+                      isActive ? 'bg-[rgb(28_31_35/5%)]' : ''
+                    }`
+                  }
+                  to="/meta"
+                >
+                  <img alt="" className="h-8 w-8" src="/favicon.svg" />
+                </NavLink>
+                {navigation.map((item) => (
                   <NavLink
-                    aria-label="返回首页"
+                    aria-label={item.label}
                     className={({ isActive }) =>
-                      `ui-focus flex h-10 w-10 items-center justify-center rounded-md no-underline transition hover:-translate-y-px hover:bg-[rgb(28_31_35/8%)] active:scale-95 ${
-                        isActive ? 'bg-[rgb(28_31_35/5%)]' : ''
+                      `ui-focus flex h-10 w-10 items-center justify-center rounded-md text-xl no-underline transition hover:-translate-y-px hover:bg-[rgb(28_31_35/8%)] active:scale-95 ${
+                        isActive
+                          ? 'text-text'
+                          : 'text-muted hover:bg-background hover:text-text'
                       }`
                     }
-                    to="/meta"
+                    key={item.href}
+                    to={item.href}
                   >
-                    <img
-                      alt=""
-                      className="h-8 w-8"
-                      src="/favicon.svg"
-                    />
+                    <Icon name={item.icon} />
                   </NavLink>
-                  {navigation.map((item) => (
-                    <NavLink
-                      aria-label={item.label}
-                      className={({ isActive }) =>
-                        `ui-focus flex h-10 w-10 items-center justify-center rounded-md text-xl no-underline transition hover:-translate-y-px hover:bg-[rgb(28_31_35/8%)] active:scale-95 ${
-                          isActive
-                            ? 'text-text'
-                            : 'text-muted hover:bg-background hover:text-text'
-                        }`
-                      }
-                      key={item.href}
-                      to={item.href}
-                    >
-                      <Icon name={item.icon} />
-                    </NavLink>
-                  ))}
-                  <span className="flex-1" />
-                  <SearchControl />
-                  <button
-                    aria-label="通知"
-                    className="ui-icon-button hidden text-xl sm:inline-flex"
-                    type="button"
-                  >
-                    <Icon className="text-lg" name="bell" />
-                  </button>
-                  <a
-                    aria-label="GitHub"
-                    className="ui-icon-button hidden text-xl sm:inline-flex"
-                    href="https://github.com/George-Miao/forrit"
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    <Icon className="text-lg" name="github" />
-                  </a>
+                ))}
+                <span className="flex-1" />
+                <SearchControl />
+                <button
+                  aria-label="通知"
+                  className="ui-icon-button hidden text-xl sm:inline-flex"
+                  type="button"
+                >
+                  <Icon className="text-lg" name="bell" />
+                </button>
+                <a
+                  aria-label="GitHub"
+                  className="ui-icon-button hidden text-xl sm:inline-flex"
+                  href="https://github.com/George-Miao/forrit"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <Icon className="text-lg" name="github" />
+                </a>
               </nav>
             </header>
             <main className="min-h-[calc(100svh-204px)]">{children}</main>

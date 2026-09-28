@@ -16,6 +16,7 @@ export default defineConfig({
       '@base-ui/react/menu',
       '@base-ui/react/popover',
       '@base-ui/react/toast',
+      '@base-ui/react/tabs',
       '@base-ui/react/tooltip',
       '@iconify/react',
       '@remix-run/react',

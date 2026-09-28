@@ -87,6 +87,26 @@ img {
   background: var(--color-accent-soft);
 }
 
+.ui-tab-list {
+  border: 1px solid var(--color-edge);
+}
+
+.ui-tab[data-active] {
+  color: white;
+}
+
+.ui-tab[data-active]:hover {
+  color: white;
+}
+
+.ui-tab-indicator {
+  width: var(--active-tab-width);
+  transform: translateX(var(--active-tab-left));
+  transition:
+    transform 150ms,
+    width 150ms;
+}
+
 .search-preview-meta + .search-preview-entry {
   margin-top: 0.25rem;
 }
