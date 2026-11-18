@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 authors = ["George Miao <gm@miao.dev>"]
 edition = "2024"
-version = "0.3.0"
+version = "0.4.0"
 
 [workspace.dependencies]
 backon = { version = "1.6.0", default-features = false, features = ["std", "tokio-sleep"] }
