@@ -1,5 +1,4 @@
 use salvo::{
-    Writer,
     oapi::extract::QueryParam,
     prelude::{Depot, Json, Router, endpoint},
 };
@@ -8,7 +7,7 @@ use super::{Search, SearchEntryPage, SearchResult, SearchSection, store::SearchE
 use crate::api::{ApiError, ApiResult, OidParam};
 
 fn obtain(depot: &Depot) -> &Search {
-    depot.obtain::<Search>().expect("missing Search")
+    depot.get_typed::<Search>().expect("missing Search")
 }
 
 fn map_error(error: SearchError) -> ApiError {
@@ -69,5 +68,5 @@ pub fn search_api() -> Router {
     Router::with_path("search")
         .get(search_all)
         .push(Router::with_path("suggestions").get(suggestions))
-        .push(Router::with_path("meta/<id>/entry").get(meta_entries))
+        .push(Router::with_path("meta/{id}/entry").get(meta_entries))
 }

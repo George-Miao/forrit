@@ -212,7 +212,7 @@ pub struct ConfigStore {
 impl ConfigStore {
     pub async fn new(database: &Database, layers: ConfigLayers) -> Result<Self, ConfigError> {
         let collection: Collection<ConfigDocument> = database.collection("config");
-        let document = collection.find_one(doc! { "_id": DOCUMENT_ID }, None).await?;
+        let document = collection.find_one(doc! { "_id": DOCUMENT_ID }).await?;
         let (revision, values) = match document {
             Some(document) => (
                 u64::try_from(document.revision)
@@ -310,7 +310,7 @@ impl ConfigStore {
         };
         let result = self
             .collection
-            .replace_one(doc! { "_id": DOCUMENT_ID, "revision": expected }, &document, None)
+            .replace_one(doc! { "_id": DOCUMENT_ID, "revision": expected }, &document)
             .await?;
         if result.matched_count == 1 {
             return Ok(());
@@ -318,7 +318,7 @@ impl ConfigStore {
         if expected != 0 {
             return Err(ConfigError::Conflict);
         }
-        match self.collection.insert_one(document, None).await {
+        match self.collection.insert_one(document).await {
             Ok(_) => Ok(()),
             Err(error)
                 if matches!(
@@ -333,7 +333,7 @@ impl ConfigStore {
     }
 
     async fn refresh(&self) -> Result<(), ConfigError> {
-        let Some(document) = self.collection.find_one(doc! { "_id": DOCUMENT_ID }, None).await? else {
+        let Some(document) = self.collection.find_one(doc! { "_id": DOCUMENT_ID }).await? else {
             return Ok(());
         };
         let revision = u64::try_from(document.revision)

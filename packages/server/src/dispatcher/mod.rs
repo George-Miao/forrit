@@ -3,10 +3,7 @@ use forrit_core::model::{
     Download, DownloadState, Entry, EntryBase, Job, PartialEntry, SubscribeGroups, Subscription, WithId,
 };
 use futures::{Stream, TryStreamExt, future::ready};
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    options::FindOneOptions,
-};
+use mongodb::bson::{doc, oid::ObjectId};
 use ractor::{Actor, ActorCell, ActorProcessingErr};
 use regex::{Regex, RegexSet};
 use tracing::{debug, info, warn};
@@ -148,7 +145,7 @@ impl SubscriptionActor {
     ) -> impl Stream<Item = Result<WithId<PartialEntry>, ActorProcessingErr>> + 'a {
         self.entry
             .get
-            .find(doc! { BsonEntryIdx::META_ID: meta_id }, None)
+            .find(doc! { BsonEntryIdx::META_ID: meta_id })
             .await
             .expect("db error")
             // Only keep entries that are "wanted" by the subscription
@@ -159,10 +156,8 @@ impl SubscriptionActor {
                 async move {
                     // Filter out successfully downloaded entries
                     job.get
-                        .find_one(
-                            doc! { JobIdx::ENTRY_ID: entry_id },
-                            FindOneOptions::builder().sort(doc! { "_id": -1 }).build(),
-                        )
+                        .find_one(doc! { JobIdx::ENTRY_ID: entry_id })
+                        .sort(doc! { "_id": -1 })
                         .await
                         .expect("db error")
                         // Check if the most recent download job of entry is successful. If it is, ignore it.

@@ -1,5 +1,3 @@
-#![feature(try_blocks)]
-
 use std::{process::exit, str::FromStr};
 
 use camino::Utf8PathBuf;

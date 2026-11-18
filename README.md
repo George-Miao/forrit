@@ -116,7 +116,6 @@ The `frontend` package is a Remix + Vite app styled with Semi UI. It uses the Op
 - [ ] (Server) Notifier (w/ [pling](https://github.com/EdJoPaTo/pling))
 - [ ] (Server) Search
 - [ ] (Server) Events
-- [ ] (Server) Backoff for failed API request
 
 ## License
 

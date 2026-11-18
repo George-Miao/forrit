@@ -1,5 +1,4 @@
 use salvo::{
-    Writer,
     oapi::extract::JsonBody,
     prelude::{Depot, Json, Router, endpoint},
 };
@@ -11,7 +10,7 @@ use crate::{
 };
 
 fn obtain(depot: &Depot) -> &ConfigStore {
-    depot.obtain::<ConfigStore>().expect("missing ConfigStore")
+    depot.get_typed::<ConfigStore>().expect("missing ConfigStore")
 }
 
 fn map_error(error: ConfigError) -> ApiError {

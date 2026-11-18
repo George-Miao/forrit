@@ -25,7 +25,7 @@ macro_rules! impl_resource {
         }
 
         impl crate::ForritClient {
-            pub fn $name(&self) -> crate::ResourceClient<$res> {
+            pub fn $name(&self) -> crate::ResourceClient<'_, $res> {
                 crate::ResourceClient::new(self)
             }
         }

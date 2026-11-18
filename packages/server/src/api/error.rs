@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use mongodb_cursor_pagination::CursorError;
 use salvo::{
     oapi::{self},
     prelude::*,
@@ -8,7 +7,7 @@ use salvo::{
 use thiserror::Error;
 use tracing::warn;
 
-use crate::db::{CrudError, CrudResult, MongoResult};
+use crate::db::{CrudError, CrudResult, MongoResult, PaginationError};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -97,39 +96,22 @@ impl Writer for ApiError {
     }
 }
 
-impl From<CursorError> for ApiError {
-    fn from(e: CursorError) -> Self {
-        match e {
-            CursorError::BsonDeError(e) => ApiError::InternalError(e.to_string()),
-            CursorError::BsonSerError(e) => ApiError::InternalError(e.to_string()),
-            CursorError::BsonValueAccessError(e) => ApiError::InternalError(e.to_string()),
-            CursorError::ParseError(e) => ApiError::InternalError(e.to_string()),
-            CursorError::MongoDBError(e) => ApiError::DatabaseError(e),
-            CursorError::InvalidCursor => ApiError::InvalidCursor,
-        }
-    }
-}
-
 impl From<CrudError> for ApiError {
     fn from(crud: CrudError) -> Self {
         match crud {
-            CrudError::DatabaseError(db) => ApiError::DatabaseError(db),
-            CrudError::CursorError(error) => error.into(),
-            CrudError::InvalidResource(reason) => ApiError::InvalidRequest { reason },
-            CrudError::Serialization(error) => ApiError::InternalError(error.to_string()),
+            CrudError::DatabaseError(error) => Self::DatabaseError(error),
+            CrudError::Pagination(PaginationError::InvalidCursor) => Self::InvalidCursor,
+            CrudError::Pagination(PaginationError::Mongo(error)) => Self::DatabaseError(error),
+            CrudError::Pagination(error) => Self::InternalError(error.to_string()),
+            CrudError::InvalidResource(reason) => Self::InvalidRequest { reason },
+            CrudError::Bson(error) => Self::InternalError(error.to_string()),
         }
     }
 }
 
-impl From<mongodb::bson::ser::Error> for ApiError {
-    fn from(err: mongodb::bson::ser::Error) -> Self {
-        ApiError::from(mongodb::error::Error::from(err))
-    }
-}
-
-impl From<mongodb::bson::de::Error> for ApiError {
-    fn from(err: mongodb::bson::de::Error) -> Self {
-        ApiError::from(mongodb::error::Error::from(err))
+impl From<mongodb::bson::error::Error> for ApiError {
+    fn from(error: mongodb::bson::error::Error) -> Self {
+        Self::InternalError(error.to_string())
     }
 }
 

@@ -1,13 +1,17 @@
 use std::{num::NonZeroU32, sync::Arc};
 
+use backon::Retryable;
 use forrit_config::NyaaConfig;
 use ractor::Actor;
 use rss::{Enclosure, Item};
-use tracing::info;
+use tracing::{info, warn};
 
-use crate::sourcer::{
-    SourcerMessage,
-    rss::{RssActor, State},
+use crate::{
+    sourcer::{
+        SourcerMessage,
+        rss::{RssActor, State},
+    },
+    util::retry_backoff,
 };
 
 #[derive(Clone)]
@@ -28,7 +32,12 @@ impl NyaaActor {
 
     async fn load_page(&self, page: NonZeroU32) -> Result<(), ractor::ActorProcessingErr> {
         let url = self.config.rss_url(page);
-        self.rss.load_url_with(url.as_str(), prepare_item).await
+        (|| self.rss.load_url_with(url.as_str(), prepare_item))
+            .retry(retry_backoff())
+            .notify(|error, delay| {
+                warn!(%error, ?delay, %url, "Failed to load Nyaa page, retrying");
+            })
+            .await
     }
 
     pub async fn load_history(&self) {

@@ -30,20 +30,17 @@ impl<K, V> Resource for Record<K, V> {
     type Idx = RecordIdx;
 }
 
-impl<K, V> Storage<Record<K, V>> {
+impl<K: Send + Sync, V: Send + Sync> Storage<Record<K, V>> {
     pub async fn upsert(&self, key: &K, value: &V) -> MongoResult<Option<ObjectId>>
     where
         K: Serialize,
         V: Serialize,
     {
-        let k = bson::to_bson(key.borrow())?;
-        let doc = doc! { "$set": { "value": bson::to_bson(value)? } };
+        let k = bson::serialize_to_bson(key.borrow())?;
+        let update = doc! { "$set": { "value": bson::serialize_to_bson(value)? } };
         self.set
-            .update_one(
-                doc! { "key": k },
-                UpdateModifications::Document(doc),
-                UpdateOptions::builder().upsert(true).build(),
-            )
+            .update_one(doc! { "key": k }, update)
+            .upsert(true)
             .await
             .map(|res| res.upserted_id.as_ref().and_then(Bson::as_object_id))
     }
@@ -55,7 +52,7 @@ impl<K, V> Storage<Record<K, V>> {
         Record<K, V>: Unpin + Send + Sync,
     {
         self.get
-            .find_one(doc! { "key": bson::to_bson(key.borrow())? }, None)
+            .find_one(doc! { "key": bson::serialize_to_bson(key.borrow())? })
             .await?
             .map(|x| x.inner.value)
             .pipe(Ok)
@@ -66,7 +63,7 @@ impl<K, V> Storage<Record<K, V>> {
         K: Serialize + DeserializeOwned + Debug + Unpin + Send + Sync + 'static,
         V: Serialize + DeserializeOwned + Debug + Unpin + Send + Sync + 'static,
     {
-        let value = bson::to_bson(val).map_err(|e| CrudError::CursorError(CursorError::BsonSerError(e)))?;
+        let value = bson::serialize_to_bson(val)?;
         self.list_by(doc! { "value": value }, param).await
     }
 
@@ -75,7 +72,7 @@ impl<K, V> Storage<Record<K, V>> {
         K: Serialize + DeserializeOwned,
     {
         self.set
-            .delete_one(doc! { "key": bson::to_bson(key)? }, None)
+            .delete_one(doc! { "key": bson::serialize_to_bson(key)? })
             .await
             .map(|res| res.deleted_count != 0)
     }

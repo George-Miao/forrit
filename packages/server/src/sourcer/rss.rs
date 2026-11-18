@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use backon::Retryable;
 use chrono::DateTime;
 use forrit_config::RssConfig;
 use forrit_core::{IntoStream, model::EntryBase};
@@ -13,7 +14,7 @@ use url::Url;
 use crate::{
     dispatcher::new_entry,
     sourcer::{EntryStorage, PartialEntry, SourcerMessage},
-    util::get_torrent_info,
+    util::{get_torrent_info, retry_backoff},
 };
 
 #[derive(Clone)]
@@ -179,14 +180,18 @@ impl Actor for RssActor {
         match msg {
             SourcerMessage::Update => {
                 debug!(actor = self.name, "Updating RSS");
-                if let Err(error) = self.load_url(self.config.url.as_str()).await {
-                    warn!(
-                        actor = self.name,
-                        url = %self.config.url,
-                        %error,
-                        "Failed to update RSS feed"
-                    );
-                }
+                (|| self.load_url(self.config.url.as_str()))
+                    .retry(retry_backoff())
+                    .notify(|error, delay| {
+                        warn!(
+                            actor = self.name,
+                            url = %self.config.url,
+                            %error,
+                            ?delay,
+                            "Failed to update RSS feed, retrying"
+                        );
+                    })
+                    .await?;
             }
             SourcerMessage::LoadHistory => {
                 // No-op
@@ -205,23 +210,30 @@ mod tests {
     use mongodb::Client as MongoClient;
     use ractor::Actor;
     use reqwest::Client;
-    use tokio::net::TcpListener;
+    use tokio::{io::AsyncWriteExt, net::TcpListener, sync::oneshot};
     use url::Url;
 
     use super::RssActor;
-    use crate::{
-        db::Storage,
-        search::BsonEntry,
-        sourcer::{EntryStorage, SourcerMessage},
-    };
+    use crate::{db::Storage, search::BsonEntry, sourcer::EntryStorage};
 
     #[tokio::test]
-    async fn request_failure_does_not_stop_actor() {
+    async fn transient_request_failure_is_retried() {
         let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
         let address = listener.local_addr().unwrap();
+        let (response_sent, response_received) = oneshot::channel();
         let server = tokio::spawn(async move {
             let (stream, _) = listener.accept().await.unwrap();
             drop(stream);
+
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let body = r#"<?xml version="1.0"?><rss version="2.0"><channel><title>test</title><link>http://localhost</link><description>test</description></channel></rss>"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/rss+xml\r\nContent-Length: {}\r\nConnection: \
+                 close\r\n\r\n{body}",
+                body.len(),
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+            response_sent.send(()).unwrap();
         });
         let database = MongoClient::with_uri_str("mongodb://127.0.0.1:1")
             .await
@@ -241,13 +253,11 @@ mod tests {
             .await
             .unwrap();
 
+        tokio::time::timeout(Duration::from_secs(5), response_received)
+            .await
+            .expect("sourcer did not retry the request")
+            .unwrap();
         server.await.unwrap();
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
-        assert!(
-            actor.send_message(SourcerMessage::Update).is_ok(),
-            "a transient request failure must not stop the actor"
-        );
         actor.stop(None);
         handle.await.unwrap();
     }

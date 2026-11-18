@@ -13,13 +13,13 @@ pub enum CrudError {
     DatabaseError(#[from] mongodb::error::Error),
 
     #[error("Pagination error: {0}")]
-    CursorError(#[from] mongodb_cursor_pagination::CursorError),
+    Pagination(#[from] super::pagination::PaginationError),
 
     #[error("Invalid resource: {0}")]
     InvalidResource(String),
 
-    #[error("Resource serialization failed: {0}")]
-    Serialization(#[from] mongodb::bson::ser::Error),
+    #[error("BSON serialization failed: {0}")]
+    Bson(#[from] mongodb::bson::error::Error),
 }
 
 pub type CrudResult<T, E = CrudError> = Result<T, E>;
@@ -50,10 +50,7 @@ where
 
     async fn create(&self, data: Self::Resource) -> CrudResult<ObjectId> {
         self.set
-            .insert_one(
-                S::try_wrap(data).map_err(|error| CrudError::InvalidResource(error.to_string()))?,
-                None,
-            )
+            .insert_one(S::try_wrap(data).map_err(|error| CrudError::InvalidResource(error.to_string()))?)
             .await?
             .inserted_id
             .as_object_id()
@@ -62,7 +59,7 @@ where
     }
 
     async fn get(&self, id: ObjectId) -> CrudResult<Option<WithId<Self::Resource>>> {
-        self.get.find_one(doc! { "_id": id }, None).await?.pipe(Ok)
+        self.get.find_one(doc! { "_id": id }).await?.pipe(Ok)
     }
 
     async fn update(&self, id: ObjectId, data: Self::Resource) -> CrudResult<UpdateResult> {
@@ -71,7 +68,6 @@ where
             .replace_one(
                 doc! { "_id": id },
                 S::try_wrap(data).map_err(|error| CrudError::InvalidResource(error.to_string()))?,
-                None,
             )
             .await?;
         Ok(UpdateResult {
@@ -80,6 +76,6 @@ where
     }
 
     async fn delete(&self, id: ObjectId) -> CrudResult<Option<WithId<Self::Resource>>> {
-        self.get.find_one_and_delete(doc! { "_id": id }, None).await?.pipe(Ok)
+        self.get.find_one_and_delete(doc! { "_id": id }).await?.pipe(Ok)
     }
 }

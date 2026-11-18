@@ -9,9 +9,8 @@ use forrit_core::model::{Job, ListParam, ListResult, Record, WithId};
 use mongodb::{
     Collection, IndexModel,
     bson::{self, Bson, Document, doc, oid::ObjectId},
-    options::{FindOptions, IndexOptions, UpdateModifications, UpdateOptions},
+    options::IndexOptions,
 };
-use mongodb_cursor_pagination::{CursorError, Pagination};
 use serde::{Serialize, de::DeserializeOwned};
 use tap::Pipe;
 use thiserror::Error;
@@ -22,10 +21,11 @@ use crate::{
     resolver::MetaStorage,
     search::{AliasStorage, Search},
     sourcer::EntryStorage,
-    util::ToCore,
 };
 
 mod_use::mod_use![crud, index, kv, migration];
+mod pagination;
+pub use pagination::PaginationError;
 
 pub type MongoResult<T> = mongodb::error::Result<T>;
 
@@ -35,7 +35,7 @@ pub enum InitError {
     Database(#[from] mongodb::error::Error),
 
     #[error("Database serialization failed: {0}")]
-    Serialization(#[from] bson::ser::Error),
+    Serialization(#[from] bson::error::Error),
 
     #[error("Cannot materialize search fields for {collection} record {id}: {reason}")]
     SearchMaterial {
@@ -48,7 +48,7 @@ pub enum InitError {
     SearchDecode {
         collection: &'static str,
         id: Bson,
-        source: bson::de::Error,
+        source: bson::error::Error,
     },
     #[error(transparent)]
     Config(#[from] ConfigError),
@@ -144,17 +144,18 @@ impl<T> Wrapping<T> for T {
 }
 
 #[derive(Debug, Clone)]
-pub struct Storage<R, W = R> {
+pub struct Storage<R: Send + Sync, W: Send + Sync = R> {
     pub get: Collection<WithId<R>>,
     pub set: Collection<W>,
 }
 
 impl<R, W> Storage<R, W>
 where
-    W: Wrapping<R> + Resource,
+    R: Send + Sync,
+    W: Wrapping<R> + Resource + Send + Sync,
 {
     pub async fn new(col: Collection<W>) -> MongoResult<Self> {
-        col.create_indexes(W::Idx::indexes(), None).await?;
+        col.create_indexes(W::Idx::indexes()).await?;
         Ok(Self {
             get: col.clone_with_type(),
             set: col,
@@ -165,14 +166,14 @@ where
     where
         WithId<R>: DeserializeOwned + Send + Sync + Unpin,
     {
-        self.get.find_one(doc! { "_id": id }, None).await
+        self.get.find_one(doc! { "_id": id }).await
     }
 
     pub async fn get_by_name(&self, name: &str) -> MongoResult<Option<WithId<R>>>
     where
         WithId<R>: DeserializeOwned + Send + Sync + Unpin,
     {
-        self.get.find_one(doc! { JobIdx::NAME: name }, None).await
+        self.get.find_one(doc! { JobIdx::NAME: name }).await
     }
 
     pub async fn insert(&self, data: R) -> CrudResult<WithId<R>>
@@ -182,7 +183,7 @@ where
         let wrapped = W::try_wrap(data).map_err(|error| CrudError::InvalidResource(error.to_string()))?;
         let id = self
             .set
-            .insert_one(&wrapped, None)
+            .insert_one(&wrapped)
             .await?
             .inserted_id
             .as_object_id()
@@ -201,18 +202,8 @@ where
     where
         R: Debug + Serialize + DeserializeOwned + Unpin + Send + Sync,
     {
-        self.get
-            .find_paginated(
-                filter.into(),
-                FindOptions::builder()
-                    .sort(W::Idx::SORT_INDEX.map(|x| doc! { x: -1 }))
-                    .limit(param.per_page as i64)
-                    .build()
-                    .pipe(Some),
-                param.into_cursor(),
-            )
-            .await?
-            .to_core()
-            .pipe(Ok)
+        pagination::find_paginated(&self.get, filter.into().unwrap_or_default(), W::Idx::SORT_INDEX, param)
+            .await
+            .map_err(Into::into)
     }
 }

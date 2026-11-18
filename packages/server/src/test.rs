@@ -11,7 +11,7 @@ use tokio::sync::OnceCell;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{Layer, filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{REQ, db::Collections, resolver::Resolver, util::GovernedClient};
+use crate::{db::Collections, resolver::Resolver, util::GovernedClient};
 
 pub struct Env {
     pub config: Config,
@@ -85,12 +85,7 @@ async fn prepare(jail: &mut Jail) -> Env {
     let mongo = Client::with_uri_str(&config.database.url).await.unwrap();
     let db = mongo.database("forrit");
     let client = GovernedClient::new(
-        tmdb_api::Client::builder()
-            .with_api_key(config.resolver.tmdb_api_key.to_owned())
-            .with_base_url("https://api.themoviedb.org/3")
-            .with_executor(REQ.clone())
-            .build()
-            .unwrap(),
+        tmdb_api::client::ReqwestClient::new(config.resolver.tmdb_api_key.to_owned()),
         RateLimiter::direct(Quota::per_second(NonZeroU32::new(20).unwrap())),
     );
     let col = Collections::new(&db, layers).await.unwrap();

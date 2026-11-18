@@ -6,7 +6,7 @@ use futures::TryStreamExt;
 use mongodb::{
     Collection, IndexModel,
     bson::{self, Bson, Document, doc, oid::ObjectId},
-    options::{IndexOptions, UpdateModifications, UpdateOptions},
+    options::IndexOptions,
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
@@ -64,7 +64,7 @@ pub enum SearchError {
     Database(#[from] mongodb::error::Error),
 
     #[error(transparent)]
-    Decode(#[from] bson::de::Error),
+    Decode(#[from] bson::error::Error),
 }
 
 #[derive(Clone, Debug)]
@@ -85,10 +85,10 @@ impl Search {
 
     pub async fn ensure_indexes(&self) -> mongodb::error::Result<()> {
         self.meta
-            .create_indexes(gram_indexes("_search.titles", "search_meta_titles"), None)
+            .create_indexes(gram_indexes("_search.titles", "search_meta_titles"))
             .await?;
         self.alias
-            .create_indexes(gram_indexes("_search.key", "search_alias_key"), None)
+            .create_indexes(gram_indexes("_search.key", "search_alias_key"))
             .await?;
 
         let mut entry_indexes = Vec::with_capacity(10);
@@ -105,7 +105,7 @@ impl Search {
                 )
                 .build(),
         );
-        self.entry.create_indexes(entry_indexes, None).await?;
+        self.entry.create_indexes(entry_indexes).await?;
         Ok(())
     }
 
@@ -193,7 +193,7 @@ impl Search {
     }
 
     pub async fn has_meta(&self, id: ObjectId) -> Result<bool, SearchError> {
-        Ok(self.meta.find_one(doc! { "_id": id }, None).await?.is_some())
+        Ok(self.meta.find_one(doc! { "_id": id }).await?.is_some())
     }
 
     async fn run(
@@ -328,13 +328,10 @@ impl Search {
         }
         let rows = self
             .entry
-            .aggregate(
-                vec![
-                    doc! { "$match": { "meta_id": { "$in": ids } } },
-                    doc! { "$group": { "_id": "$meta_id", "latest": { "$max": "$bson_pub_date" } } },
-                ],
-                None,
-            )
+            .aggregate(vec![
+                doc! { "$match": { "meta_id": { "$in": ids } } },
+                doc! { "$group": { "_id": "$meta_id", "latest": { "$max": "$bson_pub_date" } } },
+            ])
             .await?
             .try_collect::<Vec<Document>>()
             .await?;
@@ -524,7 +521,7 @@ async fn find_all<T>(collection: &Collection<WithId<T>>, filter: Document) -> Re
 where
     T: DeserializeOwned + Unpin + Send + Sync,
 {
-    Ok(collection.find(filter, None).await?.try_collect().await?)
+    Ok(collection.find(filter).await?.try_collect().await?)
 }
 
 impl Wrapping<Meta> for BsonMeta {
@@ -644,13 +641,10 @@ impl Storage<Alias, BsonAlias> {
             value: *value,
         })
         .map_err(|error| CrudError::InvalidResource(error.to_string()))?;
-        let update = bson::to_document(&alias)?;
+        let update = bson::serialize_to_document(&alias)?;
         self.set
-            .update_one(
-                doc! { "key": key },
-                UpdateModifications::Document(doc! { "$set": update }),
-                UpdateOptions::builder().upsert(true).build(),
-            )
+            .update_one(doc! { "key": key }, doc! { "$set": update })
+            .upsert(true)
             .await
             .map(|result| result.upserted_id.as_ref().and_then(Bson::as_object_id))
             .map_err(CrudError::from)
@@ -659,7 +653,7 @@ impl Storage<Alias, BsonAlias> {
     pub async fn get(&self, key: &str) -> Result<Option<ObjectId>, mongodb::error::Error> {
         Ok(self
             .get
-            .find_one(doc! { "key": key }, None)
+            .find_one(doc! { "key": key })
             .await?
             .map(|alias| alias.inner.value))
     }
@@ -674,7 +668,7 @@ impl Storage<Alias, BsonAlias> {
 
     pub async fn delete(&self, key: &str) -> Result<bool, mongodb::error::Error> {
         self.set
-            .delete_one(doc! { "key": key }, None)
+            .delete_one(doc! { "key": key })
             .await
             .map(|result| result.deleted_count != 0)
     }

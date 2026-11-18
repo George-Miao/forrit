@@ -43,12 +43,12 @@ impl Handler for LogHoop {
 #[async_trait]
 impl Handler for Collections {
     async fn handle(&self, _: &mut Request, depot: &mut Depot, _: &mut Response, _: &mut FlowCtrl) {
-        depot.inject(self.meta.clone());
-        depot.inject(self.entry.clone());
-        depot.inject(self.jobs.clone());
-        depot.inject(self.alias.clone());
-        depot.inject(self.search.clone());
-        depot.inject(self.config.clone());
+        depot.insert_typed(self.meta.clone());
+        depot.insert_typed(self.entry.clone());
+        depot.insert_typed(self.jobs.clone());
+        depot.insert_typed(self.alias.clone());
+        depot.insert_typed(self.search.clone());
+        depot.insert_typed(self.config.clone());
     }
 }
 

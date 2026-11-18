@@ -47,7 +47,7 @@ impl Handler for Frontend {
 }
 
 pub fn router(config: ConfigHandle, openapi: String) -> Router {
-    Router::with_path("<**path>").get(Frontend {
+    Router::with_path("{**path}").get(Frontend {
         config,
         openapi,
         assets: static_embed::<Assets>().fallback("index.html"),

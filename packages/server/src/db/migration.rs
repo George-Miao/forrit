@@ -5,7 +5,7 @@ use futures::TryStreamExt;
 use mongodb::{
     Collection,
     bson::{self, Bson, Document, doc},
-    options::{UpdateModifications, UpdateOptions},
+    options::UpdateModifications,
 };
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -39,7 +39,7 @@ impl Migration for AddTorrentInfoToEntry {
         let entry = col.entry.set.clone_with_type::<Document>();
 
         entry
-            .find(doc! { "info_hash": { "$exists": false }}, None)
+            .find(doc! { "info_hash": { "$exists": false }})
             .await?
             .try_for_each_concurrent(50, |doc| {
                 let entry = entry.clone();
@@ -48,7 +48,7 @@ impl Migration for AddTorrentInfoToEntry {
                     let torrent = doc.get_str("torrent").expect("torrent field missing");
                     let Ok(info) = get_torrent_info(torrent).await else {
                         tracing::debug!("Failed to get torrent info for torrent {torrent}, deleting entry");
-                        entry.delete_one(doc! { "_id": id }, None).await?;
+                        entry.delete_one(doc! { "_id": id }).await?;
                         return Ok(());
                     };
 
@@ -62,7 +62,6 @@ impl Migration for AddTorrentInfoToEntry {
                                     "size": info.size as i64,
                                 }
                             }),
-                            UpdateOptions::builder().upsert(false).build(),
                         )
                         .await
                         .expect("Failed to update entry");
@@ -90,7 +89,7 @@ impl Migration for SanitizeEntryDescriptions {
         let entry = col.entry.set.clone_with_type::<Document>();
 
         entry
-            .find(doc! { "description": { "$type": "string" } }, None)
+            .find(doc! { "description": { "$type": "string" } })
             .await?
             .try_for_each_concurrent(50, |doc| {
                 let entry = entry.clone();
@@ -100,7 +99,7 @@ impl Migration for SanitizeEntryDescriptions {
                     let sanitized = sanitize_description(description);
                     if sanitized != description {
                         entry
-                            .update_one(doc! { "_id": id }, doc! { "$set": { "description": sanitized } }, None)
+                            .update_one(doc! { "_id": id }, doc! { "$set": { "description": sanitized } })
                             .await?;
                     }
                     Ok(())
@@ -130,7 +129,7 @@ impl Migration for SearchMaterial {
 }
 
 fn search_material(value: &impl Serialize) -> InitResult<Bson> {
-    Ok(mongodb::bson::to_document(value)?
+    Ok(bson::serialize_to_document(value)?
         .remove("_search")
         .expect("search wrapper must serialize _search"))
 }
@@ -142,18 +141,19 @@ where
     W::Error: Display,
 {
     collection
-        .find(doc! { "_search": { "$exists": false } }, None)
+        .find(doc! { "_search": { "$exists": false } })
         .await?
         .map_err(InitError::from)
         .try_for_each_concurrent(50, |document| {
             let collection = collection.clone();
             async move {
                 let raw_id = document.get("_id").cloned().unwrap_or(Bson::Null);
-                let WithId { id, inner } = bson::from_document(document).map_err(|source| InitError::SearchDecode {
-                    collection: name,
-                    id: raw_id,
-                    source,
-                })?;
+                let WithId { id, inner } =
+                    bson::deserialize_from_document(document).map_err(|source| InitError::SearchDecode {
+                        collection: name,
+                        id: raw_id,
+                        source,
+                    })?;
                 let wrapped = W::try_from(inner).map_err(|source| InitError::SearchMaterial {
                     collection: name,
                     id,
@@ -163,7 +163,6 @@ where
                     .update_one(
                         doc! { "_id": id },
                         doc! { "$set": { "_search": search_material(&wrapped)? } },
-                        None,
                     )
                     .await?;
                 Ok(())

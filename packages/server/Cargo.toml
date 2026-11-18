@@ -20,6 +20,7 @@ webui = []
 forrit-core = { workspace = true, features = ["mongodb_pagination"] }
 forrit-config = { workspace = true }
 
+backon = { workspace = true }
 tap = { workspace = true }
 url = { workspace = true }
 regex = { workspace = true }
@@ -36,36 +37,35 @@ salvo_core = { workspace = true }
 serde_json = { workspace = true }
 base64 = { workspace = true }
 bangumi-data = { workspace = true }
-mongodb-cursor-pagination = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 unicode-normalization = { workspace = true }
 
 dotenvy = "0.15.7"
-mongodb = { version = "2.8.0", features = ["bson-chrono-0_4"] }
-figment = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
-salvo = { version = "0.67.0", features = ["cors", "logging", "oapi", "serve-static", "websocket", "basic-auth"] }
-ractor = { version = "0.10", default-features = false, features = ["tokio_runtime"] }
-governor = { version = "0.6.0", default-features = false, features = ["futures", "quanta", "std"] }
+mongodb = { version = "3.10.1", default-features = false, features = ["bson-3", "compat-3-3-0", "dns-resolver", "rustls-tls"] }
+figment = { version = "0.10.19", features = ["env", "json", "toml", "yaml"] }
+salvo = { version = "1.2.1", features = ["cors", "logging", "oapi", "serve-static", "websocket", "basic-auth"] }
+ractor = { version = "0.16", default-features = false, features = ["tokio_runtime"] }
+governor = { version = "0.10.4", default-features = false, features = ["quanta", "std"] }
 
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 
 anitomy = "0.2.0"
-humantime = "2.1.0"
-mod_use = "0.2.1"
-qbit-rs = "0.4.4"
-rss = "2.0.6"
-thiserror = "1.0.58"
+humantime = "2.4.0"
+mod_use = "0.2.3"
+qbit-rs = "0.6.0"
+rss = "2.1.2"
+thiserror = "2.0.21"
 camelpaste = "0.1.0"
-bt_bencode = "0.8.1"
+bt_bencode = "0.8.2"
 hex = { version = "0.4.3", features = ["serde"] }
-rust-embed = { version = "8.5.0", features = ["salvo"] }
-sha1 = "0.10.6"
+rust-embed = { version = "8.14.0", features = ["salvo"] }
+sha1 = "0.11.0"
 rustc-hex = "2.1.0"
-ammonia = "4.1.3"
+ammonia = "4.2.5"
 
 [dev-dependencies]
-tracing-appender = "0.2.3"
+tracing-appender = "0.2.5"
 tracing-flame = "0.2.0"
 
-figment = { version = "0.10.15", features = ["env", "json", "test", "toml", "yaml"] }
+figment = { version = "0.10.19", features = ["env", "json", "test", "toml", "yaml"] }
 tokio = { workspace = true, features = ["full"] }

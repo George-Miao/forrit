@@ -7,7 +7,7 @@ authors = { workspace = true }
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-mongodb_pagination = ["mongodb-cursor-pagination"]
+mongodb_pagination = []
 
 [dependencies]
 serde = { workspace = true }
@@ -23,5 +23,3 @@ salvo-oapi = { workspace = true, features = ["url"] }
 salvo_core = { workspace = true }
 serde_json = { workspace = true }
 bson = { workspace = true, features = ["chrono-0_4"] }
-mongodb-cursor-pagination = { workspace = true, optional = true }
-pin-project-lite = "0.2.14"

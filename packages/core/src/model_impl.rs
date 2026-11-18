@@ -8,21 +8,11 @@ use std::{
 use bangumi_data::{Item, Language};
 use bson::oid::ObjectId;
 use camino::Utf8PathBuf;
-use salvo_oapi::{Components, Object, Ref, RefOr, Schema, SchemaFormat, SchemaType, ToSchema, schema};
+use salvo_oapi::{BasicType, Components, Object, Ref, RefOr, Schema, SchemaFormat, ToSchema, schema};
 use tmdb_api::tvshow::{SeasonShort, TVShowShort};
 use ts_rs::TS;
 
 use crate::model::*;
-
-#[cfg(feature = "mongodb_pagination")]
-impl ListParam {
-    pub fn into_cursor(self) -> Option<mongodb_cursor_pagination::DirectedCursor> {
-        Some(match self.direction {
-            Direction::Forward => mongodb_cursor_pagination::DirectedCursor::Forward(self.cursor?),
-            Direction::Backwards => mongodb_cursor_pagination::DirectedCursor::Backwards(self.cursor?),
-        })
-    }
-}
 
 impl<K, V> ToSchema for Record<K, V> {
     fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
@@ -33,7 +23,7 @@ impl<K, V> ToSchema for Record<K, V> {
             .required("key")
             .required("value");
         let ret = RefOr::Ref(Ref::new(format!("#/components/schemas/{}", typename)));
-        components.schemas.insert(typename, schema.into());
+        components.schemas.insert(typename, schema);
         ret
     }
 }
@@ -73,18 +63,18 @@ impl<T> ListResult<T> {
 impl<T: ToSchema> ToSchema for ListResult<T> {
     fn to_schema(components: &mut salvo_oapi::oapi::Components) -> RefOr<schema::Schema> {
         let schema = Object::new()
-            .property("total_count", Object::new().schema_type(SchemaType::Number))
+            .property("total_count", Object::with_type(BasicType::Number))
             .required("total_count")
             .property(
                 "page_info",
                 schema::AllOf::new().item(<PageInfo as ToSchema>::to_schema(components)),
             )
             .required("page_info")
-            .property("items", schema::Array::new(T::to_schema(components)))
+            .property("items", schema::Array::new().items(T::to_schema(components)))
             .required("items");
         components
             .schemas
-            .insert(std::any::type_name::<ListResult<T>>().replace("::", "."), schema.into());
+            .insert(std::any::type_name::<ListResult<T>>().replace("::", "."), schema);
         RefOr::Ref(Ref::new(format!(
             "#/components/schemas/{}",
             std::any::type_name::<ListResult<T>>().replace("::", ".")
@@ -98,12 +88,11 @@ impl<T: ToSchema> ToSchema for ListResult<T> {
 impl ToSchema for SubscribeGroups {
     fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
         let schema = Into::<schema::OneOf>::into(schema::OneOf::with_capacity(3usize))
-            .item(Object::new().schema_type(SchemaType::String).enum_values(["all"]))
-            .item(schema::Array::new(Object::new().schema_type(SchemaType::String)));
-        components.schemas.insert(
-            std::any::type_name::<SubscribeGroups>().replace("::", "."),
-            schema.into(),
-        );
+            .item(Object::with_type(BasicType::String).enum_values(["all"]))
+            .item(schema::Array::new().items(Object::with_type(BasicType::String)));
+        components
+            .schemas
+            .insert(std::any::type_name::<SubscribeGroups>().replace("::", "."), schema);
         RefOr::Ref(Ref::new(format!(
             "#/components/schemas/{}",
             std::any::type_name::<SubscribeGroups>().replace("::", ".")
@@ -250,7 +239,7 @@ impl<T: ToSchema + 'static> ToSchema for WithId<T> {
                     .required("_id"),
             );
         let ret = RefOr::Ref(Ref::new(format!("#/components/schemas/{}", typename)));
-        components.schemas.insert(typename, schema.into());
+        components.schemas.insert(typename, schema);
         ret
     }
 }
@@ -258,7 +247,7 @@ impl<T: ToSchema + 'static> ToSchema for WithId<T> {
 impl ToSchema for ObjectIdSchema {
     fn to_schema(components: &mut Components) -> RefOr<schema::Schema> {
         components.schemas.entry("ObjectId".to_owned()).or_insert_with(|| {
-            RefOr::T(Schema::Object(
+            RefOr::Type(Schema::object(
                 Object::new()
                     .property("$oid", Ref::from_schema_name("ObjectIdString"))
                     .required("$oid"),
@@ -274,9 +263,8 @@ impl ToSchema for ObjectIdStringSchema {
             .schemas
             .entry("ObjectIdString".to_owned())
             .or_insert_with(|| {
-                RefOr::T(Schema::Object(
-                    Object::new()
-                        .schema_type(SchemaType::String)
+                RefOr::Type(Schema::object(
+                    Object::with_type(BasicType::String)
                         .format(SchemaFormat::Custom("ObjectId".to_owned()))
                         .pattern("^[0-9a-fA-F]{24}$"),
                 ))

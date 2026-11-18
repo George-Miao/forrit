@@ -13,10 +13,10 @@ tap        = { workspace = true }
 either     = { workspace = true }
 arc-swap   = { workspace = true }
 
-dirs            = "5.0.1"
+dirs            = "7.0.0"
 humantime-serde = "1.1.1"
 
-figment = { version = "0.10.15", features = ["env", "json", "toml", "yaml"] }
+figment = { version = "0.10.19", features = ["env", "json", "toml", "yaml"] }
 
 [dev-dependencies]
-figment = { version = "0.10.15", features = ["test"] }
+figment = { version = "0.10.19", features = ["test"] }

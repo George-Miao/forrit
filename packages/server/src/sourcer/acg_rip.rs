@@ -1,12 +1,16 @@
 use std::sync::Arc;
 
+use backon::Retryable;
 use forrit_config::AcgRipConfig;
 use ractor::Actor;
-use tracing::info;
+use tracing::{info, warn};
 
-use crate::sourcer::{
-    SourcerMessage,
-    rss::{self, RssActor},
+use crate::{
+    sourcer::{
+        SourcerMessage,
+        rss::{self, RssActor},
+    },
+    util::retry_backoff,
 };
 
 #[derive(Clone)]
@@ -38,8 +42,14 @@ impl AcgRipActor {
                 self.config.zone.map_or_default(|z| format!("{}/", z)),
                 page
             );
-            if let Err(e) = self.rss.load_url(&url).await {
-                tracing::warn!(%e, %url, "Failed to load history page");
+            if let Err(e) = (|| self.rss.load_url(&url))
+                .retry(retry_backoff())
+                .notify(|error, delay| {
+                    warn!(%error, ?delay, %url, "Failed to load acg.rip history page, retrying");
+                })
+                .await
+            {
+                warn!(%e, %url, "Failed to load history page");
                 break;
             }
         }

@@ -5,7 +5,7 @@ use forrit_core::{
         Subscription, UpdateResult, WithId,
     },
 };
-use mongodb::bson::{doc, to_bson};
+use mongodb::bson::{doc, serialize_to_bson};
 use regex::Regex;
 use salvo::{
     oapi::extract::{JsonBody, QueryParam},
@@ -99,7 +99,7 @@ async fn list_entry(
     id: OidParam,
     param: ListParam,
 ) -> ApiResult<Json<ListResult<WithId<PartialEntry>>>> {
-    pod.obtain::<EntryStorage>()
+    pod.get_typed::<EntryStorage>()
         .expect("missing EntryStorage")
         .list_by_meta_id(id.id, param)
         .await?
@@ -110,7 +110,7 @@ async fn list_entry(
 /// Get all group of a meta
 #[endpoint(tags("meta"))]
 async fn list_groups(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<EntryGroup>>> {
-    pod.obtain::<EntryStorage>()
+    pod.get_typed::<EntryStorage>()
         .expect("missing EntryStorage")
         .list_groups_of_meta(id.id)
         .await?
@@ -121,7 +121,7 @@ async fn list_groups(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<EntryG
 /// Get all aliases of a meta
 #[endpoint(tags("meta"))]
 async fn list_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Alias>>>> {
-    pod.obtain::<AliasStorage>()
+    pod.get_typed::<AliasStorage>()
         .expect("missing AliasStorage")
         .list_keys_by_value(&id.id, param)
         .await?
@@ -132,7 +132,7 @@ async fn list_alias(pod: &mut Depot, id: OidParam, param: ListParam) -> ApiResul
 /// Get subscription of a meta
 #[endpoint(tags("meta"))]
 async fn get_subscription(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Option<Subscription>>> {
-    pod.obtain::<MetaStorage>()
+    pod.get_typed::<MetaStorage>()
         .expect("missing MetaStorage")
         .get_by_oid(id.id)
         .await
@@ -153,13 +153,12 @@ async fn update_subscription(
 ) -> ApiResult<Json<UpdateResult>> {
     validate_subscription(&obj.0)?;
     let res = pod
-        .obtain::<MetaStorage>()
+        .get_typed::<MetaStorage>()
         .expect("missing MetaStorage")
         .set
         .update_one(
             doc! { "_id": id.id },
-            doc! { "$set": { "subscription": to_bson(&obj.0)? }},
-            None,
+            doc! { "$set": { "subscription": serialize_to_bson(&obj.0)? }},
         )
         .await?;
     let updated = res.modified_count != 0;
@@ -233,10 +232,10 @@ fn validate_subscription(subscription: &Subscription) -> ApiResult<()> {
 #[endpoint(tags("meta"))]
 async fn delete_subscription(pod: &mut Depot, id: OidParam) -> ApiResult<Json<UpdateResult>> {
     let res = pod
-        .obtain::<MetaStorage>()
+        .get_typed::<MetaStorage>()
         .expect("missing MetaStorage")
         .set
-        .update_one(doc! { "_id": id.id }, doc! { "$set": { "subscription": null }}, None)
+        .update_one(doc! { "_id": id.id }, doc! { "$set": { "subscription": null }})
         .await?;
     Ok(Json(UpdateResult {
         updated: res.modified_count != 0,
@@ -245,7 +244,7 @@ async fn delete_subscription(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Up
 
 #[endpoint]
 async fn list_download(pod: &Depot, id: OidParam, param: ListParam) -> ApiResult<Json<ListResult<WithId<Job>>>> {
-    pod.obtain::<Storage<Job>>()
+    pod.get_typed::<Storage<Job>>()
         .expect("missing GetSet<Download>")
         .list_by(doc! { JobIdx::META_ID : id.id }, param)
         .await?
@@ -259,12 +258,12 @@ pub fn resolver_api() -> Router {
             Router::with_path("meta")
                 .push(Router::with_path("season").get(by_season))
                 .push(Router::with_path("subscription").get(list_subscriptions))
-                .push(Router::with_path("<id>/entry").get(list_entry))
-                .push(Router::with_path("<id>/group").get(list_groups))
-                .push(Router::with_path("<id>/alias").get(list_alias))
-                .push(Router::with_path("<id>/download").get(list_download))
+                .push(Router::with_path("{id}/entry").get(list_entry))
+                .push(Router::with_path("{id}/group").get(list_groups))
+                .push(Router::with_path("{id}/alias").get(list_alias))
+                .push(Router::with_path("{id}/download").get(list_download))
                 .push(
-                    Router::with_path("<id>/subscription")
+                    Router::with_path("{id}/subscription")
                         .get(get_subscription)
                         .put(update_subscription)
                         .delete(delete_subscription),

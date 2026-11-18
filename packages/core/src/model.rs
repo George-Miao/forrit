@@ -91,6 +91,7 @@ pub struct ObjectIdStringSchema;
 pub struct Meta {
     pub title: String,
 
+    #[salvo(schema(value_type = BTreeMap<String, Vec<String>>))]
     #[ts(type = "Record<Language, Array<string>>")]
     pub title_translate: BTreeMap<Language, Vec<String>>,
 
@@ -118,14 +119,45 @@ pub struct Meta {
 
     pub subscription: Option<Subscription>,
 
-    #[salvo(schema(value_type = Option<Object>))]
+    #[salvo(schema(value_type = Option<TmdbShowSchema>))]
     pub tv: Option<TVShowShort>,
 
-    #[salvo(schema(value_type = Option<Object>))]
+    #[salvo(schema(value_type = Option<TmdbSeasonSchema>))]
     pub season: Option<SeasonShort>,
 
-    #[salvo(schema(value_type = Option<Object>))]
     pub season_override: Option<SeasonOverride>,
+}
+
+// The TMDB client types do not implement ToSchema. Use their flat JSON shape.
+#[derive(ToSchema)]
+#[allow(dead_code)]
+struct TmdbShowSchema {
+    id: u64,
+    name: String,
+    original_name: String,
+    original_language: String,
+    origin_country: Vec<String>,
+    overview: Option<String>,
+    first_air_date: Option<chrono::NaiveDate>,
+    poster_path: Option<String>,
+    backdrop_path: Option<String>,
+    popularity: f64,
+    vote_count: u64,
+    vote_average: f64,
+    adult: bool,
+    genre_ids: Vec<u64>,
+}
+
+#[derive(ToSchema)]
+#[allow(dead_code)]
+struct TmdbSeasonSchema {
+    air_date: Option<chrono::NaiveDate>,
+    id: u64,
+    name: String,
+    overview: Option<String>,
+    poster_path: Option<String>,
+    season_number: u64,
+    episode_count: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
@@ -174,7 +206,7 @@ fn test_subscribe_group() {
     assert_eq!(serde_json::to_string(&g).unwrap(), r#"["a","b"]"#);
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema, TS)]
 #[ts(export)]
 pub struct SeasonOverride {
     pub name: String,
@@ -342,7 +374,6 @@ pub struct IndexStat {
 
 #[cfg(feature = "mongodb_pagination")]
 mod mongodb_pagination {
-    use mongodb_cursor_pagination::Edge;
     use salvo_oapi::{ToParameters, ToSchema};
     use ts_rs::TS;
 
@@ -365,7 +396,7 @@ mod mongodb_pagination {
         /// Cursor to start searching, if not set, search from the beginning
         #[salvo(parameter(value_type = Option<String>), schema(value_type = Option<String>))]
         #[ts(optional, as = "Option<String>")]
-        pub cursor: Option<Edge>,
+        pub cursor: Option<String>,
     }
 
     impl Default for ListParam {

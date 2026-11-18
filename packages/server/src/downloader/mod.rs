@@ -4,10 +4,11 @@
 
 use std::sync::Arc;
 
+use backon::Retryable;
 use camino::Utf8PathBuf;
 use forrit_config::{Config, DownloaderConfig, DownloaderType};
-use forrit_core::model::{DownloadState, Job, Meta, PartialEntry, WithId};
-use futures::{TryStream, TryStreamExt};
+use forrit_core::model::{DownloadState, Job, PartialEntry, WithId};
+use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     results::UpdateResult,
@@ -17,12 +18,11 @@ use tap::Pipe;
 use tracing::warn;
 
 use crate::{
-    REQ,
     db::{Collections, MongoResult, Storage, impl_resource},
     downloader::qbit::QbitActor,
     resolver,
     sourcer::EntryStorage,
-    util::Boom,
+    util::{Boom, retry_backoff},
 };
 pub const NAME: &str = "downloader";
 
@@ -37,7 +37,7 @@ pub fn job_added(job_id: ObjectId) {
 impl Storage<Job> {
     pub async fn get_by_entry(&self, entry_id: ObjectId) -> MongoResult<Vec<WithId<Job>>> {
         self.get
-            .find(doc! { JobIdx::ENTRY_ID: entry_id }, None)
+            .find(doc! { JobIdx::ENTRY_ID: entry_id })
             .await?
             .try_collect()
             .await
@@ -49,7 +49,6 @@ impl Storage<Job> {
 pub struct Prepared {
     download: Job,
     entry: WithId<PartialEntry>,
-    meta: Option<WithId<Meta>>,
     path: Utf8PathBuf,
 }
 
@@ -69,31 +68,64 @@ impl DownloadManager {
         }
     }
 
-    async fn pending_jobs(&self) -> MongoResult<impl TryStream<Ok = WithId<Job>, Error = mongodb::error::Error>> {
-        self.jobs
-            .get
-            .find(doc! { "state": DownloadState::Pending.to_str() }, None)
-            .await?
-            .pipe(Ok)
+    async fn pending_jobs(&self) -> MongoResult<Vec<WithId<Job>>> {
+        (|| async {
+            self.jobs
+                .get
+                .find(doc! { "state": DownloadState::Pending.to_str() })
+                .await?
+                .try_collect()
+                .await
+        })
+        .retry(retry_backoff())
+        .notify(|error, delay| {
+            warn!(%error, ?delay, "Failed to load pending download jobs, retrying");
+        })
+        .await
     }
 
-    async fn downloading_jobs(&self) -> MongoResult<impl TryStream<Ok = WithId<Job>, Error = mongodb::error::Error>> {
-        self.jobs
-            .get
-            .find(doc! { "state": DownloadState::Downloading.to_str() }, None)
-            .await?
-            .pipe(Ok)
+    async fn downloading_jobs(&self) -> MongoResult<Vec<WithId<Job>>> {
+        (|| async {
+            self.jobs
+                .get
+                .find(doc! { "state": DownloadState::Downloading.to_str() })
+                .await?
+                .try_collect()
+                .await
+        })
+        .retry(retry_backoff())
+        .notify(|error, delay| {
+            warn!(%error, ?delay, "Failed to load active download jobs, retrying");
+        })
+        .await
     }
 
     async fn update_state(&self, job_id: ObjectId, state: DownloadState) -> MongoResult<UpdateResult> {
-        self.jobs
-            .set
-            .update_one(doc! { "_id": job_id }, doc! {"$set": { "state": state.to_str() }}, None)
-            .await
+        let state = state.to_str().to_owned();
+        (|| {
+            let state = state.clone();
+            async move {
+                self.jobs
+                    .set
+                    .update_one(doc! { "_id": job_id }, doc! {"$set": { "state": state }})
+                    .await
+            }
+        })
+        .retry(retry_backoff())
+        .notify(|error, delay| {
+            warn!(%error, ?delay, %job_id, "Failed to update download state, retrying");
+        })
+        .await
     }
 
     async fn prepare(&self, job: Job) -> MongoResult<Option<Prepared>> {
-        let Some(entry) = self.entry.get_one(job.entry_id).await? else {
+        let entry = (|| self.entry.get_one(job.entry_id))
+            .retry(retry_backoff())
+            .notify(|error, delay| {
+                warn!(%error, ?delay, entry_id = %job.entry_id, "Failed to load download entry, retrying");
+            })
+            .await?;
+        let Some(entry) = entry else {
             warn!(job = %job.entry_id, "Entry not found for download job, skip");
             return Ok(None);
         };
@@ -109,7 +141,6 @@ impl DownloadManager {
         Prepared {
             download: job,
             entry,
-            meta,
             path,
         }
         .pipe(Some)
@@ -128,17 +159,12 @@ pub async fn start(db: &Collections, supervisor: ActorCell, config: &Config) -> 
         }
         DownloaderType::Transmission(_) => todo!("Transmission downloader is not yet implemented"),
         DownloaderType::Qbittorrent(qb_conf) => {
-            let actor = QbitActor::new(REQ.clone(), Arc::new(qb_conf.clone()), manager);
-            match Actor::spawn_linked(Some(NAME.to_owned()), actor, (), supervisor.clone()).await {
-                Ok((actor, _)) => actor.get_cell(),
-                Err(error) => {
-                    warn!(?error, "Failed to start qBittorrent downloader, disabling downloader");
-                    db.config.warning(format!(
-                        "Failed to start qBittorrent downloader; downloader is disabled: {error}",
-                    ));
-                    start_dummy(supervisor).await
-                }
-            }
+            let actor = QbitActor::new(Arc::new(qb_conf.clone()), manager);
+            Actor::spawn_linked(Some(NAME.to_owned()), actor, (), supervisor)
+                .await
+                .boom("Failed to start qBittorrent downloader")
+                .0
+                .get_cell()
         }
     }
 }

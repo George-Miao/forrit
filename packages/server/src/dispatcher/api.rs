@@ -13,7 +13,7 @@ use crate::{
 #[endpoint]
 async fn new_download(pod: &mut Depot, entry_id: OidParam) -> ApiResult<Json<WithId<Job>>> {
     let entry = pod
-        .obtain::<EntryStorage>()
+        .get_typed::<EntryStorage>()
         .expect("missing EntryStorage")
         .get_one(entry_id.id)
         .await
@@ -23,7 +23,7 @@ async fn new_download(pod: &mut Depot, entry_id: OidParam) -> ApiResult<Json<Wit
 
 #[endpoint]
 async fn get_download(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<WithId<Job>>>> {
-    pod.obtain::<Storage<Job>>()
+    pod.get_typed::<Storage<Job>>()
         .expect("missing Storage<Job>")
         .get_by_entry(id.id)
         .await
@@ -33,7 +33,7 @@ async fn get_download(pod: &mut Depot, id: OidParam) -> ApiResult<Json<Vec<WithI
 
 pub fn dispatcher_api() -> Router {
     Router::new().push(
-        Router::with_path("entry/<id>/download")
+        Router::with_path("entry/{id}/download")
             .get(get_download)
             .post(new_download),
     )

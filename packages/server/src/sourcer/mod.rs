@@ -7,10 +7,7 @@ use std::{collections::BTreeSet, sync::Arc};
 use forrit_config::{Config, RssConfig, SourcerType};
 use forrit_core::model::{EntryGroup, ListParam, ListResult, PartialEntry, WithId};
 use futures::TryStreamExt;
-use mongodb::{
-    bson::{Bson, doc, oid::ObjectId},
-    options::{UpdateModifications, UpdateOptions},
-};
+use mongodb::bson::{Bson, doc, oid::ObjectId};
 use ractor::{Actor, ActorCell};
 use tap::Pipe;
 use tracing::warn;
@@ -118,14 +115,11 @@ impl EntryStorage {
 
     pub async fn list_groups_of_meta(&self, meta_id: ObjectId) -> MongoResult<Vec<EntryGroup>> {
         self.get
-            .aggregate(
-                vec![
-                    doc! { "$match": { "meta_id": meta_id, "group": { "$type": "string" } } },
-                    doc! { "$group": { "_id": "$group", "count": { "$sum": 1 } } },
-                    doc! { "$sort": { "count": -1, "_id": 1 } },
-                ],
-                None,
-            )
+            .aggregate(vec![
+                doc! { "$match": { "meta_id": meta_id, "group": { "$type": "string" } } },
+                doc! { "$group": { "_id": "$group", "count": { "$sum": 1 } } },
+                doc! { "$sort": { "count": -1, "_id": 1 } },
+            ])
             .await?
             .map_ok(|document| {
                 let name = document.get_str("_id").expect("group name must be a string").to_owned();
@@ -151,7 +145,7 @@ impl EntryStorage {
         if only_resolved {
             query.insert(BsonEntryIdx::META_ID, doc! { "$ne": null });
         };
-        self.get.find_one(query, None).await?.is_some().pipe(Ok)
+        self.get.find_one(query).await?.is_some().pipe(Ok)
     }
 
     pub async fn upsert(&self, entry: PartialEntry) -> CrudResult<BsonEntry> {
@@ -162,14 +156,11 @@ impl EntryStorage {
             .take()
             .map(|description| sanitize_description(&description));
         let entry = BsonEntry::try_from(entry).map_err(|error| CrudError::InvalidResource(error.to_string()))?;
-        let doc = mongodb::bson::to_document(&entry)?;
+        let doc = mongodb::bson::serialize_to_document(&entry)?;
 
         self.set
-            .update_one(
-                doc! { BsonEntryIdx::GUID: &entry.guid },
-                UpdateModifications::Document(doc! { "$set": doc }),
-                UpdateOptions::builder().upsert(true).build(),
-            )
+            .update_one(doc! { BsonEntryIdx::GUID: &entry.guid }, doc! { "$set": doc })
+            .upsert(true)
             .await?;
 
         Ok(entry)

@@ -22,7 +22,7 @@ macro_rules! build_crud {
 
         fn obtain(depot: &mut Depot) -> &$handler {
             depot
-                .obtain::<$handler>()
+                .get_typed::<$handler>()
                 .expect(concat!("missing ", stringify!($handler), " in depot"))
         }
 
@@ -104,7 +104,7 @@ impl<H, L, C, R, U, D> CrudRouterBuilder<H, L, C, R, U, D> {
     ) -> Self {
         Self {
             router: Router::with_path(route),
-            id_router: Router::with_path("<id>"),
+            id_router: Router::with_path("{id}"),
             list,
             create,
             read,

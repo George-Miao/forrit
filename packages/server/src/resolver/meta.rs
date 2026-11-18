@@ -6,7 +6,7 @@ use futures::{StreamExt, TryStreamExt};
 use mongodb::{
     IndexModel,
     bson::{self, doc, oid::ObjectId},
-    options::{FindOneOptions, IndexOptions, UpdateModifications, UpdateOptions},
+    options::IndexOptions,
 };
 use tap::Pipe;
 
@@ -40,7 +40,7 @@ impl_resource!(
 impl MetaStorage {
     pub async fn text_search(&self, query: &str) -> MongoResult<Option<WithId<Meta>>> {
         self.get
-            .find_one(doc! { "$text": { "$search": query } }, None)
+            .find_one(doc! { "$text": { "$search": query } })
             .await?
             .map(WithId::into)
             .pipe(Ok)
@@ -61,7 +61,7 @@ impl MetaStorage {
         };
 
         self.get
-            .find(filter, None)
+            .find(filter)
             .await?
             .map(|x| Ok(x?.into()))
             .try_collect::<Vec<_>>()
@@ -70,12 +70,8 @@ impl MetaStorage {
 
     pub async fn get_latest(&self, tmdb_id: u64) -> MongoResult<Option<WithId<Meta>>> {
         self.get
-            .find_one(
-                doc! { BsonMetaIdx::TV_ID: tmdb_id as i64 },
-                FindOneOptions::builder()
-                    .sort(doc! { BsonMetaIdx::BSON_BEGIN: -1 })
-                    .build(),
-            )
+            .find_one(doc! { BsonMetaIdx::TV_ID: tmdb_id as i64 })
+            .sort(doc! { BsonMetaIdx::BSON_BEGIN: -1 })
             .await?
             .map(WithId::into)
             .pipe(Ok)
@@ -83,39 +79,22 @@ impl MetaStorage {
 
     pub async fn get_by_title(&self, title: &str) -> MongoResult<Option<WithId<Meta>>> {
         self.get
-            .find_one(doc! { BsonMetaIdx::TITLE: title }, None)
+            .find_one(doc! { BsonMetaIdx::TITLE: title })
             .await?
             .map(WithId::into)
             .pipe(Ok)
     }
 
     pub async fn get_by_oid(&self, oid: ObjectId) -> MongoResult<Option<WithId<Meta>>> {
-        self.get
-            .find_one(doc! { "_id": oid }, None)
-            .await?
-            .map(WithId::into)
-            .pipe(Ok)
+        self.get.find_one(doc! { "_id": oid }).await?.map(WithId::into).pipe(Ok)
     }
-
-    // pub async fn get_by_tmdb_id(&self, id: u64) -> MongoResult<Vec<WithId<Meta>>>
-    // {     self
-    //         .get
-    //         .find(doc! { Self::TMDB_ID_INDEX: id as u32 }, None)
-    //         .await?
-    //         .map(|x| x.map(WithId::into))
-    //         .try_collect::<Vec<_>>()
-    //         .await
-    // }
 
     pub async fn upsert(&self, meta: Meta) -> CrudResult<()> {
         let meta = BsonMeta::try_from(meta).map_err(|error| CrudError::InvalidResource(error.to_string()))?;
-        let doc = mongodb::bson::to_document(&meta)?;
+        let doc = bson::serialize_to_document(&meta)?;
         self.set
-            .update_one(
-                doc! { BsonMetaIdx::TITLE: &meta.title },
-                UpdateModifications::Document(doc! { "$set": doc }),
-                UpdateOptions::builder().upsert(true).build(),
-            )
+            .update_one(doc! { BsonMetaIdx::TITLE: &meta.title }, doc! { "$set": doc })
+            .upsert(true)
             .await?;
         Ok(())
     }

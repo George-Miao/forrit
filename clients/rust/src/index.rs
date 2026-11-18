@@ -1,6 +1,4 @@
 use forrit_core::model::IndexStat;
-use futures::Stream;
-use reqwest_websocket::Message;
 use tap::Tap;
 use url::Url;
 
@@ -20,14 +18,6 @@ impl<'a> ResourceClient<'a, IndexStat> {
             url.path_segments_mut()
                 .expect("url cannot be a base")
                 .push(Self::ENDPOINT);
-        })
-    }
-
-    fn ws_url(&self) -> Url {
-        self.client.endpoint.clone().tap_mut(|url| {
-            url.path_segments_mut()
-                .expect("url cannot be a base")
-                .extend([Self::ENDPOINT, "subscribe"]);
         })
     }
 
@@ -68,23 +58,4 @@ impl<'a> ResourceClient<'a, IndexStat> {
             .map(|_: IndexStat| ())
             .map_err(Into::into)
     }
-
-    // pub async fn subscribe(&self) -> Result<impl Stream<Item =
-    // Result<IndexStat>>> {     self.client
-    //         .client
-    //         .get(self.ws_url())
-    //         .upgrade()
-    //         .send()
-    //         .await?
-    //         .into_websocket()
-    //         .await?
-    //         .map(|x| {
-    //             match x? {
-    //                 Message::Text(text) =>
-    // serde_json::from_str::<IndexStat>(&text),
-    // Message::Binary(bytes) => serde_json::from_slice(&bytes),             }
-    //             .map_err(Into::into)
-    //         })
-    //         .pipe(Ok)
-    // }
 }

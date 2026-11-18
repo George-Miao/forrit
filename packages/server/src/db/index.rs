@@ -3,6 +3,8 @@ use mongodb::IndexModel;
 pub const NON_OID: &str = "MongoDB returned non-objectid type for inserted id";
 
 pub trait Idx {
+    /// Optional top-level BSON date field. Pagination sorts by it, then by
+    /// `_id`.
     const SORT_INDEX: Option<&'static str>;
 
     fn indexes() -> impl IntoIterator<Item = IndexModel>;

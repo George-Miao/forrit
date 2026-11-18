@@ -25,7 +25,6 @@ use tmdb_api::{
 use tracing::{debug, info, instrument, trace};
 
 use crate::{
-    REQ,
     db::Collections,
     resolver::{
         index::{IndexJob, IndexStatRecv},
@@ -55,12 +54,7 @@ const ANIME_GENRE: u64 = 16;
 pub async fn start(db: &Collections, supervisor: ActorCell, config: &Config, initial: bool) -> ActorCell {
     let config = Arc::new(config.resolver.clone());
     let client = GovernedClient::new(
-        tmdb_api::Client::builder()
-            .with_api_key(config.tmdb_api_key.clone())
-            .with_base_url("https://api.themoviedb.org/3")
-            .with_executor(REQ.clone())
-            .build()
-            .boom("Failed to init TMDB client"),
+        tmdb_api::client::ReqwestClient::new(config.tmdb_api_key.clone()),
         RateLimiter::direct(Quota::per_second(config.tmdb_rate_limit)),
     );
 
@@ -220,9 +214,7 @@ impl ResolverInner {
             .find_map(|season| {
                 let air_date = season.inner.air_date?;
 
-                // IMDB adds a "Specials" season to shows for things like SPs and OVAs. It
-                // starts at the same time as the show. We don't want it to
-                // mock the actual first season.
+                // Do not match the main season to the "Specials" season.
                 if season.inner.name == "Specials" {
                     debug!("Specials season, ignore");
                     return None;
@@ -527,7 +519,7 @@ mod test {
     #[test]
     fn test_rematch() {
         run(|env| async move {
-            let mut entries = env.col.entry.get.find(None, None).await.unwrap();
+            let mut entries = env.col.entry.get.find(doc! {}).await.unwrap();
             while let Some(entry) = entries.next().await {
                 let entry = entry.unwrap();
 
@@ -547,12 +539,8 @@ mod test {
                 env.col
                     .entry
                     .set
-                    .update_one(
-                        doc! { "_id": entry.id },
-                        doc! { "$set": doc! { "meta_id": meta.id,
-                        "meta_title": &proper_title }},
-                        None,
-                    )
+                    .update_one(doc! { "_id": entry.id }, doc! { "$set": doc! { "meta_id": meta.id,
+                    "meta_title": &proper_title }})
                     .await
                     .unwrap();
             }

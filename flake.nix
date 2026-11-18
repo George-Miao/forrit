@@ -53,7 +53,6 @@
             nativeBuildInputs
             ++ (with pkgs; [
               nodejs
-              nodePackages.npm
             ]);
         };
         forrit-server-without-webui = craneLib.buildPackage {
@@ -100,8 +99,8 @@
               just
               biome
               nodejs
-              nodePackages.typescript
-              nodePackages.pnpm
+              typescript
+              pnpm
               mongosh
               openssl
               playwright-driver.browsers
