@@ -23,8 +23,8 @@ salvo_core = "1.2.1"
 unicode-normalization = "0.1.26"
 arc-swap = "1.9.5"
 
-forrit-core = { version = "0.3.0", path = "packages/core" }
-forrit-config = { version = "0.3.0", path = "packages/config" }
+forrit-core = { version = "0.4.0", path = "packages/core" }
+forrit-config = { version = "0.4.0", path = "packages/config" }
 
 ts-rs = { version = "11.1.0", features = ["no-serde-warnings"] }
 futures = { version = "0.3.34", default-features = false, features = ["async-await", "std"] }
