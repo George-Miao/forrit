@@ -18,27 +18,27 @@ Forrit is a bangumi tracker, subscription manager, and downloader. The repositor
 - `frontend/tests/e2e`: Playwright browser tests for frontend route and interaction regressions.
 - `frontend/build/client`: generated production frontend assets embedded by `packages/server/src/webui`; these files are intentionally tracked.
 - `integration`: experimental integration executable; much of its current flow is commented out.
-- `justfile`: canonical development and generation shortcuts.
+- `flake.nix`: Nix development shell and project commands.
 - `config.example.toml`: public configuration example. Local runtime data and configuration under `data/` are ignored.
 
 ## Toolchain and setup
 
 - Use the pinned Rust nightly from `rust-toolchain.toml`; the code uses unstable features.
 - Node.js 22.13+ and pnpm are expected for frontend work.
-- `nix develop` provides Rust, Node.js, pnpm, Biome, Just, Playwright's browser binaries, and native dependencies when Nix is available.
+- `nix develop` provides Rust, Node.js, pnpm, Biome, Playwright browsers, and native dependencies. Run `menu` in the shell to list project commands.
 - Install frontend packages with `cd frontend && pnpm install`.
 - Keep `@playwright/test` pinned to the version of `playwright-driver` in the flake's locked nixpkgs input; update them together.
 - The server normally expects MongoDB and may also contact TMDB, RSS feeds, and qBittorrent depending on configuration.
 
 ## Common commands
 
-Run commands from the repository root unless noted otherwise.
+Enter `nix develop` from the repository root before running these commands.
 
 ```sh
 # Development
-just server                 # server using data/config.toml
-just frontend               # MongoDB + real Rust backend + frontend dev server
-just frontend-down          # stop local MongoDB without deleting its data
+server                      # server using data/config.toml
+frontend                    # MongoDB, Rust server, and Vite
+frontend-down               # stop MongoDB without deleting its data
 
 # Rust validation
 cargo check --workspace
@@ -52,13 +52,13 @@ cd frontend && pnpm test:e2e
 cd frontend && pnpm build
 
 # Production builds
-just build_server
-just build_frontend
+build_server
+build_frontend
 ```
 
 Prefer the narrowest relevant check while iterating, for example `cargo test -p forrit-core` or `cargo check -p forrit-server`. Before handing off a broad change, expand validation to all affected packages.
 
-`just frontend` starts MongoDB in Docker, the real Rust server on `127.0.0.1:8080`, and Vite on port 5173. Vite proxies `/api` to the Rust server. MongoDB uses the persistent `forrit-mongodb` Docker volume and remains running when the frontend exits.
+`frontend` starts MongoDB in Docker, the Rust server on `127.0.0.1:8080`, and Vite on port 5173. Vite proxies `/api` to the Rust server. MongoDB uses the persistent `forrit-mongodb` Docker volume and remains running when the frontend exits.
 
 ## Testing caveats
 
@@ -67,7 +67,7 @@ Prefer the narrowest relevant check while iterating, for example `cargo test -p 
 - `clients/rust`'s client test expects a server at `http://localhost:8080`.
 - Pure unit tests in `forrit-core`, `forrit-config`, and resolver parsing utilities are the safest default. State clearly when environment-dependent tests were not run.
 - Add focused unit tests near the code they cover. Do not make ordinary unit tests depend on external services.
-- Run frontend browser tests from `nix develop` so Playwright uses the Nix-provided browser bundle instead of downloading browsers. `pnpm test:e2e` reuses a frontend already running on port 5173 or starts `just frontend`; set `PLAYWRIGHT_BASE_URL` to target another instance.
+- Run frontend browser tests from `nix develop` to use the Nix Playwright browsers. `pnpm test:e2e` reuses a frontend already running on port 5173 or starts `frontend`.
 - Add focused Playwright coverage for browser-only failures, route flows, and important interactions. Keep generated `test-results` and Playwright reports untracked.
 
 ## API and generated files
@@ -75,9 +75,9 @@ Prefer the narrowest relevant check while iterating, for example `cargo test -p 
 The server's OpenAPI definitions are the source of truth for the TypeScript schema.
 
 ```sh
-just gen_api       # write data/openapi.json
-just gen_ts        # regenerate clients/typescript/src/schema.ts and compile it
-just reload_ts     # regenerate schema, build client, and reinstall it in frontend
+gen_api       # write data/openapi.json
+gen_ts        # regenerate clients/typescript/src/schema.ts and compile it
+reload_ts     # regenerate the schema, build the client, and reinstall it in the frontend
 ```
 
 Here are generated files:

@@ -10,6 +10,7 @@ Normally you don't need to deploy this separatedly since it's embedded into the 
 
 ### Prerequisites
 
+- Nix with flake support for the development commands and browser tests
 - Node.js 22.13+
 - pnpm
 - Docker with Docker Compose
@@ -23,10 +24,10 @@ Install the frontend dependencies once:
 pnpm install
 ```
 
-Then, from the repository root, start the complete frontend development stack:
+From the repository root, start the complete frontend development stack:
 
 ```sh
-just frontend
+nix develop -c frontend
 ```
 
 This starts a persistent local MongoDB container, the real Forrit Rust server,
@@ -40,7 +41,7 @@ starts are fast, and its data is retained in the `forrit-mongodb` Docker volume.
 Stop the container without deleting its data with:
 
 ```sh
-just frontend-down
+nix develop -c frontend-down
 ```
 
 To run only Vite, use `pnpm dev -- --host` from this directory. Set
@@ -67,7 +68,7 @@ cd frontend
 pnpm test:e2e
 ```
 
-The Playwright configuration starts `just frontend` automatically when no
+The Playwright configuration starts `frontend` from the development shell when no
 frontend is already listening on port 5173. Its MongoDB data remains persistent
 in the same Docker volume used during normal frontend development.
 
@@ -96,7 +97,7 @@ This starts the Remix production server and serves the generated assets.
 If the backend OpenAPI schema changes, regenerate the TypeScript client before building:
 
 ```sh
-just reload_ts
+nix develop -c reload_ts
 ```
 
 That command rebuilds `forrit-client`, reinstalls it into the frontend, and ensures the components use the latest API contracts.

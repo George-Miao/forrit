@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    devshell = {
+      url = "github:numtide/devshell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     crane.url = "github:ipetkov/crane";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -17,6 +21,7 @@
       rust-overlay,
       nixpkgs,
       flake-utils,
+      devshell,
       crane,
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -24,7 +29,10 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ (import rust-overlay) ];
+          overlays = [
+            (import rust-overlay)
+            devshell.overlays.default
+          ];
         };
         rust = (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override {
           extensions = [
@@ -91,25 +99,122 @@
       rec {
         inherit forrit-server forrit-server-without-webui;
 
-        devShells = with pkgs; {
-          default = mkShell.override { stdenv = stdenvNoLibs; } {
-            inherit buildInputs nativeBuildInputs;
-            packages = [
+        devShells.default = pkgs.devshell.mkShell {
+          devshell.name = "forrit";
+          devshell.packages =
+            buildInputs
+            ++ (with pkgs; [
+              pkg-config
+              llvmPackages_latest.libstdcxxClang
               rust
-              just
               biome
               nodejs
               typescript
               pnpm
               mongosh
-              openssl
-              playwright-driver.browsers
-            ];
-            shellHook = ''
-              export PLAYWRIGHT_BROWSERS_PATH=${playwright-driver.browsers}
-              export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
-            '';
-          };
+            ]);
+          env = [
+            {
+              name = "PKG_CONFIG_PATH";
+              prefix = "${pkgs.lib.getDev pkgs.openssl}/lib/pkgconfig";
+            }
+            {
+              name = "PLAYWRIGHT_BROWSERS_PATH";
+              value = pkgs.playwright-driver.browsers;
+            }
+            {
+              name = "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS";
+              value = "true";
+            }
+          ];
+          commands = [
+            {
+              name = "server";
+              help = "Start the Rust server";
+              command = ''
+                cd "$PRJ_ROOT"
+                exec cargo run --bin forrit-server -- "''${1:-data/config.toml}"
+              '';
+            }
+            {
+              name = "frontend";
+              help = "Start MongoDB, the Rust server, and Vite";
+              command = ''
+                set -euo pipefail
+                cd "$PRJ_ROOT"
+                docker compose up --detach --wait mongodb
+
+                env \
+                  'FORRIT.DATABASE.URL=mongodb://127.0.0.1:27017' \
+                  'FORRIT.HTTP.BIND=127.0.0.1:8080' \
+                  'FORRIT.HTTP.WEBUI=false' \
+                  cargo run --bin forrit-server -- "''${1:-data/config.toml}" &
+                server_pid=$!
+                trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+                trap 'exit 130' INT
+                trap 'exit 143' TERM
+
+                cd frontend
+                VITE_API_PROXY_TARGET=http://127.0.0.1:8080 pnpm dev --host
+              '';
+            }
+            {
+              name = "frontend-down";
+              help = "Stop MongoDB without deleting its data";
+              command = ''
+                cd "$PRJ_ROOT"
+                exec docker compose stop mongodb
+              '';
+            }
+            {
+              name = "gen_api";
+              help = "Generate the OpenAPI schema";
+              command = ''
+                cd "$PRJ_ROOT"
+                exec cargo run --bin gen_api -- data/openapi.json
+              '';
+            }
+            {
+              name = "gen_ts";
+              help = "Generate and build the TypeScript API client";
+              command = ''
+                set -e
+                cd "$PRJ_ROOT/clients/typescript"
+                pnpm install --frozen-lockfile
+                pnpm exec openapi-typescript ../../data/openapi.json -o src/schema.ts
+                exec pnpm build
+              '';
+            }
+            {
+              name = "reload_ts";
+              help = "Regenerate and reinstall the frontend API client";
+              command = ''
+                set -e
+                gen_api
+                gen_ts
+                cd "$PRJ_ROOT/frontend"
+                exec pnpm install --frozen-lockfile --force
+              '';
+            }
+            {
+              name = "build_server";
+              help = "Build the release server binary";
+              command = ''
+                cd "$PRJ_ROOT"
+                exec cargo build --release --bin forrit-server
+              '';
+            }
+            {
+              name = "build_frontend";
+              help = "Build the production frontend assets";
+              command = ''
+                set -e
+                cd "$PRJ_ROOT/frontend"
+                pnpm install --frozen-lockfile
+                exec pnpm build
+              '';
+            }
+          ];
         };
         packages = {
           inherit

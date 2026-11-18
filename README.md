@@ -63,16 +63,12 @@ Or you can also compose with your own system config:
 
 ### Manual
 
-You will need
+1. Clone the repository and enter its root directory.
+2. Run `nix develop` to install the development tools.
+3. Run `build_frontend` if you need to regenerate the bundled frontend.
+4. Run `build_server`. The build writes `target/release/forrit-server`.
 
-- `rust` with nightly release
-- `node.js` with `pnpm`
-- [`just`](https://github.com/casey/just)
-
-1. Clone this repo and `cd` into it
-2. Install required dependencies (if you're using nix, you can do this by simply running `direnv allow` or `nix shell ".#shell"`)
-3. Run `just build_frontend` to build the frontend (optional, since the frontend is already built with CI and included in the repo)
-4. Run `just build_server` and copy the binary `./target/release/forrit-server` to your desired location
+Run `menu` in the development shell to list project commands.
 
 ## Components
 
