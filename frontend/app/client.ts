@@ -179,14 +179,6 @@ export const useMetaAlias = make_inf_with_id('meta-alias', ([, id, cursor]) =>
   })
 )
 
-export const useMetaSubs = make_inf_with_id(
-  'meta-subscription',
-  ([, id, cursor]) =>
-    useClient().GET('/meta/{id}/subscription', {
-      params: { path: { id }, query: { cursor } }
-    })
-)
-
 export const useMetaSeason = (year?: number, season?: Season) =>
   handle(
     useSWR(['season', year, season], () =>

@@ -269,11 +269,14 @@ test('shows only the API error brief in a notification', async ({ page }) => {
 
 test('shows a useful empty state', async ({ page }) => {
   await mockSubscriptions(page, [])
+  await page.route('**/api/meta/season**', (route) =>
+    route.fulfill({ contentType: 'application/json', json: [] }),
+  )
   await page.goto('/subscription?year=2026&season=summer')
 
   await expect(page.getByText('这个季度还没有订阅')).toBeVisible()
-  await expect(page.getByRole('link', { name: '浏览番剧' })).toHaveAttribute(
-    'href',
-    '/',
-  )
+  await page.getByRole('link', { name: '浏览番剧' }).click()
+  await expect(
+    page.getByRole('heading', { name: '这个季度还没有番剧' }),
+  ).toBeVisible()
 })

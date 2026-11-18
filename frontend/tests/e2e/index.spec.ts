@@ -12,18 +12,26 @@ async function mockGroups(page: Page) {
   )
 }
 
-async function mockSubscriptions(
+async function mockSeason(
   page: Page,
-  subscription: Record<string, unknown> | null,
+  subscription: Record<string, unknown> | null = null,
 ) {
-  await page.route('**/api/meta/season**', async (route) => {
-    const response = await route.fetch()
-    const data = (await response.json()) as Array<Record<string, unknown>>
-    await route.fulfill({
-      response,
-      json: data.map((meta) => ({ ...meta, subscription })),
-    })
-  })
+  const items = [1, 2].map((number) => ({
+    _id: { $oid: `0123456789abcdef0123456${number}` },
+    begin: '2026-07-01T00:00:00Z',
+    broadcast: 'R/2026-07-01T00:00:00Z/P7D',
+    lang: 'ja',
+    official_site: '',
+    sites: [],
+    subscription,
+    title: `测试番剧 ${number}`,
+    title_translate: {},
+    tv: {},
+    type: 'tv',
+  }))
+  await page.route('**/api/meta/season**', (route) =>
+    route.fulfill({ contentType: 'application/json', json: items }),
+  )
 }
 
 test('redirects the root route to the bangumi page', async ({ page }) => {
@@ -130,6 +138,7 @@ test('opens the subscription menu without locking page scrolling', async ({
   page,
 }) => {
   await mockGroups(page)
+  await mockSeason(page)
   const errors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
@@ -138,7 +147,7 @@ test('opens the subscription menu without locking page scrolling', async ({
 
   await page.goto('/meta')
 
-  await expect(page.getByRole('heading', { name: '本季新番' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '测试番剧 1' })).toBeVisible()
   const trigger = page
     .getByRole('button', { name: /^(订阅|编辑订阅)$/ })
     .first()
@@ -192,7 +201,7 @@ test('shows subscribed cards in orange and displays group entry counts', async (
   page,
 }) => {
   await mockGroups(page)
-  await mockSubscriptions(page, {
+  await mockSeason(page, {
     directory: null,
     exclude: null,
     groups: 'all',
@@ -359,7 +368,7 @@ test('keeps the subscription menu open when selecting a group', async ({
   page,
 }) => {
   await mockGroups(page)
-  await mockSubscriptions(page, null)
+  await mockSeason(page)
   await page.route('**/api/meta/*/subscription', (route) =>
     route.fulfill({
       contentType: 'application/json',
@@ -380,7 +389,7 @@ test('hides edit and delete actions when there is no subscription', async ({
   page,
 }) => {
   await mockGroups(page)
-  await mockSubscriptions(page, null)
+  await mockSeason(page)
   await page.goto('/meta')
 
   await page.getByRole('button', { name: '订阅' }).first().click()
@@ -392,9 +401,11 @@ test('hides edit and delete actions when there is no subscription', async ({
 test('keeps two mobile cards within the viewport using the fixed gap', async ({
   page,
 }) => {
+  await mockSeason(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/meta')
-  await expect(page.getByRole('heading', { name: '本季新番' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '测试番剧 1' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '测试番剧 2' })).toBeVisible()
   await expect(
     page.getByRole('button', { name: /^(订阅|编辑订阅)$/ }).first(),
   ).toBeVisible()

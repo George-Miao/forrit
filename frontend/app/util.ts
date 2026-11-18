@@ -34,8 +34,8 @@ export const extract_meta = (meta: WithId<Meta>) => {
   const id = meta._id.$oid
   const title = get_title(meta)
   const year = meta.begin ? new Date(meta.begin).getFullYear() : null
-  const poster = make_tmdb_url(meta.tv?.poster_path as string)
-  const backdrop = make_tmdb_url(meta.tv?.backdrop_path as string)
+  const poster = make_tmdb_url(meta.tv?.poster_path)
+  const backdrop = make_tmdb_url(meta.tv?.backdrop_path)
 
   const season =
     meta.season_override ??
@@ -49,8 +49,8 @@ export const extract_meta = (meta: WithId<Meta>) => {
   const info: ExtractedInfo[] = []
   if (season) {
     info.push({
-      content: `第 ${(season.number as number).toString()} 季`,
-      tooltip: season.name as string,
+      content: `第 ${season.number.toString()} 季`,
+      tooltip: season.name,
     })
   }
   const parsed_broadcast = meta.broadcast ? parse_broadcast(meta.broadcast) : {}
@@ -62,7 +62,7 @@ export const extract_meta = (meta: WithId<Meta>) => {
   if (meta.tv?.vote_average) {
     info.push({
       tooltip: `共${meta.tv.vote_count}票`,
-      content: `${(meta.tv?.vote_average as number).toFixed(1)}/10`,
+      content: `${meta.tv.vote_average.toFixed(1)}/10`,
     })
   }
 
@@ -99,7 +99,7 @@ export const group_by = <K, T>(list: T[], keyGetter: (item: T) => K) => {
 }
 
 export const get_title = (m: Meta) => {
-  const trans = m.title_translate as Record<string, string[]>
+  const trans = m.title_translate
   return (
     trans?.['zh-Hans']?.[0] ??
     trans?.['zh-Hant']?.[0] ??

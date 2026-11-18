@@ -22,7 +22,7 @@ export default function MetaCard({
             alt="番剧封面"
             containerClassName="aspect-[2/3] w-full"
             height="auto"
-            poster_path={meta.tv.poster_path as string}
+            poster_path={meta.tv.poster_path}
             width="100%"
           />
         </a>

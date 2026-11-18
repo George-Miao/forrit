@@ -3,2289 +3,2770 @@
  * Do not make direct changes to the file.
  */
 
-
-/** OneOf type helpers */
-type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
-type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
-type OneOf<T extends any[]> = T extends [infer Only] ? Only : T extends [infer A, infer B, ...infer Rest] ? OneOf<[XOR<A, B>, ...Rest]> : never;
-
 export interface paths {
-  "/alias": {
-    /**
-     * List with pagination
-     * @description List with pagination
-     */
-    get: operations["list_alias"];
-    /**
-     * Create a new item
-     * @description Create a new item
-     */
-    post: operations["create_alias"];
-  };
-  "/alias/{id}": {
-    /**
-     * Get by id
-     * @description Get by id
-     */
-    get: operations["get_alias_by_id"];
-    /**
-     * Update by id
-     * @description Update by id
-     */
-    put: operations["update_alias_by_id"];
-    /**
-     * Delete by id
-     * @description Delete by id
-     */
-    delete: operations["delete_alias_by_id"];
-  };
-  "/config": {
-    get: operations["get_config"];
-    patch: operations["update_config"];
-  };
-  "/download": {
-    /**
-     * List with pagination
-     * @description List with pagination
-     */
-    get: operations["list_download"];
-  };
-  "/download/{id}": {
-    /**
-     * Get by id
-     * @description Get by id
-     */
-    get: operations["get_download_by_id"];
-  };
-  "/entry": {
-    /**
-     * List with pagination
-     * @description List with pagination
-     */
-    get: operations["list_entry"];
-  };
-  "/entry/{id}": {
-    /**
-     * Get by id
-     * @description Get by id
-     */
-    get: operations["get_entry_by_id"];
-    /**
-     * Update by id
-     * @description Update by id
-     */
-    put: operations["update_entry_by_id"];
-    /**
-     * Delete by id
-     * @description Delete by id
-     */
-    delete: operations["delete_entry_by_id"];
-  };
-  "/entry/{id}/download": {
-    get: operations["forrit_server.dispatcher.api.get_download"];
-    /**
-     * Create a new download job for an entry
-     * @description Create a new download job for an entry
-     */
-    post: operations["forrit_server.dispatcher.api.new_download"];
-  };
-  "/index": {
-    /**
-     * Get current index status
-     * @description Get current index status
-     *
-     * This API returns `null` if no index job is running
-     */
-    get: operations["forrit_server.resolver.api.get_index"];
-    /**
-     * Start new index job if none is running
-     * @description Start new index job if none is running
-     */
-    post: operations["forrit_server.resolver.api.start_index"];
-    /**
-     * Stop current index job immediately if there's one running
-     * @description Stop current index job immediately if there's one running
-     */
-    delete: operations["forrit_server.resolver.api.stop_index"];
-  };
-  "/index/subscribe": {
-    /**
-     * Subscribe to index status updates
-     * @description Subscribe to index status updates
-     */
-    get: operations["forrit_server.resolver.api.subscribe"];
-    /**
-     * Subscribe to index status updates
-     * @description Subscribe to index status updates
-     */
-    put: operations["forrit_server.resolver.api.subscribe"];
-    /**
-     * Subscribe to index status updates
-     * @description Subscribe to index status updates
-     */
-    post: operations["forrit_server.resolver.api.subscribe"];
-    /**
-     * Subscribe to index status updates
-     * @description Subscribe to index status updates
-     */
-    patch: operations["forrit_server.resolver.api.subscribe"];
-  };
-  "/meta": {
-    /**
-     * List with pagination
-     * @description List with pagination
-     */
-    get: operations["list_meta"];
-  };
-  "/meta/season": {
-    /**
-     * Get all meta by season
-     * @description Get all meta by season
-     */
-    get: operations["forrit_server.resolver.api.by_season"];
-  };
-  "/meta/subscription": {
-    /**
-     * Get all subscribed meta
-     * @description Get all subscribed meta
-     */
-    get: operations["forrit_server.resolver.api.list_subscriptions"];
-  };
-  "/meta/{id}": {
-    /**
-     * Get by id
-     * @description Get by id
-     */
-    get: operations["get_meta_by_id"];
-    /**
-     * Update by id
-     * @description Update by id
-     */
-    put: operations["update_meta_by_id"];
-  };
-  "/meta/{id}/alias": {
-    /**
-     * Get all aliases of a meta
-     * @description Get all aliases of a meta
-     */
-    get: operations["forrit_server.resolver.api.list_alias"];
-  };
-  "/meta/{id}/download": {
-    get: operations["forrit_server.resolver.api.list_download"];
-  };
-  "/meta/{id}/entry": {
-    /**
-     * Get all entries of a meta
-     * @description Get all entries of a meta
-     */
-    get: operations["forrit_server.resolver.api.list_entry"];
-  };
-  "/meta/{id}/group": {
-    /**
-     * Get all group of a meta
-     * @description Get all group of a meta
-     */
-    get: operations["forrit_server.resolver.api.list_groups"];
-  };
-  "/meta/{id}/subscription": {
-    /**
-     * Get subscription of a meta
-     * @description Get subscription of a meta
-     */
-    get: operations["forrit_server.resolver.api.get_subscription"];
-    /**
-     * Update subscription of a meta
-     * @description Update subscription of a meta
-     */
-    put: operations["forrit_server.resolver.api.update_subscription"];
-    /**
-     * Delete subscription of a meta
-     * @description Delete subscription of a meta
-     */
-    delete: operations["forrit_server.resolver.api.delete_subscription"];
-  };
-  "/search": {
-    get: operations["search"];
-  };
-  "/search/meta/{id}/entry": {
-    get: operations["search_meta_entries"];
-  };
-  "/search/suggestions": {
-    get: operations["search_suggestions"];
-  };
+    "/alias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List with pagination */
+        get: operations["list_alias"];
+        put?: never;
+        /** Create a new item */
+        post: operations["create_alias"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/alias/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by id */
+        get: operations["get_alias_by_id"];
+        /** Update by id */
+        put: operations["update_alias_by_id"];
+        post?: never;
+        /** Delete by id */
+        delete: operations["delete_alias_by_id"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_config"];
+        trace?: never;
+    };
+    "/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List with pagination */
+        get: operations["list_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by id */
+        get: operations["get_download_by_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List with pagination */
+        get: operations["list_entry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entry/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by id */
+        get: operations["get_entry_by_id"];
+        /** Update by id */
+        put: operations["update_entry_by_id"];
+        post?: never;
+        /** Delete by id */
+        delete: operations["delete_entry_by_id"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entry/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["forrit_server.dispatcher.api.get_download"];
+        put?: never;
+        /** Create a new download job for an entry */
+        post: operations["forrit_server.dispatcher.api.new_download"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get current index status
+         * @description This API returns `null` if no index job is running
+         */
+        get: operations["forrit_server.resolver.api.get_index"];
+        put?: never;
+        /** Start new index job if none is running */
+        post: operations["forrit_server.resolver.api.start_index"];
+        /** Stop current index job immediately if there's one running */
+        delete: operations["forrit_server.resolver.api.stop_index"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List with pagination */
+        get: operations["list_meta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/season": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all meta by season */
+        get: operations["forrit_server.resolver.api.by_season"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all subscribed meta */
+        get: operations["forrit_server.resolver.api.list_subscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by id */
+        get: operations["get_meta_by_id"];
+        /** Update by id */
+        put: operations["update_meta_by_id"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/{id}/alias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all aliases of a meta */
+        get: operations["forrit_server.resolver.api.list_alias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["forrit_server.resolver.api.list_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/{id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all entries of a meta */
+        get: operations["forrit_server.resolver.api.list_entry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/{id}/group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all group of a meta */
+        get: operations["forrit_server.resolver.api.list_groups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/{id}/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get subscription of a meta */
+        get: operations["forrit_server.resolver.api.get_subscription"];
+        /** Update subscription of a meta */
+        put: operations["forrit_server.resolver.api.update_subscription"];
+        post?: never;
+        /** Delete subscription of a meta */
+        delete: operations["forrit_server.resolver.api.delete_subscription"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/meta/{id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_meta_entries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_suggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
-
 export type webhooks = Record<string, never>;
-
 export interface components {
-  schemas: {
-    ObjectId: {
-      $oid: components["schemas"]["ObjectIdString"];
+    schemas: {
+        ObjectId: {
+            $oid: components["schemas"]["ObjectIdString"];
+        };
+        /** Format: ObjectId */
+        ObjectIdString: string;
+        /** @enum {string} */
+        "forrit_core.date.Season": "winter" | "spring" | "summer" | "fall";
+        "forrit_core.date.YearMonth": {
+            /** Format: uint8 */
+            month: number;
+            /** Format: int32 */
+            year: number;
+        };
+        "forrit_core.model.DirectedCursor": {
+            /** @description Use to invert the search e.g. go back a page */
+            Backwards: string;
+        } | {
+            /** @description Normal direction to search */
+            Forward: string;
+        };
+        /** @description A request to download an entry */
+        "forrit_core.model.Download": {
+            directory_override?: string | null;
+            entry_id: components["schemas"]["ObjectId"];
+            meta_id?: null | components["schemas"]["ObjectId"];
+            subscription_id?: null | components["schemas"]["ObjectId"];
+        };
+        /** @enum {string} */
+        "forrit_core.model.DownloadState": "pending" | "downloading" | "finished" | "cancelled" | "failed";
+        "forrit_core.model.EntryBase": {
+            description?: string | null;
+            elements: {
+                [key: string]: string;
+            };
+            group?: string | null;
+            guid: string;
+            info_hash: string;
+            /** Format: url */
+            link?: string | null;
+            mime_type: string;
+            /** Format: date-time */
+            pub_date?: string | null;
+            /** Format: uint64 */
+            size: number;
+            sourcer: string;
+            title: string;
+            /** Format: url */
+            torrent: string;
+            torrent_name: string;
+        };
+        "forrit_core.model.EntryGroup": {
+            /** Format: uint64 */
+            count: number;
+            name: string;
+        };
+        "forrit_core.model.IndexArg": {
+            after?: (null | components["schemas"]["forrit_core.date.YearMonth"]) & unknown;
+            before?: (null | components["schemas"]["forrit_core.date.YearMonth"]) & unknown;
+            /** @description Force re-indexing even if the item already exists */
+            force?: boolean;
+            /** @description Maximum number of items to index */
+            max?: number | null;
+        };
+        "forrit_core.model.IndexStat": {
+            arg: components["schemas"]["forrit_core.model.IndexArg"] & unknown;
+            /**
+             * Format: date-time
+             * @description Time when the indexing ended
+             */
+            end_at?: string | null;
+            /**
+             * Format: uint32
+             * @description Number of items filtered out
+             */
+            num_filtered: number;
+            /**
+             * Format: uint32
+             * @description Number of items from bangumi data
+             */
+            num_items: number;
+            /**
+             * Format: uint32
+             * @description Number of new items added
+             */
+            num_new: number;
+            /**
+             * Format: uint32
+             * @description Number of non-TV items
+             */
+            num_non_tv: number;
+            /**
+             * Format: uint32
+             * @description Number of items unchanged.
+             */
+            num_unchanged: number;
+            /**
+             * Format: uint32
+             * @description Number of updated items. Only update when force is set to true.
+             */
+            num_updated: number;
+            /**
+             * Format: date-time
+             * @description Time when the indexing started
+             */
+            start_at: string;
+        };
+        /** @description A resolved and started download job */
+        "forrit_core.model.Job": components["schemas"]["forrit_core.model.Download"] & {
+            /** @description Name of the torrent file */
+            name: string;
+            state: components["schemas"]["forrit_core.model.DownloadState"];
+        };
+        "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>": {
+            items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"][];
+            page_info: components["schemas"]["forrit_core.model.PageInfo"];
+            total_count: number;
+        };
+        "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Meta>>": {
+            items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"][];
+            page_info: components["schemas"]["forrit_core.model.PageInfo"];
+            total_count: number;
+        };
+        "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>": {
+            items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"][];
+            page_info: components["schemas"]["forrit_core.model.PageInfo"];
+            total_count: number;
+        };
+        "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>": {
+            items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"][];
+            page_info: components["schemas"]["forrit_core.model.PageInfo"];
+            total_count: number;
+        };
+        /** @description Metadata of a bangumi season */
+        "forrit_core.model.Meta": {
+            /** Format: date-time */
+            begin?: string | null;
+            broadcast?: string | null;
+            comment?: string | null;
+            /** Format: date-time */
+            end?: string | null;
+            lang: string;
+            official_site: string;
+            season?: null | components["schemas"]["forrit_core.model.TmdbSeasonSchema"];
+            season_override?: null | components["schemas"]["forrit_core.model.SeasonOverride"];
+            sites: Record<string, never>[];
+            subscription?: null | components["schemas"]["forrit_core.model.Subscription"];
+            title: string;
+            title_translate: {
+                [key: string]: string[];
+            };
+            tv?: null | components["schemas"]["forrit_core.model.TmdbShowSchema"];
+            type: string;
+        };
+        "forrit_core.model.PageInfo": {
+            end_cursor?: (null | components["schemas"]["forrit_core.model.DirectedCursor"]) & unknown;
+            /** @description True if there is a next page which contains items */
+            has_next_page: boolean;
+            /** @description True if there is a previous page which contains items */
+            has_previous_page: boolean;
+            start_cursor?: (null | components["schemas"]["forrit_core.model.DirectedCursor"]) & unknown;
+        };
+        "forrit_core.model.PartialEntry": components["schemas"]["forrit_core.model.EntryBase"] & {
+            meta_id?: null | components["schemas"]["ObjectId"];
+            meta_title?: string | null;
+        };
+        "forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>": {
+            key: string;
+            value: string;
+        };
+        "forrit_core.model.SeasonOverride": {
+            name: string;
+            /** Format: uint64 */
+            number: number;
+        };
+        "forrit_core.model.SubscribeGroups": "all" | string[];
+        "forrit_core.model.Subscription": {
+            directory?: string | null;
+            /** @description Exclude the entry if it matches include regex (overrides include) */
+            exclude?: string | null;
+            groups: components["schemas"]["forrit_core.model.SubscribeGroups"];
+            /** @description Include the entry if it matches include regex */
+            include?: string | null;
+            /**
+             * Format: uint64
+             * @description Exclude the entry if it's bigger than max_size
+             */
+            max_size?: number | null;
+            /**
+             * Format: uint64
+             * @description Exclude the entry if it's smaller than min_size
+             */
+            min_size?: number | null;
+        };
+        "forrit_core.model.TmdbSeasonSchema": {
+            /** Format: date */
+            air_date?: string | null;
+            /** Format: uint64 */
+            episode_count: number;
+            /** Format: uint64 */
+            id: number;
+            name: string;
+            overview?: string | null;
+            poster_path?: string | null;
+            /** Format: uint64 */
+            season_number: number;
+        };
+        "forrit_core.model.TmdbShowSchema": {
+            adult: boolean;
+            backdrop_path?: string | null;
+            /** Format: date */
+            first_air_date?: string | null;
+            genre_ids: number[];
+            /** Format: uint64 */
+            id: number;
+            name: string;
+            origin_country: string[];
+            original_language: string;
+            original_name: string;
+            overview?: string | null;
+            /** Format: double */
+            popularity: number;
+            poster_path?: string | null;
+            /** Format: double */
+            vote_average: number;
+            /** Format: uint64 */
+            vote_count: number;
+        };
+        "forrit_core.model.UpdateResult": {
+            updated: boolean;
+        };
+        "forrit_core.model.WithId<forrit_core.model.Job>": components["schemas"]["forrit_core.model.Job"] & {
+            _id: components["schemas"]["ObjectId"];
+        };
+        "forrit_core.model.WithId<forrit_core.model.Meta>": components["schemas"]["forrit_core.model.Meta"] & {
+            _id: components["schemas"]["ObjectId"];
+        };
+        "forrit_core.model.WithId<forrit_core.model.PartialEntry>": components["schemas"]["forrit_core.model.PartialEntry"] & {
+            _id: components["schemas"]["ObjectId"];
+        };
+        "forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>": components["schemas"]["forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>"] & {
+            _id: components["schemas"]["ObjectId"];
+        };
+        /** @enum {string} */
+        "forrit_core.model.mongodb_pagination.Direction": "forward" | "backwards";
+        /** @enum {string} */
+        "forrit_server.config.ApplyMode": "immediate" | "next_startup" | "next_enable";
+        "forrit_server.config.ConfigChange": {
+            /** @enum {string} */
+            op: "set";
+            path: string;
+            value: components["schemas"]["forrit_server.config.ConfigValue"];
+        } | {
+            /** @enum {string} */
+            op: "unset";
+            path: string;
+        } | {
+            name: string;
+            /** @enum {string} */
+            op: "create_source";
+            source: components["schemas"]["forrit_server.config.SourceInputType"];
+        } | {
+            name: string;
+            /** @enum {string} */
+            op: "delete_source";
+        };
+        "forrit_server.config.ConfigField": {
+            apply: components["schemas"]["forrit_server.config.ApplyMode"];
+            locked: boolean;
+            path: string;
+            secret: boolean;
+            secret_set: boolean;
+            source: components["schemas"]["forrit_server.config.FieldSource"];
+            value?: null | components["schemas"]["forrit_server.config.ConfigValue"];
+        };
+        "forrit_server.config.ConfigUpdate": {
+            changes: components["schemas"]["forrit_server.config.ConfigChange"][];
+            /** Format: uint64 */
+            revision: number;
+        };
+        "forrit_server.config.ConfigValue": boolean | number | string | string[] | null;
+        "forrit_server.config.ConfigView": {
+            fields: components["schemas"]["forrit_server.config.ConfigField"][];
+            /** Format: uint64 */
+            revision: number;
+            sources: components["schemas"]["forrit_server.config.SourceView"][];
+            warnings: string[];
+        };
+        /** @enum {string} */
+        "forrit_server.config.FieldSource": "default" | "ui" | "file" | "environment";
+        "forrit_server.config.SourceInputType": {
+            deny_non_torrent: boolean;
+            enable: boolean;
+            /** @enum {string} */
+            type: "rss";
+            update_interval: string;
+            url: string;
+        } | {
+            deny_non_torrent: boolean;
+            enable: boolean;
+            /** Format: uint32 */
+            load_history_pages?: number | null;
+            /** Format: uint8 */
+            page?: number | null;
+            /** @enum {string} */
+            type: "acg_rip";
+            update_interval: string;
+            /** Format: uint8 */
+            zone?: number | null;
+        } | {
+            category: string;
+            enable: boolean;
+            /** Format: uint32 */
+            load_history_pages?: number | null;
+            /** @enum {string} */
+            type: "nyaa";
+            update_interval: string;
+        };
+        /** @enum {string} */
+        "forrit_server.config.SourceKind": "rss" | "acg_rip" | "nyaa";
+        "forrit_server.config.SourceView": {
+            deletable: boolean;
+            kind: components["schemas"]["forrit_server.config.SourceKind"];
+            name: string;
+        };
+        /** @enum {string} */
+        "forrit_server.search.model.MatchField": "meta_title" | "tmdb_name" | "alias" | "entry_title" | "parsed_title" | "torrent_name";
+        /** @enum {string} */
+        "forrit_server.search.model.MatchKind": "exact" | "prefix" | "substring" | "terms";
+        "forrit_server.search.model.SearchEntryHit": {
+            entry: components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
+            matched_by?: null | components["schemas"]["forrit_server.search.model.SearchMatch"];
+        };
+        "forrit_server.search.model.SearchEntryPage": {
+            items: components["schemas"]["forrit_server.search.model.SearchEntryHit"][];
+            next_cursor?: string | null;
+        };
+        "forrit_server.search.model.SearchMatch": {
+            field: components["schemas"]["forrit_server.search.model.MatchField"];
+            fragments: string[];
+            kind: components["schemas"]["forrit_server.search.model.MatchKind"];
+            text: string;
+        };
+        "forrit_server.search.model.SearchMetaGroup": {
+            entries: components["schemas"]["forrit_server.search.model.SearchEntryHit"][];
+            matched_by?: null | components["schemas"]["forrit_server.search.model.SearchMatch"];
+            /** Format: uint64 */
+            matching_entry_count: number;
+            meta: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"];
+        };
+        "forrit_server.search.model.SearchMetaPage": {
+            items: components["schemas"]["forrit_server.search.model.SearchMetaGroup"][];
+            next_cursor?: string | null;
+        };
+        "forrit_server.search.model.SearchResult": {
+            metadata?: null | components["schemas"]["forrit_server.search.model.SearchMetaPage"];
+            unmatched_entries?: null | components["schemas"]["forrit_server.search.model.SearchEntryPage"];
+        };
+        /** @enum {string} */
+        "forrit_server.search.model.SearchSection": "metadata" | "unmatched";
+        "salvo_core.http.errors.status_error.StatusError": {
+            error: {
+                brief: string;
+                cause?: string;
+                /** Format: uint16 */
+                code: number;
+                detail?: string;
+                name: string;
+            };
+        };
     };
-    /** Format: ObjectId */
-    ObjectIdString: string;
-    /** @enum {string} */
-    "forrit_core.date.Season": "winter" | "spring" | "summer" | "fall";
-    "forrit_core.date.YearMonth": {
-      /** Format: int32 */
-      month: number;
-      /** Format: int32 */
-      year: number;
-    };
-    "forrit_core.model.DirectedCursor": OneOf<[{
-      /** @description Use to invert the search e.g. go back a page */
-      Backwards: string;
-    }, {
-      /** @description Normal direction to search */
-      Forward: string;
-    }]>;
-    /** @description A request to download an entry */
-    "forrit_core.model.Download": {
-      directory_override?: string | null;
-      entry_id: components["schemas"]["ObjectId"];
-      meta_id?: components["schemas"]["ObjectId"] | null;
-      subscription_id?: components["schemas"]["ObjectId"] | null;
-    };
-    /** @enum {string} */
-    "forrit_core.model.DownloadState": "pending" | "downloading" | "finished" | "cancelled" | "failed";
-    "forrit_core.model.EntryBase": {
-      description?: string | null;
-      elements: {
-        [key: string]: unknown;
-      };
-      group?: string | null;
-      guid: string;
-      info_hash: string;
-      /** Format: url */
-      link?: string | null;
-      mime_type: string;
-      /** Format: date-time */
-      pub_date?: string | null;
-      /** Format: int64 */
-      size: number;
-      sourcer: string;
-      title: string;
-      /** Format: url */
-      torrent: string;
-      torrent_name: string;
-    };
-    "forrit_core.model.EntryGroup": {
-      /** Format: int64 */
-      count: number;
-      name: string;
-    };
-    "forrit_core.model.IndexArg": {
-      after?: components["schemas"]["forrit_core.date.YearMonth"] | null;
-      before?: components["schemas"]["forrit_core.date.YearMonth"] | null;
-      /** @description Force re-indexing even if the item already exists */
-      force?: boolean;
-      /** @description Maximum number of items to index */
-      max?: number | null;
-    };
-    "forrit_core.model.IndexStat": {
-      arg: components["schemas"]["forrit_core.model.IndexArg"];
-      /**
-       * Format: date-time
-       * @description Time when the indexing ended
-       */
-      end_at?: string | null;
-      /**
-       * Format: int32
-       * @description Number of items filtered out
-       */
-      num_filtered: number;
-      /**
-       * Format: int32
-       * @description Number of items from bangumi data
-       */
-      num_items: number;
-      /**
-       * Format: int32
-       * @description Number of new items added
-       */
-      num_new: number;
-      /**
-       * Format: int32
-       * @description Number of non-TV items
-       */
-      num_non_tv: number;
-      /**
-       * Format: int32
-       * @description Number of items unchanged.
-       */
-      num_unchanged: number;
-      /**
-       * Format: int32
-       * @description Number of updated items. Only update when force is set to true.
-       */
-      num_updated: number;
-      /**
-       * Format: date-time
-       * @description Time when the indexing started
-       */
-      start_at: string;
-    };
-    /** @description A resolved and started download job */
-    "forrit_core.model.Job": components["schemas"]["forrit_core.model.Download"] & {
-      /** @description Name of the torrent file */
-      name: string;
-      state: components["schemas"]["forrit_core.model.DownloadState"];
-    };
-    "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>": {
-      items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"][];
-      page_info: components["schemas"]["forrit_core.model.PageInfo"];
-      total_count: number;
-    };
-    "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Meta>>": {
-      items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"][];
-      page_info: components["schemas"]["forrit_core.model.PageInfo"];
-      total_count: number;
-    };
-    "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>": {
-      items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"][];
-      page_info: components["schemas"]["forrit_core.model.PageInfo"];
-      total_count: number;
-    };
-    "forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>": {
-      items: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"][];
-      page_info: components["schemas"]["forrit_core.model.PageInfo"];
-      total_count: number;
-    };
-    /** @description Metadata of a bangumi season */
-    "forrit_core.model.Meta": {
-      /** Format: date-time */
-      begin?: string | null;
-      broadcast?: string | null;
-      comment?: string | null;
-      /** Format: date-time */
-      end?: string | null;
-      lang: string;
-      official_site: string;
-      season?: {
-        [key: string]: unknown;
-      };
-      season_override?: {
-        [key: string]: unknown;
-      };
-      sites: {
-          [key: string]: unknown;
-        }[];
-      subscription?: components["schemas"]["forrit_core.model.Subscription"] | null;
-      title: string;
-      title_translate: {
-        [key: string]: unknown;
-      };
-      tv?: {
-        [key: string]: unknown;
-      };
-      type: string;
-    };
-    "forrit_core.model.PageInfo": {
-      end_cursor?: components["schemas"]["forrit_core.model.DirectedCursor"] | null;
-      /** @description True if there is a next page which contains items */
-      has_next_page: boolean;
-      /** @description True if there is a previous page which contains items */
-      has_previous_page: boolean;
-      start_cursor?: components["schemas"]["forrit_core.model.DirectedCursor"] | null;
-    };
-    "forrit_core.model.PartialEntry": components["schemas"]["forrit_core.model.EntryBase"] & ({
-      meta_id?: components["schemas"]["ObjectId"] | null;
-      meta_title?: string | null;
-    });
-    "forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>": {
-      key: string;
-      value: string;
-    };
-    "forrit_core.model.SubscribeGroups": "all" | string[];
-    "forrit_core.model.Subscription": {
-      directory?: string | null;
-      /** @description Exclude the entry if it matches include regex (overrides include) */
-      exclude?: string | null;
-      groups: components["schemas"]["forrit_core.model.SubscribeGroups"];
-      /** @description Include the entry if it matches include regex */
-      include?: string | null;
-      /**
-       * Format: int64
-       * @description Exclude the entry if it's bigger than max_size
-       */
-      max_size?: number | null;
-      /**
-       * Format: int64
-       * @description Exclude the entry if it's smaller than min_size
-       */
-      min_size?: number | null;
-    };
-    "forrit_core.model.UpdateResult": {
-      updated: boolean;
-    };
-    "forrit_core.model.WithId<forrit_core.model.Job>": components["schemas"]["forrit_core.model.Job"] & {
-      _id: components["schemas"]["ObjectId"];
-    };
-    "forrit_core.model.WithId<forrit_core.model.Meta>": components["schemas"]["forrit_core.model.Meta"] & {
-      _id: components["schemas"]["ObjectId"];
-    };
-    "forrit_core.model.WithId<forrit_core.model.PartialEntry>": components["schemas"]["forrit_core.model.PartialEntry"] & {
-      _id: components["schemas"]["ObjectId"];
-    };
-    "forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>": components["schemas"]["forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>"] & {
-      _id: components["schemas"]["ObjectId"];
-    };
-    /** @enum {string} */
-    "forrit_core.model.mongodb_pagination.Direction": "forward" | "backwards";
-    /** @enum {string} */
-    "forrit_server.config.ApplyMode": "immediate" | "next_startup" | "next_enable";
-    "forrit_server.config.ConfigChange": {
-      /** @enum {string} */
-      op: "set";
-      path: string;
-      value: components["schemas"]["forrit_server.config.ConfigValue"];
-    } | {
-      /** @enum {string} */
-      op: "unset";
-      path: string;
-    } | {
-      name: string;
-      /** @enum {string} */
-      op: "create_source";
-      source: components["schemas"]["forrit_server.config.SourceInputType"];
-    } | {
-      name: string;
-      /** @enum {string} */
-      op: "delete_source";
-    };
-    "forrit_server.config.ConfigField": {
-      apply: components["schemas"]["forrit_server.config.ApplyMode"];
-      locked: boolean;
-      path: string;
-      secret: boolean;
-      secret_set: boolean;
-      source: components["schemas"]["forrit_server.config.FieldSource"];
-      value?: components["schemas"]["forrit_server.config.ConfigValue"] | null;
-    };
-    "forrit_server.config.ConfigUpdate": {
-      changes: components["schemas"]["forrit_server.config.ConfigChange"][];
-      /** Format: int64 */
-      revision: number;
-    };
-    "forrit_server.config.ConfigValue": boolean | number | string | string[] | (Record<string, unknown> | null);
-    "forrit_server.config.ConfigView": {
-      fields: components["schemas"]["forrit_server.config.ConfigField"][];
-      /** Format: int64 */
-      revision: number;
-      sources: components["schemas"]["forrit_server.config.SourceView"][];
-      warnings: string[];
-    };
-    /** @enum {string} */
-    "forrit_server.config.FieldSource": "default" | "ui" | "file" | "environment";
-    "forrit_server.config.SourceInputType": {
-      deny_non_torrent: boolean;
-      enable: boolean;
-      /** @enum {string} */
-      type: "rss";
-      update_interval: string;
-      url: string;
-    } | ({
-      deny_non_torrent: boolean;
-      enable: boolean;
-      /** Format: int32 */
-      load_history_pages?: number | null;
-      /** Format: int32 */
-      page?: number | null;
-      /** @enum {string} */
-      type: "acg_rip";
-      update_interval: string;
-      /** Format: int32 */
-      zone?: number | null;
-    }) | ({
-      category: string;
-      enable: boolean;
-      /** Format: int32 */
-      load_history_pages?: number | null;
-      /** @enum {string} */
-      type: "nyaa";
-      update_interval: string;
-    });
-    /** @enum {string} */
-    "forrit_server.config.SourceKind": "rss" | "acg_rip" | "nyaa";
-    "forrit_server.config.SourceView": {
-      deletable: boolean;
-      kind: components["schemas"]["forrit_server.config.SourceKind"];
-      name: string;
-    };
-    /** @enum {string} */
-    "forrit_server.search.model.MatchField": "meta_title" | "tmdb_name" | "alias" | "entry_title" | "parsed_title" | "torrent_name";
-    /** @enum {string} */
-    "forrit_server.search.model.MatchKind": "exact" | "prefix" | "substring" | "terms";
-    "forrit_server.search.model.SearchEntryHit": {
-      entry: components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
-      matched_by?: components["schemas"]["forrit_server.search.model.SearchMatch"] | null;
-    };
-    "forrit_server.search.model.SearchEntryPage": {
-      items: components["schemas"]["forrit_server.search.model.SearchEntryHit"][];
-      next_cursor?: string | null;
-    };
-    "forrit_server.search.model.SearchMatch": {
-      field: components["schemas"]["forrit_server.search.model.MatchField"];
-      fragments: string[];
-      kind: components["schemas"]["forrit_server.search.model.MatchKind"];
-      text: string;
-    };
-    "forrit_server.search.model.SearchMetaGroup": {
-      entries: components["schemas"]["forrit_server.search.model.SearchEntryHit"][];
-      matched_by?: components["schemas"]["forrit_server.search.model.SearchMatch"] | null;
-      /** Format: int64 */
-      matching_entry_count: number;
-      meta: components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"];
-    };
-    "forrit_server.search.model.SearchMetaPage": {
-      items: components["schemas"]["forrit_server.search.model.SearchMetaGroup"][];
-      next_cursor?: string | null;
-    };
-    "forrit_server.search.model.SearchResult": {
-      metadata?: components["schemas"]["forrit_server.search.model.SearchMetaPage"] | null;
-      unmatched_entries?: components["schemas"]["forrit_server.search.model.SearchEntryPage"] | null;
-    };
-    /** @enum {string} */
-    "forrit_server.search.model.SearchSection": "metadata" | "unmatched";
-    "salvo_core.http.errors.status_error.StatusError": {
-      brief: string;
-      cause?: string;
-      /** Format: int32 */
-      code: number;
-      detail: string;
-      name: string;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
-
 export type $defs = Record<string, never>;
-
-export type external = Record<string, never>;
-
 export interface operations {
-
-  /**
-   * List with pagination
-   * @description List with pagination
-   */
-  list_alias: {
-    parameters: {
-      query?: {
-        /** @description Number of items in a page */
-        per_page?: number;
-        /** @description Direction to search */
-        direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
-        /** @description Cursor to start searching, if not set, search from the beginning */
-        cursor?: string | null;
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Create a new item
-   * @description Create a new item
-   */
-  create_alias: {
-    /** @description Extract json format data from request. */
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>"];
-      };
-    };
-    responses: {
-      /** @description Ok */
-      200: {
-        content: {
-          "text/plain": string;
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get by id
-   * @description Get by id
-   */
-  get_alias_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Update by id
-   * @description Update by id
-   */
-  update_alias_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    /** @description Extract json format data from request. */
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Delete by id
-   * @description Delete by id
-   */
-  delete_alias_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  get_config: {
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_server.config.ConfigView"];
-        };
-      };
-    };
-  };
-  update_config: {
-    /** @description Extract json format data from request. */
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["forrit_server.config.ConfigUpdate"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_server.config.ConfigView"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * List with pagination
-   * @description List with pagination
-   */
-  list_download: {
-    parameters: {
-      query?: {
-        /** @description Number of items in a page */
-        per_page?: number;
-        /** @description Direction to search */
-        direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
-        /** @description Cursor to start searching, if not set, search from the beginning */
-        cursor?: string | null;
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get by id
-   * @description Get by id
-   */
-  get_download_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * List with pagination
-   * @description List with pagination
-   */
-  list_entry: {
-    parameters: {
-      query?: {
-        /** @description Number of items in a page */
-        per_page?: number;
-        /** @description Direction to search */
-        direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
-        /** @description Cursor to start searching, if not set, search from the beginning */
-        cursor?: string | null;
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get by id
-   * @description Get by id
-   */
-  get_entry_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Update by id
-   * @description Update by id
-   */
-  update_entry_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    /** @description Extract json format data from request. */
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["forrit_core.model.PartialEntry"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Delete by id
-   * @description Delete by id
-   */
-  delete_entry_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  "forrit_server.dispatcher.api.get_download": {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"][];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Create a new download job for an entry
-   * @description Create a new download job for an entry
-   */
-  "forrit_server.dispatcher.api.new_download": {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get current index status
-   * @description Get current index status
-   *
-   * This API returns `null` if no index job is running
-   */
-  "forrit_server.resolver.api.get_index": {
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.IndexStat"] | null;
-        };
-      };
-    };
-  };
-  /**
-   * Start new index job if none is running
-   * @description Start new index job if none is running
-   */
-  "forrit_server.resolver.api.start_index": {
-    /** @description Extract json format data from request. */
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["forrit_core.model.IndexArg"];
-      };
-    };
-    responses: {
-    };
-  };
-  /**
-   * Stop current index job immediately if there's one running
-   * @description Stop current index job immediately if there's one running
-   */
-  "forrit_server.resolver.api.stop_index": {
-    responses: {
-    };
-  };
-  /**
-   * Subscribe to index status updates
-   * @description Subscribe to index status updates
-   */
-  "forrit_server.resolver.api.subscribe": {
-    responses: {
-      /** @description Ok */
-      200: {
-        content: never;
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request requires user authentication. */
-      401: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed due to lack of payment. */
-      402: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server refused to authorize the request. */
-      403: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request method is not supported for the requested resource. */
-      405: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource is capable of generating only content not acceptable according to the Accept headers sent in the request. */
-      406: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description Authentication with the proxy is required. */
-      407: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The resource requested is no longer available and will not be available again. */
-      410: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request did not specify the length of its content, which is required by the requested resource. */
-      411: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server does not meet one of the preconditions specified in the request. */
-      412: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request is larger than the server is willing or able to process. */
-      413: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The URI provided was too long for the server to process. */
-      414: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request entity has a media type which the server or resource does not support. */
-      415: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The portion of the requested file cannot be supplied by the server. */
-      416: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server cannot meet the requirements of the expect request-header field. */
-      417: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description I was requested to brew coffee, and I am a teapot. */
-      418: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server cannot produce a response for this request. */
-      421: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request was well-formed but was unable to be followed due to semantic errors. */
-      422: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The source or destination resource of a method is locked. */
-      423: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The method could not be performed on the resource because the requested action depended on another action and that action failed. */
-      424: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description Switching to the protocol in the Upgrade header field is required. */
-      426: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server requires the request to be conditional. */
-      428: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description Too many requests have been received recently. */
-      429: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server is unwilling to process the request because either  an individual header field, or all the header fields collectively, are too large. */
-      431: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource is unavailable due to a legal demand to deny access to this resource. */
-      451: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server either does not recognize the request method, or it lacks the ability to fulfill the request. */
-      501: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description Received an invalid response from an inbound server it accessed while attempting to fulfill the request. */
-      502: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server is currently unavailable. */
-      503: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server did not receive a timely response from an upstream server. */
-      504: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server does not support, or refuses to support, the major version of HTTP that was used in the request message. */
-      505: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server has an internal configuration error. */
-      506: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The method could not be performed on the resource because the server is unable to store the representation needed to successfully complete the request. */
-      507: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description the server terminated an operation because it encountered an infinite loop while processing a request with "Depth: infinity". */
-      508: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description Further extensions to the request are required for the server to fulfill it. */
-      510: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description the client needs to authenticate to gain network access. */
-      511: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * List with pagination
-   * @description List with pagination
-   */
-  list_meta: {
-    parameters: {
-      query?: {
-        /** @description Number of items in a page */
-        per_page?: number;
-        /** @description Direction to search */
-        direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
-        /** @description Cursor to start searching, if not set, search from the beginning */
-        cursor?: string | null;
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Meta>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get all meta by season
-   * @description Get all meta by season
-   */
-  "forrit_server.resolver.api.by_season": {
-    parameters: {
-      query?: {
-        /** @description Get parameter `year` from request url query. */
-        year?: number;
-        /** @description Get parameter `season` from request url query. */
-        season?: components["schemas"]["forrit_core.date.Season"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"][];
-        };
-      };
-    };
-  };
-  /**
-   * Get all subscribed meta
-   * @description Get all subscribed meta
-   */
-  "forrit_server.resolver.api.list_subscriptions": {
-    parameters: {
-      query?: {
-        /** @description Get parameter `year` from request url query. */
-        year?: number;
-        /** @description Get parameter `season` from request url query. */
-        season?: components["schemas"]["forrit_core.date.Season"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"][];
-        };
-      };
-    };
-  };
-  /**
-   * Get by id
-   * @description Get by id
-   */
-  get_meta_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Update by id
-   * @description Update by id
-   */
-  update_meta_by_id: {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    /** @description Extract json format data from request. */
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["forrit_core.model.Meta"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get all aliases of a meta
-   * @description Get all aliases of a meta
-   */
-  "forrit_server.resolver.api.list_alias": {
-    parameters: {
-      query?: {
-        /** @description Number of items in a page */
-        per_page?: number;
-        /** @description Direction to search */
-        direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
-        /** @description Cursor to start searching, if not set, search from the beginning */
-        cursor?: string | null;
-      };
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  "forrit_server.resolver.api.list_download": {
-    parameters: {
-      query?: {
-        /** @description Number of items in a page */
-        per_page?: number;
-        /** @description Direction to search */
-        direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
-        /** @description Cursor to start searching, if not set, search from the beginning */
-        cursor?: string | null;
-      };
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get all entries of a meta
-   * @description Get all entries of a meta
-   */
-  "forrit_server.resolver.api.list_entry": {
-    parameters: {
-      query?: {
-        /** @description Number of items in a page */
-        per_page?: number;
-        /** @description Direction to search */
-        direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
-        /** @description Cursor to start searching, if not set, search from the beginning */
-        cursor?: string | null;
-      };
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get all group of a meta
-   * @description Get all group of a meta
-   */
-  "forrit_server.resolver.api.list_groups": {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.EntryGroup"][];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get subscription of a meta
-   * @description Get subscription of a meta
-   */
-  "forrit_server.resolver.api.get_subscription": {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.Subscription"] | null;
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Update subscription of a meta
-   * @description Update subscription of a meta
-   */
-  "forrit_server.resolver.api.update_subscription": {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    /** @description Extract json format data from request. */
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["forrit_core.model.Subscription"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  /**
-   * Delete subscription of a meta
-   * @description Delete subscription of a meta
-   */
-  "forrit_server.resolver.api.delete_subscription": {
-    parameters: {
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  search: {
-    parameters: {
-      query: {
-        /** @description Get parameter `q` from request url query. */
-        q: string;
-        /** @description Get parameter `section` from request url query. */
-        section?: components["schemas"]["forrit_server.search.model.SearchSection"];
-        /** @description Get parameter `cursor` from request url query. */
-        cursor?: string;
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_server.search.model.SearchResult"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  search_meta_entries: {
-    parameters: {
-      query: {
-        /** @description Get parameter `q` from request url query. */
-        q: string;
-        /** @description Get parameter `cursor` from request url query. */
-        cursor?: string;
-      };
-      path: {
-        id: components["schemas"]["ObjectIdString"];
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_server.search.model.SearchEntryPage"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
-  search_suggestions: {
-    parameters: {
-      query: {
-        /** @description Get parameter `q` from request url query. */
-        q: string;
-      };
-    };
-    responses: {
-      /** @description Response with json format data */
-      200: {
-        content: {
-          "application/json": components["schemas"]["forrit_server.search.model.SearchResult"];
-        };
-      };
-      /** @description The request could not be understood by the server due to malformed syntax. */
-      400: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The requested resource could not be found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server timed out waiting for the request. */
-      408: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The request could not be processed because of a conflict in the request. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-      /** @description The server encountered an internal error while processing this request. */
-      500: {
-        content: {
-          "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
-        };
-      };
-    };
-  };
+    list_alias: {
+        parameters: {
+            query?: {
+                /** @description Number of items in a page */
+                per_page?: number;
+                /** @description Direction to search */
+                direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
+                /** @description Cursor to start searching, if not set, search from the beginning */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    create_alias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Extract json format data from request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    get_alias_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    update_alias_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        /** @description Extract json format data from request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>"];
+            };
+        };
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    delete_alias_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    get_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_server.config.ConfigView"];
+                };
+            };
+        };
+    };
+    update_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Extract json format data from request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["forrit_server.config.ConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_server.config.ConfigView"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    list_download: {
+        parameters: {
+            query?: {
+                /** @description Number of items in a page */
+                per_page?: number;
+                /** @description Direction to search */
+                direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
+                /** @description Cursor to start searching, if not set, search from the beginning */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    get_download_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    list_entry: {
+        parameters: {
+            query?: {
+                /** @description Number of items in a page */
+                per_page?: number;
+                /** @description Direction to search */
+                direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
+                /** @description Cursor to start searching, if not set, search from the beginning */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    get_entry_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    update_entry_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        /** @description Extract json format data from request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["forrit_core.model.PartialEntry"];
+            };
+        };
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    delete_entry_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.PartialEntry>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.dispatcher.api.get_download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"][];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.dispatcher.api.new_download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Job>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.get_index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["forrit_core.model.IndexStat"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.start_index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Extract json format data from request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["forrit_core.model.IndexArg"];
+            };
+        };
+        responses: {
+            /** @description Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "forrit_server.resolver.api.stop_index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_meta: {
+        parameters: {
+            query?: {
+                /** @description Number of items in a page */
+                per_page?: number;
+                /** @description Direction to search */
+                direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
+                /** @description Cursor to start searching, if not set, search from the beginning */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Meta>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.by_season": {
+        parameters: {
+            query?: {
+                /** @description Get parameter `year` from request url query. */
+                year?: number;
+                /** @description Get parameter `season` from request url query. */
+                season?: components["schemas"]["forrit_core.date.Season"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"][];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.list_subscriptions": {
+        parameters: {
+            query?: {
+                /** @description Get parameter `year` from request url query. */
+                year?: number;
+                /** @description Get parameter `season` from request url query. */
+                season?: components["schemas"]["forrit_core.date.Season"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"][];
+                };
+            };
+        };
+    };
+    get_meta_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.WithId<forrit_core.model.Meta>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    update_meta_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        /** @description Extract json format data from request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["forrit_core.model.Meta"];
+            };
+        };
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.list_alias": {
+        parameters: {
+            query?: {
+                /** @description Number of items in a page */
+                per_page?: number;
+                /** @description Direction to search */
+                direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
+                /** @description Cursor to start searching, if not set, search from the beginning */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Record<alloc.string.String, bson.oid.ObjectId>>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.list_download": {
+        parameters: {
+            query?: {
+                /** @description Number of items in a page */
+                per_page?: number;
+                /** @description Direction to search */
+                direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
+                /** @description Cursor to start searching, if not set, search from the beginning */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.Job>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.list_entry": {
+        parameters: {
+            query?: {
+                /** @description Number of items in a page */
+                per_page?: number;
+                /** @description Direction to search */
+                direction?: components["schemas"]["forrit_core.model.mongodb_pagination.Direction"];
+                /** @description Cursor to start searching, if not set, search from the beginning */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.ListResult<forrit_core.model.WithId<forrit_core.model.PartialEntry>>"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.list_groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.EntryGroup"][];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.get_subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["forrit_core.model.Subscription"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.update_subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        /** @description Extract json format data from request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["forrit_core.model.Subscription"];
+            };
+        };
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    "forrit_server.resolver.api.delete_subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_core.model.UpdateResult"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    search: {
+        parameters: {
+            query: {
+                /** @description Get parameter `q` from request url query. */
+                q: string;
+                /** @description Get parameter `section` from request url query. */
+                section?: components["schemas"]["forrit_server.search.model.SearchSection"];
+                /** @description Get parameter `cursor` from request url query. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_server.search.model.SearchResult"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    search_meta_entries: {
+        parameters: {
+            query: {
+                /** @description Get parameter `q` from request url query. */
+                q: string;
+                /** @description Get parameter `cursor` from request url query. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: components["schemas"]["ObjectIdString"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_server.search.model.SearchEntryPage"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
+    search_suggestions: {
+        parameters: {
+            query: {
+                /** @description Get parameter `q` from request url query. */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response with json format data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["forrit_server.search.model.SearchResult"];
+                };
+            };
+            /** @description The request could not be understood by the server due to malformed syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The requested resource could not be found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server timed out waiting for the request. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The request could not be processed because of a conflict in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+            /** @description The server encountered an internal error while processing this request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["salvo_core.http.errors.status_error.StatusError"];
+                };
+            };
+        };
+    };
 }
