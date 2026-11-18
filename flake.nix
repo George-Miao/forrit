@@ -44,6 +44,7 @@
         buildInputs = with pkgs; [ openssl ];
         nativeBuildInputs = with pkgs; [
           pkg-config
+          cmake
           llvmPackages_latest.bintools
           llvmPackages_latest.libstdcxxClang
         ];
